@@ -1,0 +1,12 @@
+panels:
+  language:
+    title: Idioma
+components:
+  toolbar:
+    search: Buscar...
+    actions:
+      leads: Leads
+      projects: Projetos
+      team: Equipe
+      reports: Relatórios
+      settings: Configurações
