@@ -177,7 +177,7 @@ export default defineNuxtConfig({
         'vee-validate',
         'zod',
         // calendar app
-        // 'vue3-smooth-dnd',
+        'vue3-smooth-dnd',
         // 'date-fns',
         // 'date-fns/locale',
         // profile edit page

@@ -57,6 +57,7 @@
     "@vee-validate/zod": "^4.15.1",
     "canvas-confetti": "^1.9.3",
     "gsap": "^3.13.0",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "vue3-smooth-dnd": "0.0.6"
   }
 }
