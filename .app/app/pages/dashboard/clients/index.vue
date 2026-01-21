@@ -1,21 +1,15 @@
 <script setup lang="ts">
-definePageMeta({
-  title: 'Listagem de clientes',
-  preview: {
-    title: 'Listagem de clientes',
-    description: 'For list views and collections',
-    categories: ['layouts', 'lists'],
-    src: '/img/screens/layouts-list-view-1.png',
-    srcDark: '/img/screens/layouts-list-view-1-dark.png',
-    order: 37,
-  },
-})
-
 import { useApi } from '~/composables/useAuth'
+
+definePageMeta({
+  title: 'Clientes',
+})
 
 const { useCustomFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
+
+// Pagination logic
 const page = computed({
   get: () => Number.parseInt((route.query.page as string) ?? '1', 10),
   set: (value) => {
@@ -47,28 +41,27 @@ const query = computed(() => {
   }
 })
 
-const data = ref<any>({ data: [], total: 0 })
+const data = ref<any>({ data: [], pagination: { total: 0 } })
 const pending = ref(true)
 
-// Função para buscar clientes
+// Fetch clients
 async function fetchClients() {
   pending.value = true
   try {
-    const { data: response } = await useCustomFetch<any>('/users/clients-with-stats', {
+    const { data: response } = await useCustomFetch<any>('/clients', {
       method: 'GET',
       query: query.value
     })
-    
+
     data.value = response
   } catch (error) {
     console.error('Erro ao buscar clientes:', error)
-    data.value = { data: [], total: 0 }
+    data.value = { data: [], pagination: { total: 0 } }
   } finally {
     pending.value = false
   }
 }
 
-// Buscar clientes ao montar o componente e quando query mudar
 onMounted(() => {
   fetchClients()
 })
@@ -77,279 +70,137 @@ watch(query, () => {
   fetchClients()
 }, { deep: true })
 
-// Função para formatar valores em moeda brasileira
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value)
+// Tag colors for consistency with Kanban
+const tagColors: Record<string, string> = {
+  VIP: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  Recorrente: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  Novo: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  Médico: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
-const { open, close } = usePanels()
-import { PanelsPanelAddCredit, PanelsPanelWithdraw, PanelsPanelClientDetails } from '#components'
-
-function addCredit(id: string) {
-  open(PanelsPanelAddCredit, {
-    action: 'create',
-    data: { id: id },
-    onSave(info: any) {
-      console.log(info)
-      close()
-    },
-  })
+function getTagColor(tag: string): string {
+  return tagColors[tag] || 'bg-muted-100 text-muted-600 dark:bg-muted-800 dark:text-muted-400'
 }
 
-
-function withdraw(id: string) {
-  open(PanelsPanelWithdraw, {
-    action: 'create',
-    data: { id: id },
-    onSave(info: any) {
-      console.log('Saque processado:', info)
-      // Atualizar lista após o saque
-      fetchClients()
-      close()
-    },
-  })
-}
-
-function viewClient(clientId: string) {
-  open(PanelsPanelClientDetails, {
-    clientId: clientId
-  })
+function formatCpf(cpf: string): string {
+  if (!cpf) return ''
+  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
 }
 </script>
 
 <template>
-  <div class="px-4 md:px-6 lg:px-8 pb-20 dark:[--color-input-default-bg:var(--color-muted-950)]">
+  <div class="px-4 md:px-6 lg:px-8 pb-20">
     <TairoContentWrapper>
       <template #left>
-        <TairoInput
-          v-model="filter"
-          icon="lucide:search"
-          placeholder="Filtrar por nome ou cpf..."
-        />
+        <TairoInput v-model="filter" icon="lucide:search" placeholder="Buscar por nome ou CPF..."
+          class="w-full sm:w-80" />
       </template>
       <template #right>
-        <BaseButton variant="primary" class="w-full sm:w-32" to="/dashboard/clients/create">
+        <BaseButton variant="primary" to="/dashboard/clients/create" class="w-full sm:w-auto">
           <Icon name="lucide:plus" class="size-4" />
-          <span>Cadastrar</span>
+          <span>Novo Cliente</span>
         </BaseButton>
       </template>
+
       <div>
-        <div v-if="!pending && data?.data.length === 0">
-          <BasePlaceholderPage
-            title="Nenhum resultado encontrado"
-            subtitle="Não foi possível encontrar nenhum resultado para a busca."
-          >
+        <!-- Loading State -->
+        <div v-if="pending" class="flex items-center justify-center py-20">
+          <BaseSpinner size="lg" />
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="data?.data.length === 0">
+          <BasePlaceholderPage title="Nenhum cliente encontrado"
+            subtitle="Tente ajustar sua busca ou cadastrar um novo cliente.">
             <template #image>
-              <img
-                class="block dark:hidden"
-                src="/img/illustrations/placeholders/flat/placeholder-search-1.svg"
-                alt="Placeholder image"
-              >
-              <img
-                class="hidden dark:block"
-                src="/img/illustrations/placeholders/flat/placeholder-search-1-dark.svg"
-                alt="Placeholder image"
-              >
+              <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-1.svg"
+                alt="Sem resultados">
+              <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-1-dark.svg"
+                alt="Sem resultados">
             </template>
           </BasePlaceholderPage>
         </div>
-        <div v-else class="space-y-3">
-          <TransitionGroup
-            enter-active-class="transform-gpu"
-            enter-from-class="opacity-0 -translate-x-full"
-            enter-to-class="opacity-100 translate-x-0"
-            leave-active-class="absolute transform-gpu"
-            leave-from-class="opacity-100 translate-x-0"
-            leave-to-class="opacity-0 -translate-x-full"
-          >
-            <BaseCard
-              v-for="item in data?.data"
-              :key="item.id"
-              rounded="lg"
-              class="flex flex-col p-4 sm:flex-row sm:items-center"
-            >
-              <div
-                class="flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:justify-start sm:text-start"
-              >
-                <BaseAvatar
-                  size="sm"
-                  :src="item.photo"
-                  :text="item.name.charAt(0).toUpperCase()"
-                />
-                <div>
-                  <BaseHeading
-                    tag="h3"
-                    size="sm"
-                  >
+
+        <!-- List -->
+        <div v-else class="space-y-4">
+          <TransitionGroup enter-active-class="transform-gpu transition-all duration-300"
+            enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0">
+            <BaseCard v-for="item in data?.data" :key="item.id" rounded="lg"
+              class="flex flex-col p-5 sm:flex-row sm:items-center gap-4 hover:border-primary-500/30 transition-colors">
+              <!-- Info Column -->
+              <div class="flex items-center gap-4 flex-1">
+                <BaseAvatar size="md" :text="item.name.charAt(0).toUpperCase()" rounded="full"
+                  class="bg-primary-500/10 text-primary-600" />
+                <div class="flex flex-col">
+                  <BaseHeading tag="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
                     {{ item.name }}
                   </BaseHeading>
-                  <BaseParagraph
-                    size="xs"
-                    lead="none"
-                    class="text-muted-600 dark:text-muted-400 flex items-end text-sm"
-                  >
-                    <span>{{ item.document || 'Sem documento' }}</span>
-                  </BaseParagraph>
-                  <BaseParagraph
-                    size="xs"
-                    lead="none"
-                    class="text-muted-600 dark:text-muted-400 flex items-end text-sm"
-                  >
-                    <span>{{ item.phone || 'Sem telefone' }}</span>
-                  </BaseParagraph>
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                    <span class="text-xs text-muted-400 font-mono flex items-center gap-1">
+                      <Icon name="lucide:fingerprint" class="size-3" />
+                      {{ item.cpf }}
+                    </span>
+                    <span v-if="item.phone" class="text-xs text-muted-400 flex items-center gap-1">
+                      <Icon name="lucide:phone" class="size-3" />
+                      {{ item.phone }}
+                    </span>
+                    <span v-if="item.email" class="text-xs text-muted-400 flex items-center gap-1">
+                      <Icon name="lucide:mail" class="size-3" />
+                      {{ item.email }}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div
-                class="flex flex-col gap-4 pt-4 sm:ms-auto sm:flex-row sm:items-center sm:justify-end sm:pt-0"
-              >
-                <div
-                  class="flex w-full items-center justify-center sm:w-[120px] sm:justify-start"
-                >
-                  <BaseTag
-                    size="sm"
-                    :variant="item.phoneValidated ? 'primary' : 'dark'"
-                    rounded="full"
-                  >
-                    {{ item.phoneValidated ? 'Tel. Válido' : 'Tel. Inválido' }}
-                  </BaseTag>
+
+              <!-- Stats & Tags -->
+              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-10">
+                <!-- Tags -->
+                <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-1">
+                  <span v-for="tag in item.tags" :key="tag"
+                    :class="[getTagColor(tag), 'px-2 py-0.5 rounded text-[10px] font-medium transition-opacity']">
+                    {{ tag }}
+                  </span>
                 </div>
-                <div
-                  class="divide-muted-200 dark:divide-muted-800 flex items-center justify-center divide-x flex-1"
-                >
-                  <div class="flex flex-col gap-1 px-3 text-center min-h-[3rem] justify-center flex-1">
-                    <BaseHeading
-                      tag="h3"
-                      size="sm"
-                      class="text-muted-800 dark:text-muted-100"
-                    >
-                      <span>{{ formatCurrency(item.stats.totalDeposited) }}</span>
-                    </BaseHeading>
-                    <BaseParagraph
-                      lead="none"
-                      weight="medium"
-                      class="text-muted-400 text-[0.6rem]! uppercase tracking-wide"
-                    >
-                      <span>Depositado</span>
-                    </BaseParagraph>
-                  </div>
-                  <div class="flex flex-col gap-1 px-3 text-center min-h-[3rem] justify-center flex-1">
-                    <BaseHeading
-                      tag="h3"
-                      size="sm"
-                      class="text-muted-800 dark:text-muted-100"
-                    >
-                      <span>{{ formatCurrency(item.stats.totalWithdrawn) }}</span>
-                    </BaseHeading>
-                    <BaseParagraph
-                      lead="none"
-                      weight="medium"
-                      class="text-muted-400 text-[0.6rem]! uppercase tracking-wide"
-                    >
-                      <span>Sacado</span>
-                    </BaseParagraph>
-                  </div>
-                  <div class="flex flex-col gap-1 px-3 text-center min-h-[3rem] justify-center flex-1">
-                    <BaseHeading
-                      tag="h3"
-                      size="sm"
-                      class="text-muted-800 dark:text-muted-100"
-                    >
-                      <span>{{ formatCurrency(item.stats.totalCashback) }}</span>
-                    </BaseHeading>
-                    <BaseParagraph
-                      lead="none"
-                      weight="medium"
-                      class="text-muted-400 text-[0.6rem]! uppercase tracking-wide"
-                    >
-                      <span>Cashback</span>
-                    </BaseParagraph>
-                  </div>
-                  <div class="flex flex-col gap-1 px-3 text-center min-h-[3rem] justify-center flex-1">
-                    <BaseHeading
-                      tag="h3"
-                      size="sm"
-                      class="text-muted-800 dark:text-muted-100"
-                    >
-                      <span>{{ formatCurrency(item.credits) }}</span>
-                    </BaseHeading>
-                    <BaseParagraph
-                      lead="none"
-                      weight="medium"
-                      class="text-muted-400 text-[0.6rem]! uppercase tracking-wide"
-                    >
-                      <span>Créditos</span>
-                    </BaseParagraph>
-                  </div>
+
+                <!-- IR Count -->
+                <div class="flex flex-col items-center">
+                  <span class="text-xs text-muted-400 uppercase tracking-wider font-medium">Declarações</span>
+                  <span class="text-lg font-bold text-muted-800 dark:text-muted-100">
+                    {{ item.declarationsCount }}
+                  </span>
                 </div>
-                <div
-                  class="flex w-full items-center justify-center gap-1 py-3 sm:w-[160px] sm:justify-end sm:py-0"
-                >
-                  <div v-if="item.invitedBy" class="flex items-center gap-2">
-                    <BaseAvatar
-                      size="xs"
-                      :text="item.invitedBy.name.charAt(0).toUpperCase()"
-                    />
-                    <p class="text-muted-600 dark:text-muted-400 font-sans text-xs">
-                      {{ item.invitedBy.name }}
-                    </p>
-                  </div>
-                  <div v-else class="flex items-center gap-2">
-                    <p class="text-muted-400 dark:text-muted-500 font-sans text-xs">
-                      Cadastro direto
-                    </p>
-                  </div>
-                </div>
-                <div class="sm:ms-0">
-                  <BaseTooltip content="Visualizar"> 
-                  <BaseButton size="sm" rounded="md" class="w-full sm:w-auto" @click="viewClient(item.id)">
-                    <Icon name="lucide:eye" class="size-4" /> 
+
+                <!-- Status -->
+                <BaseTag size="sm" :variant="item.isActive ? 'primary' : 'muted'" rounded="full">
+                  {{ item.isActive ? 'Ativo' : 'Inativo' }}
+                </BaseTag>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center justify-end gap-2 sm:ms-4">
+                <BaseTooltip content="Visualizar Detalhes">
+                  <BaseButton size="icon-sm" rounded="full" variant="muted" :to="`/dashboard/clients/edit/${item.id}`">
+                    <Icon name="lucide:eye" class="size-4" />
                   </BaseButton>
-                  </BaseTooltip>
-                </div>
-                <div class="sm:ms-0">
-                  <BaseTooltip content="Editar">
-                  <BaseButton size="sm" rounded="md" class="w-full sm:w-auto" :to="`/dashboard/clients/edit/${item.id}`">
-                    <Icon name="lucide:edit-2" class="size-4" />
+                </BaseTooltip>
+
+                <BaseTooltip content="Nova Declaração">
+                  <BaseButton size="icon-sm" rounded="full" variant="primary"
+                    :to="{ path: '/dashboard/ir', query: { newFor: item.id } }">
+                    <Icon name="lucide:file-plus" class="size-4" />
                   </BaseButton>
-                  </BaseTooltip>
-                </div>
-                <div class="sm:ms-0">
-                  <BaseTooltip content="Adicionar Crédito">
-                  <BaseButton size="sm" rounded="md" class="w-full sm:w-auto" @click="addCredit(item.id)">
-                    <Icon name="uil:money-insert" class="size-4" />
-                  </BaseButton>
-                  </BaseTooltip>
-                </div>
-                <div class="sm:ms-0">
-                  <BaseTooltip content="Sacar">
-                  <BaseButton size="sm" rounded="md" class="w-full sm:w-auto" @click="withdraw(item.id)">
-                    <Icon name="uil:money-withdrawal" class="size-4" />
-                  </BaseButton>
-                  </BaseTooltip>
-                </div>
-              
+                </BaseTooltip>
               </div>
             </BaseCard>
           </TransitionGroup>
 
-          <div class="mt-4">
-            <BasePagination
-              v-model:page="page"
-              :items-per-page="perPage"
-              :total="data.total"
-              :sibling-count="2"
-              rounded="full"
-              class="w-full"
-            />
+          <!-- Pagination -->
+          <div class="mt-6">
+            <BasePagination v-model:page="page" :items-per-page="perPage" :total="data?.pagination?.total || 0"
+              :sibling-count="1" rounded="full" class="w-full" />
           </div>
         </div>
       </div>
     </TairoContentWrapper>
   </div>
 </template>
-  

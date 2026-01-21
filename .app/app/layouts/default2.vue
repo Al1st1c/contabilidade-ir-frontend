@@ -30,7 +30,16 @@ const menu = [
         icon: 'solar:user-linear',
         to: '/dashboard/team',
       },
-      
+      {
+        label: 'Whitelabel',
+        icon: 'solar:palette-round-linear',
+        to: '/dashboard/settings',
+      },
+      {
+        label: 'Dados da Empresa',
+        icon: 'solar:buildings-3-linear',
+        to: '/dashboard/settings/account',
+      },
     ],
   }
 ]
@@ -190,7 +199,7 @@ function getRouteSidebarId() {
               portal: { disabled: true },
             }"
           >
-            <TairoSidebarLink to="/layouts/preferences">
+            <TairoSidebarLink to="/dashboard/settings">
               <Icon name="solar:settings-linear" class="size-5" />
             </TairoSidebarLink>
           </BaseTooltip>

@@ -8,294 +8,259 @@ const toaster = useNuiToasts()
 
 definePageMeta({
   title: 'Editar Cliente',
-  preview: {
-    title: 'Editar Cliente',
-    description: 'Para edição de informações do cliente',
-    categories: ['layouts', 'forms'],
-    src: '/img/screens/layouts-user-edit.png',
-    srcDark: '/img/screens/layouts-user-edit-dark.png',
-    order: 31,
-  },
 })
 
-// Tipagem para o usuário
-interface User {
-  id: string
-  name: string
-  email?: string | null // Email pode ser null
-  document?: string
-  phone?: string
-  photo?: string
-  phoneValidated: boolean
-  credits: number | string // Pode vir como string da API
-  creditsInCashback: number | string // Pode vir como string da API
-  createdAt: string
-  invitedBy?: {
-    id: string
-    name: string
-  }
-  role: {
-    id: string
-    name: string
-  }
-}
-
-// Estados do componente
-const userId = route.params.id as string
-const user = ref<User | null>(null)
+// States
+const clientId = route.params.id as string
+const client = ref<any>(null)
 const loading = ref(true)
 const saving = ref(false)
 
-// Dados do formulário
 const form = ref({
   name: '',
   email: '',
-  document: '',
+  cpf: '',
   phone: '',
-  phoneValidated: false,
+  whatsapp: '',
+  birthDate: '',
+  rg: '',
+  address: '',
+  addressNumber: '',
+  addressComplement: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  occupation: '',
+  employer: '',
+  bankName: '',
+  bankAgency: '',
+  bankAccount: '',
+  pixKey: '',
+  notes: '',
+  isActive: true,
+  tags: [] as string[]
 })
 
-// Erros do formulário
-const errors = ref<Record<string, string>>({})
-
-// Função para buscar dados do usuário
-const fetchUser = async () => {
-  if (!userId) return
-  
+// Fetch client data
+const fetchClient = async () => {
+  if (!clientId) return
   loading.value = true
   try {
-    const response = await useCustomFetch<User>(`/users/${userId}`, {
-      method: 'GET',
-    })
-    
-    user.value = response.data
-    
-    // Preencher o formulário com os dados do usuário
+    const { data } = await useCustomFetch<any>(`/clients/${clientId}`)
+    client.value = data
+
+    // Fill form
     form.value = {
-      name: response.data.name || '',
-      email: response.data.email || '',
-      document: response.data.document || '',
-      phone: response.data.phone || '',
-      phoneValidated: response.data.phoneValidated || false,
+      name: data.name || '',
+      email: data.email || '',
+      cpf: data.cpfRaw || data.cpf || '',
+      phone: data.phone || '',
+      whatsapp: data.whatsapp || '',
+      birthDate: data.birthDate ? data.birthDate.split('T')[0] : '',
+      rg: data.rg || '',
+      address: data.address || '',
+      addressNumber: data.addressNumber || '',
+      addressComplement: data.addressComplement || '',
+      neighborhood: data.neighborhood || '',
+      city: data.city || '',
+      state: data.state || '',
+      zipCode: data.zipCode || '',
+      occupation: data.occupation || '',
+      employer: data.employer || '',
+      bankName: data.bankName || '',
+      bankAgency: data.bankAgency || '',
+      bankAccount: data.bankAccount || '',
+      pixKey: data.pixKey || '',
+      notes: data.notes || '',
+      isActive: data.isActive,
+      tags: data.tags || []
     }
   } catch (error) {
-    console.error('Erro ao buscar usuário:', error)
+    console.error('Erro ao buscar cliente:', error)
     toaster.add({
       title: 'Erro',
-      description: 'Erro ao carregar dados do usuário',
-      icon: 'lucide:alert-triangle',
-      duration: 3000,
+      description: 'Não foi possível carregar os dados do cliente.',
+      icon: 'ph:warning-circle-fill',
     })
   } finally {
     loading.value = false
   }
 }
 
-// Função para salvar alterações
-const saveUser = async () => {
+const saveClient = async () => {
   saving.value = true
   try {
-    const payload: any = {
-      name: form.value.name.trim(),
-      phoneValidated: form.value.phoneValidated,
-    }
+    await useCustomFetch(`/clients/${clientId}`, {
+      method: 'PUT',
+      body: form.value,
+    })
 
-    // Adicionar campos opcionais apenas se preenchidos
-    const email = form.value.email.trim()
-    if (email) {
-      payload.email = email
-    }
-
-    const document = form.value.document.replace(/\D/g, '')
-    if (document) {
-      payload.document = document
-    }
-
-    const phone = form.value.phone.replace(/\D/g, '')
-    if (phone) {
-      payload.phone = phone
-    }
-
-    await useCustomFetch(`/users/${userId}`, {
-      method: 'PATCH',
-      body: payload,
-      })
-
-      toaster.add({
+    toaster.add({
       title: 'Sucesso',
-      description: 'Usuário atualizado com sucesso!',
-      icon: 'ph:check-circle-fill',
-      duration: 3000,
+      description: 'Cliente atualizado com sucesso!',
+      icon: 'ph:check-box-fill',
     })
 
     router.push('/dashboard/clients')
   } catch (error: any) {
-    console.error('Erro ao salvar usuário:', error)
-        toaster.add({
+    console.error('Erro ao salvar cliente:', error)
+    toaster.add({
       title: 'Erro',
-      description: error.message || 'Erro ao salvar alterações',
-          icon: 'lucide:alert-triangle',
-      duration: 3000,
+      description: error.data?.message || 'Erro ao salvar alterações.',
+      icon: 'ph:warning-circle-fill',
     })
   } finally {
     saving.value = false
   }
 }
 
-// Buscar usuário ao montar o componente
-onMounted(() => {
-  fetchUser()
-})
-
-// Função para formatar CPF
-const formatCPF = (value: string) => {
-  const numbers = value.replace(/\D/g, '')
-  return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-}
-
-// Função para formatar telefone
-const formatPhone = (value: string) => {
-  const numbers = value.replace(/\D/g, '')
-  if (numbers.length <= 10) {
-    return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-  }
-  return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-}
+onMounted(fetchClient)
 </script>
 
 <template>
-  <div class="px-4 md:px-6 lg:px-8 pb-20">
-    <div class="mx-auto max-w-4xl">
-      <!-- Loading State -->
-      <div v-if="loading" class="flex items-center justify-center py-20">
-        <BaseSpinner size="lg" />
+  <div class="px-4 md:px-6 lg:px-8 pb-20 max-w-5xl mx-auto">
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <BaseSpinner size="lg" />
+    </div>
+
+    <div v-else-if="client" class="space-y-8">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <BaseHeading as="h1" size="2xl" weight="medium">
+            Editar Cliente
+          </BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500">
+            Atualize as informações de {{ client.name }}
+          </BaseParagraph>
+        </div>
+        <BaseButton variant="ghost" to="/dashboard/clients" class="flex items-center gap-2">
+          <Icon name="lucide:arrow-left" class="size-4" />
+          <span>Voltar</span>
+        </BaseButton>
       </div>
 
-      <!-- User Edit Form -->
-      <div v-else-if="user" class="space-y-8">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-    <div>
-            <BaseHeading as="h1" size="2xl" weight="bold">
-              Editar Cliente
-            </BaseHeading>
-            <BaseParagraph size="sm" class="text-muted-500">
-              Atualize as informações do cliente
-            </BaseParagraph>
-          </div>
-          <BaseButton
-            variant="ghost"
-            to="/dashboard/clients"
-            class="flex items-center gap-2"
-          >
-            <Icon name="lucide:arrow-left" class="size-4" />
-            <span>Voltar</span>
-          </BaseButton>
-        </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Sidebar: Basic Status -->
+        <div class="lg:col-span-1 space-y-6">
+          <BaseCard rounded="lg" class="p-6 text-center">
+            <BaseAvatar size="2xl" :text="form.name.charAt(0).toUpperCase()" rounded="full"
+              class="mx-auto mb-4 bg-primary-500/10 text-primary-600" />
+            <BaseHeading as="h3" size="lg" weight="medium">{{ form.name }}</BaseHeading>
+            <BaseParagraph size="xs" class="text-muted-400 mt-1">CPF: {{ client.cpf }}</BaseParagraph>
 
-        <!-- User Info Card -->
-        <BaseCard rounded="lg" class="p-6">
-          <div class="flex items-center gap-4 mb-6">
-            <BaseAvatar
-              size="xl"
-              :src="user.photo"
-              :text="user.name.charAt(0).toUpperCase()"
-            />
-            <div>
-              <BaseHeading as="h2" size="lg" weight="semibold">
-                {{ user.name }}
-              </BaseHeading>
-              <BaseParagraph size="sm" class="text-muted-500">
-                Cliente desde {{ new Date(user.createdAt).toLocaleDateString('pt-BR') }}
-              </BaseParagraph>
-              <div class="flex items-center gap-4 mt-2">
-                <BaseTag
-                  size="sm"
-                  :variant="user.phoneValidated ? 'primary' : 'muted'"
-                  rounded="full"
-                >
-                  {{ user.phoneValidated ? 'Tel. Validado' : 'Tel. Não Validado' }}
-                </BaseTag>
-                <BaseParagraph size="xs" class="text-muted-400">
-                  Créditos: R$ {{ Number(user.credits).toFixed(2) }}
-                </BaseParagraph>
-                        </div>
-                      </div>
-                    </div>
-
-          <!-- Form -->
-          <form @submit.prevent="saveUser" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Nome -->
-              <BaseField label="Nome Completo" :error="errors.name">
-                <BaseInput
-                  v-model="form.name"
-                  placeholder="Digite o nome completo"
-                  :error="!!errors.name"
-                          />
-                        </BaseField>
-
-              <!-- Email -->
-              <BaseField label="Email (Opcional)" :error="errors.email">
-                <BaseInput
-                  v-model="form.email"
-                            type="email"
-                  placeholder="Digite o email"
-                  :error="!!errors.email"
-                          />
-                        </BaseField>
-
-              <!-- CPF -->
-              <BaseField label="CPF (Opcional)" :error="errors.document">
-                          <BaseInput
-                  v-model="form.document"
-                  placeholder="000.000.000-00"
-                  :error="!!errors.document"
-                  @input="(e) => form.document = formatCPF(e.target.value)"
-                          />
-                        </BaseField>
-
-              <!-- Telefone -->
-              <BaseField label="Telefone (Opcional)" :error="errors.phone">
-                <BaseInput
-                  v-model="form.phone"
-                  placeholder="(00) 00000-0000"
-                  :error="!!errors.phone"
-                  @input="(e) => form.phone = formatPhone(e.target.value)"
-                            />
-                          </BaseField>
-                    </div>
-
-            <!-- Telefone Validado -->
-            <BaseField>
-              <BaseCheckbox
-                v-model="form.phoneValidated"
-                label="Telefone validado"
-                color="primary"
-                            />
-                          </BaseField>
-
-            <!-- Actions -->
-            <div class="flex items-center justify-end gap-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                    <BaseButton
-                      type="button"
-                      variant="ghost"
-                @click="router.push('/dashboard/clients')"
-                    >
-                Cancelar
-                    </BaseButton>
-                    <BaseButton
-                      type="submit"
-                      variant="primary"
-                :loading="saving"
-                :disabled="saving"
-                    >
-                Salvar Alterações
-                    </BaseButton>
+            <div class="mt-6 flex flex-col gap-2">
+              <BaseTag size="sm" :variant="form.isActive ? 'primary' : 'muted'" rounded="full"
+                class="w-full justify-center">
+                {{ form.isActive ? 'Cadastro Ativo' : 'Cadastro Inativo' }}
+              </BaseTag>
             </div>
-          </form>
-        </BaseCard>
+          </BaseCard>
+
+          <BaseCard rounded="lg" class="p-6">
+            <BaseHeading as="h4" size="sm" weight="medium"
+              class="mb-4 text-muted-500 uppercase tracking-wider text-[10px]">
+              Resumo de Atividade
+            </BaseHeading>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted-400">Declarações</span>
+                <span class="font-bold text-muted-800 dark:text-muted-100">{{ client.declarationsCount }}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted-400">Membro desde</span>
+                <span class="text-muted-800 dark:text-muted-100">{{ new
+                  Date(client.createdAt).toLocaleDateString('pt-BR') }}</span>
+              </div>
+            </div>
+          </BaseCard>
         </div>
+
+        <!-- Main Form -->
+        <div class="lg:col-span-2 space-y-6">
+          <BaseCard rounded="lg" class="p-8">
+            <form @submit.prevent="saveClient" class="space-y-10">
+              <!-- Section: Personal -->
+              <div class="space-y-5">
+                <div class="flex items-center gap-2 border-b border-muted-100 dark:border-muted-800 pb-2">
+                  <Icon name="lucide:user" class="size-4 text-primary-500" />
+                  <BaseHeading as="h4" size="sm" weight="medium">Informações Pessoais</BaseHeading>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <BaseField label="Nome Completo">
+                    <BaseInput v-model="form.name" />
+                  </BaseField>
+                  <BaseField label="CPF (Fixo)">
+                    <BaseInput v-model="form.cpf" disabled class="bg-muted-50 dark:bg-muted-800/50" />
+                  </BaseField>
+                  <BaseField label="E-mail">
+                    <BaseInput v-model="form.email" type="email" />
+                  </BaseField>
+                  <BaseField label="Data de Nascimento">
+                    <BaseInput v-model="form.birthDate" type="date" />
+                  </BaseField>
+                  <BaseField label="WhatsApp">
+                    <BaseInput v-model="form.whatsapp" />
+                  </BaseField>
+                  <BaseField label="RG">
+                    <BaseInput v-model="form.rg" />
+                  </BaseField>
+                </div>
+              </div>
+
+              <!-- Section: Address -->
+              <div class="space-y-5">
+                <div class="flex items-center gap-2 border-b border-muted-100 dark:border-muted-800 pb-2">
+                  <Icon name="lucide:map-pin" class="size-4 text-primary-500" />
+                  <BaseHeading as="h4" size="sm" weight="medium">Localização</BaseHeading>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <BaseField label="CEP">
+                    <BaseInput v-model="form.zipCode" />
+                  </BaseField>
+                  <BaseField label="Endereço" class="md:col-span-2">
+                    <BaseInput v-model="form.address" />
+                  </BaseField>
+                  <BaseField label="Número">
+                    <BaseInput v-model="form.addressNumber" />
+                  </BaseField>
+                  <BaseField label="Cidade">
+                    <BaseInput v-model="form.city" />
+                  </BaseField>
+                  <BaseField label="Bairro">
+                    <BaseInput v-model="form.neighborhood" />
+                  </BaseField>
+                </div>
+              </div>
+
+              <!-- Section: Professional / Bank -->
+              <div class="space-y-5">
+                <div class="flex items-center gap-2 border-b border-muted-100 dark:border-muted-800 pb-2">
+                  <Icon name="lucide:briefcase" class="size-4 text-primary-500" />
+                  <BaseHeading as="h4" size="sm" weight="medium">Trabalho e Banco</BaseHeading>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <BaseField label="Ocupação">
+                    <BaseInput v-model="form.occupation" />
+                  </BaseField>
+                  <BaseField label="PIX / Restituição">
+                    <BaseInput v-model="form.pixKey" />
+                  </BaseField>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center justify-end gap-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <BaseButton type="button" variant="ghost" to="/dashboard/clients">Cancelar</BaseButton>
+                <BaseButton type="submit" variant="primary" :loading="saving" :disabled="saving">
+                  Salvar Alterações
+                </BaseButton>
+              </div>
+            </form>
+          </BaseCard>
+        </div>
+      </div>
     </div>
   </div>
 </template>
