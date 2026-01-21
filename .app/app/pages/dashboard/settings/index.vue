@@ -7,6 +7,7 @@ definePageMeta({
 
 const { useCustomFetch } = useApi()
 const toaster = useNuiToasts()
+const { applyColors } = useWhitelabel()
 
 // State
 const isLoading = ref(true)
@@ -14,24 +15,47 @@ const isSaving = ref(false)
 const isUploadingLogo = ref(false)
 const tenant = ref<any>(null)
 
-// Form
+// Form - using Tailwind color names
 const form = ref({
   name: '',
   tradeName: '',
-  primaryColor: '#6366f1',
-  secondaryColor: '#8b5cf6',
+  primaryColor: 'amber',
+  secondaryColor: 'zinc',
 })
 
-// Preset colors for easy selection
-const colorPresets = [
-  { name: 'Indigo', primary: '#6366f1', secondary: '#8b5cf6' },
-  { name: 'Emerald', primary: '#10b981', secondary: '#34d399' },
-  { name: 'Blue', primary: '#3b82f6', secondary: '#60a5fa' },
-  { name: 'Rose', primary: '#f43f5e', secondary: '#fb7185' },
-  { name: 'Amber', primary: '#f59e0b', secondary: '#fbbf24' },
-  { name: 'Violet', primary: '#8b5cf6', secondary: '#a78bfa' },
-  { name: 'Teal', primary: '#14b8a6', secondary: '#2dd4bf' },
-  { name: 'Orange', primary: '#f97316', secondary: '#fb923c' },
+// Tailwind color options for primary colors
+const primaryColors = [
+  { name: 'slate', label: 'Slate', class: 'bg-slate-500' },
+  { name: 'gray', label: 'Gray', class: 'bg-gray-500' },
+  { name: 'zinc', label: 'Zinc', class: 'bg-zinc-500' },
+  { name: 'neutral', label: 'Neutral', class: 'bg-neutral-500' },
+  { name: 'stone', label: 'Stone', class: 'bg-stone-500' },
+  { name: 'red', label: 'Red', class: 'bg-red-500' },
+  { name: 'orange', label: 'Orange', class: 'bg-orange-500' },
+  { name: 'amber', label: 'Amber', class: 'bg-amber-500' },
+  { name: 'yellow', label: 'Yellow', class: 'bg-yellow-500' },
+  { name: 'lime', label: 'Lime', class: 'bg-lime-500' },
+  { name: 'green', label: 'Green', class: 'bg-green-500' },
+  { name: 'emerald', label: 'Emerald', class: 'bg-emerald-500' },
+  { name: 'teal', label: 'Teal', class: 'bg-teal-500' },
+  { name: 'cyan', label: 'Cyan', class: 'bg-cyan-500' },
+  { name: 'sky', label: 'Sky', class: 'bg-sky-500' },
+  { name: 'blue', label: 'Blue', class: 'bg-blue-500' },
+  { name: 'indigo', label: 'Indigo', class: 'bg-indigo-500' },
+  { name: 'violet', label: 'Violet', class: 'bg-violet-500' },
+  { name: 'purple', label: 'Purple', class: 'bg-purple-500' },
+  { name: 'fuchsia', label: 'Fuchsia', class: 'bg-fuchsia-500' },
+  { name: 'pink', label: 'Pink', class: 'bg-pink-500' },
+  { name: 'rose', label: 'Rose', class: 'bg-rose-500' },
+]
+
+// Muted/secondary color options
+const mutedColors = [
+  { name: 'slate', label: 'Slate', class: 'bg-slate-300 dark:bg-slate-700' },
+  { name: 'gray', label: 'Gray', class: 'bg-gray-300 dark:bg-gray-700' },
+  { name: 'zinc', label: 'Zinc', class: 'bg-zinc-300 dark:bg-zinc-700' },
+  { name: 'neutral', label: 'Neutral', class: 'bg-neutral-300 dark:bg-neutral-700' },
+  { name: 'stone', label: 'Stone', class: 'bg-stone-300 dark:bg-stone-700' },
 ]
 
 // Fetch tenant data
@@ -44,8 +68,8 @@ async function fetchTenant() {
       form.value = {
         name: data.data.name || '',
         tradeName: data.data.tradeName || '',
-        primaryColor: data.data.primaryColor || '#6366f1',
-        secondaryColor: data.data.secondaryColor || '#8b5cf6',
+        primaryColor: data.data.primaryColor || 'amber',
+        secondaryColor: data.data.secondaryColor || 'zinc',
       }
     }
   } catch (error) {
@@ -71,6 +95,10 @@ async function saveSettings() {
 
     if (data.success) {
       tenant.value = { ...tenant.value, ...form.value }
+
+      // Apply colors immediately
+      applyColors(form.value.primaryColor, form.value.secondaryColor)
+
       toaster.add({
         title: 'Sucesso',
         description: 'Configurações salvas com sucesso!',
@@ -98,7 +126,7 @@ function triggerLogoUpload() {
 async function handleLogoUpload(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
+
   if (!file) return
 
   // Validate file type
@@ -153,12 +181,6 @@ async function handleLogoUpload(event: Event) {
   }
 }
 
-// Apply preset colors
-function applyPreset(preset: typeof colorPresets[0]) {
-  form.value.primaryColor = preset.primary
-  form.value.secondaryColor = preset.secondary
-}
-
 onMounted(fetchTenant)
 </script>
 
@@ -187,32 +209,16 @@ onMounted(fetchTenant)
             <div class="flex items-center gap-6">
               <!-- Logo Preview -->
               <div
-                class="size-32 rounded-xl border-2 border-dashed border-muted-300 dark:border-muted-700 flex items-center justify-center overflow-hidden bg-muted-50 dark:bg-muted-900"
-              >
-                <img
-                  v-if="tenant?.logo"
-                  :src="tenant.logo"
-                  alt="Logo"
-                  class="size-full object-contain p-2"
-                />
+                class="size-32 rounded-xl border-2 border-dashed border-muted-300 dark:border-muted-700 flex items-center justify-center overflow-hidden bg-muted-50 dark:bg-muted-900">
+                <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-2" />
                 <Icon v-else name="lucide:image" class="size-12 text-muted-300" />
               </div>
 
               <!-- Upload Actions -->
               <div class="flex flex-col gap-3">
-                <input
-                  ref="logoInput"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
-                  class="hidden"
-                  @change="handleLogoUpload"
-                />
-                <BaseButton
-                  variant="primary"
-                  size="sm"
-                  :loading="isUploadingLogo"
-                  @click="triggerLogoUpload"
-                >
+                <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden"
+                  @change="handleLogoUpload" />
+                <BaseButton variant="primary" size="sm" :loading="isUploadingLogo" @click="triggerLogoUpload">
                   <Icon name="lucide:upload" class="size-4 mr-2" />
                   Enviar Logo
                 </BaseButton>
@@ -233,61 +239,45 @@ onMounted(fetchTenant)
               Cores do Sistema
             </BaseHeading>
             <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Personalize as cores principais do sistema para combinar com a identidade visual do seu escritório.
+              Escolha as cores do Tailwind CSS para personalizar seu sistema.
             </BaseParagraph>
           </div>
 
           <div class="md:col-span-8 space-y-6">
-            <!-- Color Presets -->
+            <!-- Primary Color Selection -->
             <div>
-              <BaseParagraph size="xs" class="text-muted-500 mb-3 uppercase tracking-wider font-medium">
-                Paletas Prontas
-              </BaseParagraph>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="preset in colorPresets"
-                  :key="preset.name"
-                  type="button"
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg border border-muted-200 dark:border-muted-700 hover:border-primary-500/50 transition-colors"
-                  :class="form.primaryColor === preset.primary ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-muted-900' : ''"
-                  @click="applyPreset(preset)"
-                >
-                  <div class="flex gap-1">
-                    <div class="size-4 rounded-full" :style="{ backgroundColor: preset.primary }"></div>
-                    <div class="size-4 rounded-full" :style="{ backgroundColor: preset.secondary }"></div>
-                  </div>
-                  <span class="text-xs font-medium text-muted-600 dark:text-muted-400">{{ preset.name }}</span>
-                </button>
-              </div>
+              <BaseInputWrapper label="Cor Primária">
+                <div class="grid grid-cols-6 gap-2">
+                  <button v-for="color in primaryColors" :key="color.name" type="button"
+                    class="size-12 rounded-lg transition-all duration-200" :class="[
+                      color.class,
+                      form.primaryColor === color.name
+                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-900 scale-110'
+                        : 'hover:scale-105'
+                    ]" :title="color.label" @click="form.primaryColor = color.name" />
+                </div>
+                <template #help>
+                  Selecionado: <span class="font-semibold capitalize">{{ form.primaryColor }}</span>
+                </template>
+              </BaseInputWrapper>
             </div>
 
-            <!-- Custom Colors -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <BaseInputWrapper label="Cor Primária">
-                  <div class="flex items-center gap-3">
-                    <input
-                      v-model="form.primaryColor"
-                      type="color"
-                      class="size-10 rounded-lg border border-muted-200 dark:border-muted-700 cursor-pointer"
-                    />
-                    <BaseInput v-model="form.primaryColor" class="font-mono text-sm" />
-                  </div>
-                </BaseInputWrapper>
-              </div>
-
-              <div>
-                <BaseInputWrapper label="Cor Secundária">
-                  <div class="flex items-center gap-3">
-                    <input
-                      v-model="form.secondaryColor"
-                      type="color"
-                      class="size-10 rounded-lg border border-muted-200 dark:border-muted-700 cursor-pointer"
-                    />
-                    <BaseInput v-model="form.secondaryColor" class="font-mono text-sm" />
-                  </div>
-                </BaseInputWrapper>
-              </div>
+            <!-- Muted Color Selection -->
+            <div>
+              <BaseInputWrapper label="Cor Secundária (Tons Neutros)">
+                <div class="flex gap-3">
+                  <button v-for="color in mutedColors" :key="color.name" type="button"
+                    class="size-12 rounded-lg transition-all duration-200" :class="[
+                      color.class,
+                      form.secondaryColor === color.name
+                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-900 scale-110'
+                        : 'hover:scale-105'
+                    ]" :title="color.label" @click="form.secondaryColor = color.name" />
+                </div>
+                <template #help>
+                  Selecionado: <span class="font-semibold capitalize">{{ form.secondaryColor }}</span>
+                </template>
+              </BaseInputWrapper>
             </div>
 
             <!-- Preview -->
@@ -296,14 +286,15 @@ onMounted(fetchTenant)
                 Pré-visualização
               </BaseParagraph>
               <div class="flex items-center gap-4">
-                <div class="h-10 px-6 rounded-lg flex items-center justify-center text-white text-sm font-medium"
-                  :style="{ backgroundColor: form.primaryColor }">
+                <BaseButton variant="primary">
                   Botão Primário
-                </div>
-                <div class="h-10 px-6 rounded-lg flex items-center justify-center text-white text-sm font-medium"
-                  :style="{ backgroundColor: form.secondaryColor }">
-                  Botão Secundário
-                </div>
+                </BaseButton>
+                <BaseButton variant="muted">
+                  Botão Neutro
+                </BaseButton>
+                <BaseBadge variant="primary" rounded="lg">
+                  Badge
+                </BaseBadge>
               </div>
             </div>
           </div>
