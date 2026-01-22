@@ -68,7 +68,7 @@ const isMobileOpen = ref(false)
                 <TairoMenuContent>
                   <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
                     <TairoMenuLink as-child>
-                      <NuxtLink to="#">
+                      <NuxtLink to="/dashboard/clients">
                         <BaseHeading size="sm" weight="medium"
                           class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
                           Listar Todos
@@ -79,7 +79,7 @@ const isMobileOpen = ref(false)
                       </NuxtLink>
                     </TairoMenuLink>
                     <TairoMenuLink as-child>
-                      <NuxtLink to="#">
+                      <NuxtLink to="/dashboard/clients/create">
                         <BaseHeading size="sm" weight="medium"
                           class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
                           Cadastrar Cliente

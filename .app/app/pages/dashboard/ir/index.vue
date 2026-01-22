@@ -369,7 +369,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
               <Icon name="solar:widget-4-linear" class="size-4" />
             </BaseButton>
           </BaseTooltip>
-          <BaseTooltip content="Nova Tarefa">
+          <BaseTooltip content="Novo IR">
             <BaseButton size="icon-sm" rounded="full" variant="primary" @click="openCreateDeclaration">
               <Icon name="lucide:plus" class="size-4" />
             </BaseButton>
@@ -558,16 +558,16 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                         class="size-12 rounded-full bg-muted-200/50 dark:bg-muted-800/50 flex items-center justify-center mb-3">
                         <Icon name="lucide:inbox" class="size-6 text-muted-400" />
                       </div>
-                      <p class="text-sm text-muted-400 font-medium font-sans">Nenhuma tarefa</p>
-                      <p class="text-xs text-muted-400 mt-1 font-sans">Arraste tarefas para cá</p>
+                      <p class="text-sm text-muted-400 font-medium font-sans">Nenhum IR</p>
+                      <p class="text-xs text-muted-400 mt-1 font-sans">Arraste os cards para cá</p>
                     </div>
                   </div>
 
-                  <!-- Add Task Button -->
-                  <button
+                  <!-- Add Task Button (Only for first column) -->
+                  <button v-if="column.title === 'AGUARDANDO DOCUMENTOS'" @click="openCreateDeclaration"
                     class="w-full mt-3 py-2.5 rounded-lg border-2 border-dashed border-muted-300 dark:border-muted-700 text-muted-500 dark:text-muted-400 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-500/5 transition-all text-sm font-medium flex items-center justify-center gap-2 font-sans">
                     <Icon name="lucide:plus" class="size-4" />
-                    Adicionar tarefa
+                    Criar novo IR
                   </button>
                 </div>
               </div>

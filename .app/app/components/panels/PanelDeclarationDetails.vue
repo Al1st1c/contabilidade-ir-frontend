@@ -10,6 +10,8 @@ const emit = defineEmits(['close', 'saved'])
 
 const { useCustomFetch } = useApi()
 const toaster = useNuiToasts()
+const { open } = usePanels()
+import { PanelsPanelClientDetails } from '#components'
 
 // States
 const isLoading = ref(true)
@@ -17,6 +19,7 @@ const isSaving = ref(false)
 const declaration = ref<any>(null)
 const isGeneratingLink = ref(false)
 const collectionLink = ref<any>(null)
+const activeTab = ref('activity')
 
 // Form state
 const form = ref({
@@ -30,25 +33,25 @@ const form = ref({
   dueDate: '',
   description: '',
   internalNotes: '',
+  assignedToId: '',
 })
+
+// Team members for assignee dropdown
+const teamMembers = ref<any[]>([])
+const isLoadingTeam = ref(false)
 
 // Options
 const statusOptions = [
-  { label: 'Pendente', value: 'pending' },
-  { label: 'Em Progresso', value: 'in_progress' },
-  { label: 'Transmitida', value: 'submitted' },
-  { label: 'Retificadora', value: 'rectifying' },
+  { label: 'Pendente', value: 'pending', color: 'warning' },
+  { label: 'Em Progresso', value: 'in_progress', color: 'info' },
+  { label: 'Transmitida', value: 'submitted', color: 'success' },
+  { label: 'Retificadora', value: 'rectifying', color: 'danger' },
 ]
 
 const priorityOptions = [
-  { label: 'Baixa', value: 'low' },
-  { label: 'Média', value: 'medium' },
-  { label: 'Alta', value: 'high' },
-]
-
-const typeOptions = [
-  { label: 'Simplificada', value: 'simplified' },
-  { label: 'Completa', value: 'complete' },
+  { label: 'Baixa', value: 'low', icon: 'lucide:arrow-down', color: 'text-muted-500' },
+  { label: 'Média', value: 'medium', icon: 'lucide:minus', color: 'text-amber-500' },
+  { label: 'Alta', value: 'high', icon: 'lucide:arrow-up', color: 'text-rose-500' },
 ]
 
 const resultOptions = [
@@ -64,6 +67,42 @@ const paymentStatusOptions = [
 ]
 
 // Methods
+// Methods
+const kanbanColumns = ref<any[]>([])
+
+async function fetchKanbanColumns() {
+  try {
+    const { data } = await useCustomFetch<any>('/declarations/columns')
+    if (data.success) {
+      kanbanColumns.value = data.data.map((col: any) => ({
+        label: col.name,
+        value: col.id, // Status technically is mapped to column ID roughly in this view or we need to know what constitutes "Status" vs "Column"
+        // Wait, the user said "Status deve listar todas as colunas". The backend schema has 'status' (pending, submitted) AND 'columnId'.
+        // This implies the user wants to move cards between columns via this dropdown.
+        // So we should map 'columnId' to this dropdown, not 'status'.
+        id: col.id,
+        color: col.color
+      }))
+    }
+  } catch (error) {
+    console.error('Erro ao buscar colunas:', error)
+  }
+}
+
+async function fetchTeamMembers() {
+  isLoadingTeam.value = true
+  try {
+    const { data } = await useCustomFetch<any>('/tenant/members')
+    if (data.success) {
+      teamMembers.value = data.data
+    }
+  } catch (error) {
+    console.error('Erro ao buscar equipe:', error)
+  } finally {
+    isLoadingTeam.value = false
+  }
+}
+
 async function fetchDeclaration() {
   isLoading.value = true
   try {
@@ -73,7 +112,8 @@ async function fetchDeclaration() {
 
       // Populate form
       form.value = {
-        status: data.data.status,
+        // We are using columnId as "Status" for the dropdown as per request
+        status: data.data.column?.id || '',
         priority: data.data.priority,
         declarationType: data.data.declarationType,
         result: data.data.result || 'neutral',
@@ -83,6 +123,7 @@ async function fetchDeclaration() {
         dueDate: (data.data.dueDate ? new Date(data.data.dueDate).toISOString().split('T')[0] : '') as string,
         description: data.data.description || '',
         internalNotes: data.data.internalNotes || '',
+        assignedToId: data.data.assignedTo?.id || 'unassigned',
       }
 
       // Check for latest collection link
@@ -97,26 +138,48 @@ async function fetchDeclaration() {
   }
 }
 
-async function save() {
+async function save(field?: string) {
   isSaving.value = true
   try {
+    const payload: any = {
+      ...form.value,
+      resultValue: Number(form.value.resultValue),
+      serviceValue: Number(form.value.serviceValue),
+    }
+
+    // Map selected Column ID (form.status) to payload.columnId
+    // And remove 'status' to avoid sending UUID as status enum
+    payload.columnId = form.value.status
+    delete payload.status
+
+    // Handle "unassigned" value (UI specific) -> backend expects empty string or null for removal
+    if (payload.assignedToId === 'unassigned') {
+      payload.assignedToId = ''
+    }
+
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
       method: 'PUT',
-      body: {
-        ...form.value,
-        resultValue: Number(form.value.resultValue),
-        serviceValue: Number(form.value.serviceValue),
-      }
+      body: payload
     })
 
     if (data.success) {
       toaster.add({
-        title: 'Sucesso',
-        description: 'Declaração atualizada com sucesso!',
-        icon: 'ph:check-circle-fill'
+        title: 'Salvo',
+        description: 'Alterações salvas com sucesso',
+        icon: 'ph:check-circle-fill',
+        duration: 2000
       })
       emit('saved')
-      emit('close')
+
+      // Update local declaration state (e.g. audit logs, calculated fields)
+      // BUT do not replace 'form' to avoid breaking active input bindings/focus
+      if (data.data) {
+        declaration.value = data.data
+        // Update collection link if returned?
+        if (data.data.collectionLinks?.length > 0) {
+          collectionLink.value = data.data.collectionLinks[0]
+        }
+      }
     }
   } catch (error: any) {
     toaster.add({
@@ -140,7 +203,7 @@ async function remove() {
     if (data.success) {
       toaster.add({
         title: 'Sucesso',
-        description: 'Declaração excluída com sucesso',
+        description: 'Declaração excluída',
         icon: 'ph:check-circle-fill'
       })
       emit('saved')
@@ -166,7 +229,7 @@ async function generateLink() {
       collectionLink.value = data.data
       toaster.add({
         title: 'Link Gerado',
-        description: 'Link de coleta gerado com sucesso!',
+        description: 'Link de coleta pronto para envio',
         icon: 'ph:link-fill'
       })
     }
@@ -180,9 +243,6 @@ async function generateLink() {
     isGeneratingLink.value = false
   }
 }
-
-const { open } = usePanels()
-import { PanelsPanelClientDetails } from '#components'
 
 function viewClient() {
   if (!declaration.value?.client?.id) return
@@ -202,210 +262,300 @@ function copyLink() {
   })
 }
 
-onMounted(() => {
-  fetchDeclaration()
-})
+function triggerUpload() {
+  fileInput.value?.click()
+}
 
+const fileInput = ref<HTMLInputElement | null>(null)
+
+async function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    toaster.add({
+      title: 'Enviando...',
+      description: `Enviando ${target.files.length} arquivos...`,
+      icon: 'ph:clock-fill'
+    })
+
+    // Simulate delay
+    setTimeout(() => {
+      toaster.add({
+        title: 'Sucesso',
+        description: 'Arquivos enviados com sucesso (Mock)',
+        icon: 'ph:check-circle-fill'
+      })
+    }, 1500)
+  }
+}
+
+onMounted(() => {
+  fetchKanbanColumns() // Fetch dynamic columns
+  fetchDeclaration()
+  fetchTeamMembers()
+})
 </script>
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-700 dark:bg-muted-950 border-l bg-white w-full max-w-xl shadow-2xl"
-    trapped loop>
+    class="border-muted-200 dark:border-muted-700 dark:bg-muted-950 border-l bg-white w-full max-w-5xl shadow-2xl flex flex-col h-screen">
     <!-- Header -->
-    <div class="border-muted-200 dark:border-muted-800 flex h-20 w-full items-center justify-between border-b px-8">
-      <div v-if="declaration" class="flex flex-col">
-        <BaseHeading as="h3" size="sm" weight="medium"
-          class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
-          IR {{ declaration.taxYear }} - {{ declaration.client?.name }}
-        </BaseHeading>
-        <div class="flex items-center gap-2 mt-1">
-          <BaseParagraph size="xs" class="text-muted-400 font-mono">
-            {{ declaration.client?.cpfMasked }}
-          </BaseParagraph>
-          <span class="text-muted-300">•</span>
-          <button type="button" @click="viewClient" class="text-xs text-primary-500 hover:text-primary-600 font-medium">
-            Ver Ficha do Cliente
-          </button>
+    <div
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 z-20 bg-white dark:bg-muted-950">
+      <div v-if="declaration" class="flex items-center gap-4">
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-muted-400">#{{ declaration.id.slice(0, 6) }}</span>
+            <BaseHeading as="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
+              IR {{ declaration.taxYear }} - {{ declaration.client?.name }}
+            </BaseHeading>
+            <BaseTag v-if="declaration.declarationType === 'complete'" size="sm" variant="muted" color="primary">
+              Completa</BaseTag>
+            <BaseTag v-else size="sm" variant="muted" color="info">Simplificada</BaseTag>
+          </div>
         </div>
       </div>
       <div v-else class="flex flex-col gap-1">
         <BasePlaceload class="h-4 w-48 rounded" />
-        <BasePlaceload class="h-3 w-32 rounded" />
       </div>
 
-      <button type="button"
-        class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-500 rounded-full p-2 transition-colors duration-300"
-        @click="() => $emit('close')">
-        <Icon name="lucide:x" class="size-5" />
-      </button>
+      <div class="flex items-center">
+        <div v-if="isSaving" class="mr-3 flex items-center animate-fade-in">
+          <Icon name="svg-spinners:ring-resize" class="size-5 text-muted-400" />
+        </div>
+        <button type="button"
+          class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-500 rounded-full p-2 transition-colors duration-300"
+          @click="() => $emit('close')">
+          <Icon name="lucide:x" class="size-5" />
+        </button>
+      </div>
     </div>
 
     <!-- Content -->
-    <div class="nui-slimscroll h-[calc(100dvh-160px)] overflow-y-auto p-8">
-      <div v-if="isLoading" class="space-y-6">
+    <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
+      <!-- Loading State -->
+      <div v-if="isLoading" class="w-full p-8 space-y-6">
         <BasePlaceload class="h-24 w-full rounded-xl" />
-        <BasePlaceload class="h-48 w-full rounded-xl" />
-        <BasePlaceload class="h-32 w-full rounded-xl" />
+        <div class="grid grid-cols-3 gap-6">
+          <BasePlaceload class="h-96 w-full col-span-2 rounded-xl" />
+          <BasePlaceload class="h-96 w-full rounded-xl" />
+        </div>
       </div>
 
-      <div v-else-if="declaration" class="space-y-8">
-        <!-- Status & Priority Section -->
-        <div class="grid grid-cols-2 gap-4">
-          <BaseInputWrapper label="Status do Processamento">
-            <BaseSelect v-model="form.status" rounded="lg">
-              <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </BaseSelect>
-          </BaseInputWrapper>
+      <div v-else-if="declaration" class="w-full flex flex-col md:flex-row h-full">
+        <!-- Main Content (Left) -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-950">
 
-          <BaseInputWrapper label="Prioridade">
-            <BaseSelect v-model="form.priority" rounded="lg">
-              <option v-for="opt in priorityOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </BaseSelect>
-          </BaseInputWrapper>
-        </div>
+          <!-- Description -->
+          <div class="space-y-2">
+            <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
+              Descrição
+            </BaseHeading>
+            <BaseTextarea v-model="form.description" rounded="lg" rows="6"
+              placeholder="Adicione uma descrição detalhada, instruções ou checklist..." class="bg-transparent" />
+            <div class="flex justify-end">
+              <BaseButton v-if="form.description !== declaration.description" size="sm" variant="primary"
+                :loading="isSaving" @click="save">Salvar Descrição</BaseButton>
+            </div>
+          </div>
 
-        <!-- Configuration -->
-        <div class="grid grid-cols-2 gap-4">
-          <BaseInputWrapper label="Tipo de Declaração">
-            <BaseSelect v-model="form.declarationType" rounded="lg">
-              <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </BaseSelect>
-          </BaseInputWrapper>
-
-          <BaseInputWrapper label="Prazo de Entrega">
-            <BaseInput v-model="form.dueDate" type="date" rounded="lg" />
-          </BaseInputWrapper>
-        </div>
-
-        <!-- Collection Link Section -->
-        <BaseCard rounded="lg"
-          class="p-6 border-muted-200 dark:border-muted-800 shadow-none border-dashed bg-primary-500/5">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <BaseHeading as="h4" size="xs" weight="medium" class="uppercase tracking-widest text-primary-600 mb-1">
-                Coleta de Documentos
+          <!-- Attachments -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
+                Anexos ({{ declaration.attachments?.length || 0 }})
               </BaseHeading>
-              <BaseParagraph size="xs" class="text-muted-500">
-                Envie este link para o cliente fazer upload dos documentos com segurança.
-              </BaseParagraph>
-            </div>
-            <Icon name="lucide:file-up" class="size-6 text-primary-500" />
-          </div>
-
-          <div v-if="collectionLink"
-            class="flex items-center gap-2 p-3 bg-white dark:bg-muted-900 rounded-lg border border-primary-500/20">
-            <BaseParagraph size="xs" class="flex-1 truncate font-mono text-muted-500">
-              {{ collectionLink.url }}
-            </BaseParagraph>
-            <div class="flex gap-2">
-              <BaseButton size="icon-sm" @click="copyLink" title="Copiar Link">
-                <Icon name="lucide:copy" class="size-3.5" />
-              </BaseButton>
-              <BaseButton size="icon-sm" variant="primary" :to="collectionLink.url" target="_blank" title="Abrir Link">
-                <Icon name="lucide:external-link" class="size-3.5" />
+              <input type="file" ref="fileInput" class="hidden" @change="handleFileUpload" multiple />
+              <BaseButton size="sm" variant="muted" @click="triggerUpload">
+                <Icon name="lucide:upload" class="size-4 mr-2" />
+                Adicionar Anexo
               </BaseButton>
             </div>
-          </div>
-          <div v-else class="text-center py-2">
-            <BaseButton variant="primary" size="sm" rounded="full" class="w-full" :loading="isGeneratingLink"
-              @click="generateLink">
-              Gerar Link de Coleta
-            </BaseButton>
-          </div>
-        </BaseCard>
 
-        <!-- Financial Section -->
-        <BaseCard rounded="lg"
-          class="p-6 border-muted-200 dark:border-muted-800 shadow-none bg-muted-50/50 dark:bg-muted-900/50">
-          <BaseHeading as="h4" size="xs" weight="medium" class="uppercase tracking-widest text-muted-400 mb-4">
-            Financeiro & Resultado
-          </BaseHeading>
-
-          <div class="space-y-6">
-            <div class="grid grid-cols-2 gap-4">
-              <BaseInputWrapper label="Valor do Serviço (R$)">
-                <BaseInput v-model="form.serviceValue" type="number" step="0.01" rounded="lg"
-                  icon="lucide:dollar-sign" />
-              </BaseInputWrapper>
-
-              <BaseInputWrapper label="Status de Pagamento">
-                <BaseSelect v-model="form.paymentStatus" rounded="lg">
-                  <option v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </BaseSelect>
-              </BaseInputWrapper>
+            <div v-if="declaration.attachments?.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <BaseCard v-for="att in declaration.attachments" :key="att.id" rounded="lg"
+                class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-500 transition-colors cursor-pointer group">
+                <div class="flex items-start gap-3">
+                  <div class="size-10 rounded bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0">
+                    <Icon name="lucide:file-text" class="size-5 text-muted-500" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-medium truncate" :title="att.fileName">{{ att.fileName }}</p>
+                    <p class="text-[10px] text-muted-400 capitalize">{{ att.category }}</p>
+                  </div>
+                  <button class="opacity-0 group-hover:opacity-100 p-1 text-primary-500">
+                    <Icon name="lucide:download" class="size-4" />
+                  </button>
+                </div>
+              </BaseCard>
             </div>
-
-            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-muted-200 dark:border-muted-800">
-              <BaseInputWrapper label="Resultado Estimado">
-                <BaseSelect v-model="form.result" rounded="lg">
-                  <option v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </BaseSelect>
-              </BaseInputWrapper>
-
-              <BaseInputWrapper label="Valor Estimado (R$)">
-                <BaseInput v-model="form.resultValue" type="number" step="0.01" rounded="lg" icon="lucide:calculator" />
-              </BaseInputWrapper>
+            <div v-else
+              class="text-center py-6 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+              <p class="text-sm text-muted-400">Nenhum anexo encontrado</p>
             </div>
           </div>
-        </BaseCard>
 
-        <!-- Notes -->
-        <div class="space-y-6">
-          <BaseInputWrapper label="Descrição Pública (O que o cliente vê)">
-            <BaseTextarea v-model="form.description" rounded="lg"
-              placeholder="Instruções para o cliente ou resumo do status..." />
-          </BaseInputWrapper>
+          <!-- Tabs: Activity & Notes -->
+          <div>
+            <div class="border-b border-muted-200 dark:border-muted-800 flex gap-6 mb-4">
+              <button @click="activeTab = 'activity'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
+                :class="activeTab === 'activity' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-400 hover:text-muted-600'">
+                Atividade
+              </button>
+              <button @click="activeTab = 'notes'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
+                :class="activeTab === 'notes' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-400 hover:text-muted-600'">
+                Notas Internas
+              </button>
+            </div>
 
-          <BaseInputWrapper label="Notas Internas (Apenas equipe)">
-            <BaseTextarea v-model="form.internalNotes" rounded="lg"
-              placeholder="Detalhes técnicos, pendências internas..." />
-          </BaseInputWrapper>
-        </div>
+            <!-- Activity Tab -->
+            <div v-if="activeTab === 'activity'" class="space-y-4">
+              <div v-if="declaration.auditLogs?.length > 0" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <div v-for="log in declaration.auditLogs" :key="log.id" class="flex gap-3 text-sm">
+                  <div class="mt-0.5">
+                    <BaseAvatar v-if="log.userId" :text="log.userName?.charAt(0)" size="xs"
+                      class="bg-muted-200 dark:bg-muted-800 text-muted-600" />
+                    <div v-else class="size-6 rounded-full bg-primary-100 flex items-center justify-center">
+                      <Icon name="lucide:zap" class="size-3 text-primary-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
+                        }}</span>
+                      <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
+                    </div>
+                    <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-muted-400 text-sm italic">Nenhuma atividade registrada.</div>
+            </div>
 
-        <!-- Audit/Logs Preview -->
-        <div v-if="declaration.auditLogs?.length > 0" class="space-y-4">
-          <BaseHeading as="h4" size="sm" weight="medium">Atividade Recente</BaseHeading>
-          <div class="space-y-3">
-            <div v-for="log in declaration.auditLogs.slice(0, 3)" :key="log.id" class="flex gap-3">
-              <div class="size-2 mt-1.5 rounded-full bg-primary-500 shrink-0" />
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-muted-700 dark:text-muted-200">
-                  {{ log.description }}
-                </BaseParagraph>
-                <BaseParagraph size="xs" class="text-muted-400">
-                  Por {{ log.userName }} em {{ new Date(log.createdAt).toLocaleString('pt-BR') }}
-                </BaseParagraph>
+            <!-- Internal Notes Tab -->
+            <div v-if="activeTab === 'notes'" class="space-y-2">
+              <BaseTextarea v-model="form.internalNotes" rounded="lg" rows="6"
+                placeholder="Notas visíveis apenas para a equipe..." />
+              <div class="flex justify-end">
+                <BaseButton size="sm" variant="primary" :loading="isSaving" @click="save">Salvar Nota</BaseButton>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Footer Actions -->
-    <div
-      class="border-muted-200 dark:border-muted-800 flex h-20 w-full items-center justify-between border-t px-8 bg-muted-50/50 dark:bg-muted-950/50">
-      <BaseButton variant="destructive" ghost size="sm" @click="remove">
-        <Icon name="lucide:trash-2" class="size-4 mr-2" />
-        Excluir Card
-      </BaseButton>
+        <!-- Sidebar (Right) -->
+        <!-- Sidebar (Right) -->
+        <div
+          class="w-full md:w-80 border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/50 dark:bg-muted-900/20 overflow-y-auto p-6 space-y-8">
 
-      <div class="flex gap-3">
-        <BaseButton size="sm" @click="() => $emit('close')">Cancelar</BaseButton>
-        <BaseButton variant="primary" size="sm" :loading="isSaving" @click="save">
-          Salvar Alterações
-        </BaseButton>
+          <!-- Client Link (Moved to Top) -->
+          <div class="space-y-3">
+            <BaseCard rounded="lg" class="p-4 bg-primary-500/5 border-primary-500/10 border shadow-none">
+              <div class="flex items-center gap-2 mb-2">
+                <Icon name="lucide:share-2" class="size-4 text-primary-500" />
+                <span class="text-xs font-bold text-primary-700 dark:text-primary-400 uppercase">Link do Cliente</span>
+              </div>
+              <BaseParagraph class="text-xs text-muted-500"> Envie esse link para o cliente importar os arquivos
+              </BaseParagraph>
+
+              <div v-if="collectionLink">
+                <p class="text-xs text-muted-500 mb-3 line-clamp-1 break-all">{{ collectionLink.url }}</p>
+                <div class="flex gap-2">
+                  <BaseButton size="sm" class="flex-1" @click="copyLink">Copiar</BaseButton>
+                  <BaseButton size="icon-sm" :to="collectionLink.url" target="_blank">
+                    <Icon name="lucide:external-link" class="size-4" />
+                  </BaseButton>
+                </div>
+              </div>
+              <div v-else>
+                <p class="text-xs text-muted-500 mb-3">Gere um link para o cliente enviar documentos.</p>
+                <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink"
+                  @click="generateLink">Gerar Link</BaseButton>
+              </div>
+            </BaseCard>
+          </div>
+
+          <!-- Status -->
+          <div class="space-y-3">
+            <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status</label>
+            <BaseSelect v-model="form.status" rounded="md" @update:model-value="() => save()">
+              <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value" class="py-1">
+                <div class="flex items-center gap-2">
+                  <div class="size-2 rounded-full" :class="`bg-${opt.color || 'gray'}-500`"></div>
+                  <span>{{ opt.label }}</span>
+                </div>
+              </BaseSelectItem>
+            </BaseSelect>
+          </div>
+
+          <!-- Assignee -->
+          <div class="space-y-3">
+            <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Responsável</label>
+            <BaseSelect v-model="form.assignedToId" rounded="md" placeholder="Selecione..." @update:model-value="save">
+              <BaseSelectItem value="unassigned">
+                <span class="text-muted-400">Sem responsável</span>
+              </BaseSelectItem>
+              <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
+                <div class="flex items-center gap-2">
+                  <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
+                  <div>
+                    <span class="font-medium text-sm">{{ member.name }}</span>
+                  </div>
+                </div>
+              </BaseSelectItem>
+            </BaseSelect>
+          </div>
+
+          <!-- Details Group -->
+          <div class="space-y-4 border-t border-muted-200 dark:border-muted-800 pt-6">
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prioridade</label>
+              <div class="flex flex-wrap gap-2">
+                <button v-for="p in priorityOptions" :key="p.value" @click="form.priority = p.value; save()"
+                  type="button"
+                  class="px-2 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1" :class="form.priority === p.value
+                    ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
+                    : 'border-transparent hover:bg-muted-200 dark:hover:bg-muted-800 text-muted-500'">
+                  <Icon :name="p.icon" class="size-3" :class="p.color" />
+                  {{ p.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo</label>
+              <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
+            </div>
+          </div>
+
+          <!-- Financial Group -->
+          <div class="space-y-4 border-t border-muted-200 dark:border-muted-800 pt-6">
+            <BaseHeading as="h5" size="xs" weight="medium" class="text-muted-800 dark:text-muted-100">Financeiro
+            </BaseHeading>
+
+            <BaseInputWrapper label="Valor (R$)">
+              <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
+                icon="lucide:dollar-sign" @change="save" />
+            </BaseInputWrapper>
+
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Pagamento</label>
+              <div class="flex flex-col gap-1">
+                <label v-for="opt in paymentStatusOptions" :key="opt.value"
+                  class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted-200/50 dark:hover:bg-muted-800/50">
+                  <input type="radio" v-model="form.paymentStatus" :value="opt.value" @change="() => save()"
+                    class="text-primary-500 focus:ring-primary-500 border-muted-300 rounded-full" />
+                  <span class="text-sm text-muted-600 dark:text-muted-300">{{ opt.label }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-muted-200 dark:border-muted-800 pt-6 text-center">
+            <button @click="remove" class="text-xs text-rose-500 hover:text-rose-600 hover:underline">Excluir
+              declaração</button>
+          </div>
+
+        </div>
       </div>
     </div>
   </FocusScope>

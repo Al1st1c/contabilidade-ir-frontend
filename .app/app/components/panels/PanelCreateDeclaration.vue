@@ -210,20 +210,19 @@ function copyLinkAgain() {
   }
 }
 
-const stepTitles = ['Selecionar Cliente', 'Configurar Serviço', 'Revisão e Link']
+const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
 
 </script>
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl"
-    trapped loop>
+    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl">
     <!-- Header -->
     <div class="border-muted-200 dark:border-muted-800 flex h-20 w-full items-center justify-between border-b px-8">
       <div>
         <BaseHeading as="h3" size="sm" weight="medium"
           class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
-          Nova Declaração de IR
+          Novo Imposto de Renda
         </BaseHeading>
         <BaseParagraph size="xs" class="text-muted-400 mt-1">
           Etapa {{ currentStep }} de 3: {{ stepTitles[currentStep - 1] }}
@@ -264,13 +263,13 @@ const stepTitles = ['Selecionar Cliente', 'Configurar Serviço', 'Revisão e Lin
     <div class="nui-slimscroll h-[calc(100dvh-200px)] overflow-y-auto p-8">
       <!-- Step 1: Client Selection -->
       <div v-if="currentStep === 1" class="space-y-6">
-        <BaseInputWrapper label="Buscar Cliente">
+        <BaseField label="Buscar Cliente">
           <BaseInput v-model="clientSearch" placeholder="Digite o nome ou CPF do cliente..." icon="ph:magnifying-glass"
             autocomplete="off" />
-          <template #help>
+          <p class="text-xs text-muted-400 mt-1">
             Digite pelo menos 3 caracteres para buscar
-          </template>
-        </BaseInputWrapper>
+          </p>
+        </BaseField>
 
         <!-- Search Results -->
         <div v-if="searchResults.length > 0" class="space-y-2">
@@ -316,82 +315,90 @@ const stepTitles = ['Selecionar Cliente', 'Configurar Serviço', 'Revisão e Lin
             </BaseHeading>
           </div>
 
-          <BaseInputWrapper label="Nome Completo *">
+          <BaseField label="Nome Completo *">
             <BaseInput v-model="newClientData.name" placeholder="Ex: João da Silva" icon="ph:user" />
-          </BaseInputWrapper>
+          </BaseField>
 
           <div class="grid grid-cols-2 gap-4">
-            <BaseInputWrapper label="CPF *">
+            <BaseField label="CPF *">
               <BaseInput v-model="newClientData.cpf" v-maska="masks" placeholder="000.000.000-00"
                 icon="ph:identification-card" />
-            </BaseInputWrapper>
+            </BaseField>
 
-            <BaseInputWrapper label="Telefone/WhatsApp">
+            <BaseField label="Telefone/WhatsApp">
               <BaseInput v-model="newClientData.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
                 icon="ph:phone" />
-            </BaseInputWrapper>
+            </BaseField>
           </div>
 
-          <BaseInputWrapper label="E-mail (Opcional)">
+          <BaseField label="E-mail (Opcional)">
             <BaseInput v-model="newClientData.email" placeholder="cliente@exemplo.com" icon="ph:envelope" />
-          </BaseInputWrapper>
+          </BaseField>
         </div>
       </div>
 
       <!-- Step 2: Service Configuration -->
       <div v-else-if="currentStep === 2" class="space-y-6">
         <div class="grid grid-cols-2 gap-4">
-          <BaseInputWrapper label="Ano-Calendário">
+          <BaseField label="Ano do Exercício" class="z-30">
             <BaseSelect v-model="serviceData.taxYear" icon="ph:calendar">
-              <option :value="2024">2024 (IR 2025)</option>
-              <option :value="2023">2023 (IR 2024)</option>
-              <option :value="2022">2022 (IR 2023)</option>
+              <BaseSelectItem :value="2024">2024 (IR 2025)</BaseSelectItem>
+              <BaseSelectItem :value="2023">2023 (IR 2024)</BaseSelectItem>
+              <BaseSelectItem :value="2022">2022 (IR 2023)</BaseSelectItem>
             </BaseSelect>
-          </BaseInputWrapper>
+          </BaseField>
 
-          <BaseInputWrapper label="Prioridade">
+          <BaseField label="Prioridade" class="z-30">
             <BaseSelect v-model="serviceData.priority" icon="ph:flag">
-              <option value="low">Baixa</option>
-              <option value="medium">Média</option>
-              <option value="high">Alta</option>
+              <BaseSelectItem value="low">Baixa</BaseSelectItem>
+              <BaseSelectItem value="medium">Média</BaseSelectItem>
+              <BaseSelectItem value="high">Alta</BaseSelectItem>
             </BaseSelect>
-          </BaseInputWrapper>
+          </BaseField>
         </div>
 
-        <BaseInputWrapper label="Valor do Honorário (R$) *">
+        <BaseField label="Honorários (R$) *">
           <BaseInput v-model.number="serviceData.serviceValue" type="number" step="0.01" placeholder="350.00"
             icon="lucide:dollar-sign" />
-          <template #help>
-            Valor a ser cobrado pelo serviço de declaração
-          </template>
-        </BaseInputWrapper>
+          <p class="text-xs text-muted-400 mt-1">
+            Valor a ser cobrado pelo serviço
+          </p>
+        </BaseField>
 
-        <BaseInputWrapper label="Responsável pela Declaração">
-          <BaseSelect v-model="serviceData.assignedToId" icon="ph:user-circle">
-            <option value="" disabled>Selecione o responsável...</option>
-            <option v-for="member in teamMembers" :key="member.id" :value="member.id">
-              {{ member.name }} ({{ member.role?.name }})
-            </option>
+        <BaseField label="Responsável" class="z-20">
+          <BaseSelect v-model="serviceData.assignedToId" icon="ph:user-circle" placeholder="Selecione o responsável...">
+            <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
+              <div class="flex items-center gap-2">
+                <BaseAvatar :src="member.avatar" :text="member.name.charAt(0).toUpperCase()" size="xs"
+                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
+                <div class="flex flex-col">
+                  <span class="font-medium text-xs">{{ member.name }}</span>
+                  <span class="text-[10px] text-muted-500">{{ member.role?.name }}</span>
+                </div>
+              </div>
+            </BaseSelectItem>
           </BaseSelect>
-        </BaseInputWrapper>
+        </BaseField>
 
-        <BaseInputWrapper label="Tipo de Declaração">
+        <BaseField label="Tipo de IR">
           <div class="flex gap-6 mt-2">
-            <BaseRadio v-model="serviceData.declarationType" value="complete" label="Completa" color="primary" />
-            <BaseRadio v-model="serviceData.declarationType" value="simplified" label="Simplificada" color="primary" />
+            <BaseRadioGroup v-model="serviceData.declarationType">
+              <BaseRadio value="complete" label="Completa" color="primary" />
+              <BaseRadio value="simplified" label="Simplificada" color="primary" />
+            </BaseRadioGroup>
           </div>
-        </BaseInputWrapper>
+        </BaseField>
 
-        <BaseInputWrapper label="Observações Iniciais">
+        <BaseField label="Observações Iniciais">
           <BaseTextarea v-model="serviceData.description" rows="3" placeholder="Ex: Aguardando informe do banco X..." />
-        </BaseInputWrapper>
+        </BaseField>
       </div>
 
       <!-- Step 3: Review and Link -->
       <div v-else-if="currentStep === 3" class="space-y-6">
         <BaseCard rounded="lg" class="p-6 border-muted-200 dark:border-muted-800 shadow-none">
           <BaseHeading as="h4" size="sm" weight="medium" class="mb-4 uppercase tracking-widest text-muted-400">
-            Resumo da Declaração
+            Resumo do IR
           </BaseHeading>
 
           <div class="space-y-4">
@@ -404,12 +411,12 @@ const stepTitles = ['Selecionar Cliente', 'Configurar Serviço', 'Revisão e Lin
             </div>
 
             <div class="flex items-center justify-between py-3 border-b border-muted-100 dark:border-muted-800">
-              <span class="text-sm text-muted-500">Ano-Calendário</span>
+              <span class="text-sm text-muted-500">Ano do Exercício</span>
               <span class="text-sm font-medium">{{ serviceData.taxYear }}</span>
             </div>
 
             <div class="flex items-center justify-between py-3 border-b border-muted-100 dark:border-muted-800">
-              <span class="text-sm text-muted-500">Honorário</span>
+              <span class="text-sm text-muted-500">Honorários</span>
               <span class="text-sm font-medium text-primary-600">
                 {{ new Intl.NumberFormat('pt-BR', {
                   style: 'currency', currency: 'BRL'
