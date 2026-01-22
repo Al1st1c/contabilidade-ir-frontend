@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useTenant } from '~/composables/useTenant'
+const { tenant } = useTenant()
 const isMobileOpen = ref(false)
 </script>
 
@@ -40,6 +42,58 @@ const isMobileOpen = ref(false)
         <ClientOnly>
           <TairoMenu>
             <TairoMenuList>
+
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard'">
+                  <NuxtLink to="/dashboard">
+                    Dashboard
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
+                  <NuxtLink to="/dashboard/ir">
+                    Imposto de Renda
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
+              <TairoMenuItem>
+                <TairoMenuTrigger>
+                  <span>Clientes</span>
+                  <Icon name="lucide:chevron-down"
+                    class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
+                </TairoMenuTrigger>
+                <TairoMenuContent>
+                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
+                    <TairoMenuLink as-child>
+                      <NuxtLink to="#">
+                        <BaseHeading size="sm" weight="medium"
+                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                          Listar Todos
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
+                          Veja todos os clientes cadastrados
+                        </BaseParagraph>
+                      </NuxtLink>
+                    </TairoMenuLink>
+                    <TairoMenuLink as-child>
+                      <NuxtLink to="#">
+                        <BaseHeading size="sm" weight="medium"
+                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                          Cadastrar Cliente
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
+                          Cadastre um novo cliente
+                        </BaseParagraph>
+                      </NuxtLink>
+                    </TairoMenuLink>
+                  </TairoMenuListItems>
+                </TairoMenuContent>
+              </TairoMenuItem>
+
+
               <TairoMenuItem>
                 <TairoMenuTrigger>
                   <span>Minha Empresa</span>
@@ -55,10 +109,10 @@ const isMobileOpen = ref(false)
                             <div>
                               <TairoLogo class="size-10 text-white mb-3" />
                               <BaseHeading class="text-white mb-2">
-                                CONTSTAR
+                                {{ tenant?.name || 'CONTSTAR' }}
                               </BaseHeading>
                               <BaseParagraph size="xs" class="max-w-[260px] text-white">
-                                Contabilidade e IR
+                                {{ tenant?.tradeName || 'Contabilidade e IR' }}
                               </BaseParagraph>
                             </div>
                           </div>
@@ -125,53 +179,7 @@ const isMobileOpen = ref(false)
                 </TairoMenuContent>
               </TairoMenuItem>
 
-              <TairoMenuItem>
-                <TairoMenuLink as-child :active="$route.path === '/dashboard'">
-                  <NuxtLink to="/dashboard">
-                    Dashboard
-                  </NuxtLink>
-                </TairoMenuLink>
-              </TairoMenuItem>
-              <TairoMenuItem>
-                <TairoMenuTrigger>
-                  <span>Clientes</span>
-                  <Icon name="lucide:chevron-down"
-                    class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
-                </TairoMenuTrigger>
-                <TairoMenuContent>
-                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
-                    <TairoMenuLink as-child>
-                      <NuxtLink to="#">
-                        <BaseHeading size="sm" weight="medium"
-                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                          Listar Todos
-                        </BaseHeading>
-                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                          Veja todos os clientes cadastrados
-                        </BaseParagraph>
-                      </NuxtLink>
-                    </TairoMenuLink>
-                    <TairoMenuLink as-child>
-                      <NuxtLink to="#">
-                        <BaseHeading size="sm" weight="medium"
-                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                          Cadastrar Cliente
-                        </BaseHeading>
-                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                          Cadastre um novo cliente
-                        </BaseParagraph>
-                      </NuxtLink>
-                    </TairoMenuLink>
-                  </TairoMenuListItems>
-                </TairoMenuContent>
-              </TairoMenuItem>
-              <TairoMenuItem>
-                <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
-                  <NuxtLink to="/dashboard/ir">
-                    Imposto de Renda
-                  </NuxtLink>
-                </TairoMenuLink>
-              </TairoMenuItem>
+
 
               <TairoMenuIndicator />
             </TairoMenuList>

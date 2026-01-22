@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watchDebounced } from '@vueuse/core'
 import { useApi } from '~/composables/useAuth'
+import { useTenant } from '~/composables/useTenant'
 
 definePageMeta({
   title: 'Identidade Visual',
@@ -10,11 +11,10 @@ const { useCustomFetch } = useApi()
 const toaster = useNuiToasts()
 const { applyColors } = useWhitelabel()
 
-// State
+const { tenant, fetchTenant: fetchGlobalTenant } = useTenant()
 const isLoading = ref(true)
 const isSaving = ref(false)
 const isUploadingLogo = ref(false)
-const tenant = ref<any>(null)
 
 // Form
 const form = ref({
@@ -62,10 +62,8 @@ const mutedColors = [
 async function fetchTenant() {
   isLoading.value = true
   try {
-    const { data } = await useCustomFetch<any>('/tenant')
-    const source = data.data || data
+    const source = await fetchGlobalTenant()
     if (source) {
-      tenant.value = source
       form.value = {
         name: source.name || '',
         tradeName: source.tradeName || '',
@@ -98,7 +96,10 @@ async function handleLogoUpload(event: Event) {
       body: formData
     })
     if (data.success || data) {
-      tenant.value.logo = (data.data || data).logo
+      const source = data.data || data
+      if (tenant.value) {
+        tenant.value.logo = source.logo
+      }
       toaster.add({ title: 'Sucesso', description: 'Logo atualizado!', icon: 'solar:check-circle-linear' })
     }
   } catch (error: any) {
@@ -129,8 +130,8 @@ async function saveSettings() {
 }
 
 // Real-time preview
-watchDebounced(() => form.value.primaryColor, (c) => applyColors(c, form.value.secondaryColor), { debounce: 100 })
-watchDebounced(() => form.value.secondaryColor, (c) => applyColors(form.value.primaryColor, c), { debounce: 100 })
+watchDebounced(() => form.value.primaryColor, (c: string) => applyColors(c, form.value.secondaryColor), { debounce: 100 })
+watchDebounced(() => form.value.secondaryColor, (c: string) => applyColors(form.value.primaryColor, c), { debounce: 100 })
 
 onMounted(fetchTenant)
 </script>

@@ -7,6 +7,7 @@ interface User {
   id: string
   email: string
   name: string
+  photo?: string
   level?: string
   // Adicione outros campos conforme necessário
 }
@@ -43,7 +44,7 @@ export function useAuth() {
     secure: process.env.NODE_ENV === 'production',
   })
 
-  const user = useCookie<string | null>(API_CONFIG.TOKEN.USER_COOKIE_NAME, {
+  const user = useCookie<User | null>(API_CONFIG.TOKEN.USER_COOKIE_NAME, {
     default: () => null,
     maxAge: API_CONFIG.TOKEN.MAX_AGE,
     path: '/',
@@ -62,7 +63,14 @@ export function useAuth() {
   const isAuthenticated = computed(() => !!token.value)
 
   const currentUser = computed<User | null>(() => {
-    return user.value ? JSON.parse(user.value) : null
+    try {
+      // Nuxt useCookie handles JSON parsing automatically
+      return user.value as User | null
+    } catch (e) {
+      console.error('Error parsing user cookie:', e)
+      user.value = null
+      return null
+    }
   })
 
   // Função para fazer login (agora sempre requer 2FA)
@@ -144,7 +152,7 @@ export function useAuth() {
 
       // Salva o token e dados do usuário
       token.value = authData.access_token
-      user.value = JSON.stringify(authData.user)
+      user.value = authData.user
       if (authData.level) {
         level.value = authData.level
       }
@@ -172,10 +180,10 @@ export function useAuth() {
     token.value = null
     user.value = null
     level.value = null
-    
+
     // Limpar cache do caixa no logout
     clearCashierCache()
-    
+
     navigateTo('/')
   }
 

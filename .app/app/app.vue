@@ -64,8 +64,7 @@ useHead({
       )}&url=${encodeURIComponent(
         'https://media.cssninja.io/content/products/logos/tairo-text-white.svg',
       )}&previewUrl=${encodeURIComponent(
-        `https://tairo.cssninja.io${
-          route.meta?.preview?.src || '/img/screens/documentation-hub.png'
+        `https://tairo.cssninja.io${route.meta?.preview?.src || '/img/screens/documentation-hub.png'
         }`,
       )}`,
     },
@@ -74,10 +73,7 @@ useHead({
 </script>
 
 <template>
-  <BaseProviders
-    :config="{ dir: head.htmlAttrs!.dir as any, locale }"
-    :toast="{ position: 'top-center' }"
-  >
+  <BaseProviders :config="{ dir: head.htmlAttrs!.dir as any, locale }" :toast="{ position: 'top-center' }">
     <!--
       Global app search modal
       @see .demo/components/DemoAppSearch.vue
