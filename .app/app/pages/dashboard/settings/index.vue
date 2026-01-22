@@ -3,7 +3,7 @@ import { watchDebounced } from '@vueuse/core'
 import { useApi } from '~/composables/useAuth'
 
 definePageMeta({
-  title: 'Whitelabel',
+  title: 'Identidade Visual',
 })
 
 const { useCustomFetch } = useApi()
@@ -16,7 +16,7 @@ const isSaving = ref(false)
 const isUploadingLogo = ref(false)
 const tenant = ref<any>(null)
 
-// Form - using Tailwind color names
+// Form
 const form = ref({
   name: '',
   tradeName: '',
@@ -24,7 +24,7 @@ const form = ref({
   secondaryColor: 'zinc',
 })
 
-// Tailwind color options for primary colors
+// Tailwind color options
 const primaryColors = [
   { name: 'slate', label: 'Slate', class: 'bg-slate-500' },
   { name: 'gray', label: 'Gray', class: 'bg-gray-500' },
@@ -50,7 +50,6 @@ const primaryColors = [
   { name: 'rose', label: 'Rose', class: 'bg-rose-500' },
 ]
 
-// Muted/secondary color options
 const mutedColors = [
   { name: 'slate', label: 'Slate', class: 'bg-slate-300 dark:bg-slate-700' },
   { name: 'gray', label: 'Gray', class: 'bg-gray-300 dark:bg-gray-700' },
@@ -59,305 +58,208 @@ const mutedColors = [
   { name: 'stone', label: 'Stone', class: 'bg-stone-300 dark:bg-stone-700' },
 ]
 
-// Fetch tenant data
+// Fetch tenant
 async function fetchTenant() {
   isLoading.value = true
   try {
     const { data } = await useCustomFetch<any>('/tenant')
-    if (data.success) {
-      tenant.value = data.data
+    const source = data.data || data
+    if (source) {
+      tenant.value = source
       form.value = {
-        name: data.data.name || '',
-        tradeName: data.data.tradeName || '',
-        primaryColor: data.data.primaryColor || 'amber',
-        secondaryColor: data.data.secondaryColor || 'zinc',
+        name: source.name || '',
+        tradeName: source.tradeName || '',
+        primaryColor: source.primaryColor || 'amber',
+        secondaryColor: source.secondaryColor || 'zinc',
       }
     }
   } catch (error) {
-    console.error('Erro ao buscar dados da empresa:', error)
+    console.error('Erro ao buscar dados:', error)
   } finally {
     isLoading.value = false
   }
 }
 
-// Save whitelabel settings
-async function saveSettings() {
-  isSaving.value = true
-  try {
-    const { data } = await useCustomFetch<any>('/tenant', {
-      method: 'PUT',
-      body: {
-        name: form.value.name,
-        tradeName: form.value.tradeName,
-        primaryColor: form.value.primaryColor,
-        secondaryColor: form.value.secondaryColor,
-      }
-    })
-
-    if (data.success) {
-      tenant.value = { ...tenant.value, ...form.value }
-
-      // Apply colors immediately
-      applyColors(form.value.primaryColor, form.value.secondaryColor)
-
-      toaster.add({
-        title: 'Sucesso',
-        description: 'Configurações salvas com sucesso!',
-        icon: 'ph:check-circle-fill'
-      })
-    }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao salvar configurações',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    isSaving.value = false
-  }
-}
-
-// Apply colors in real-time for preview (before saving) with debouncing
-
-watchDebounced(
-  () => form.value.primaryColor,
-  (newColor: string) => {
-    if (newColor) {
-      applyColors(newColor, form.value.secondaryColor)
-    }
-  },
-  { debounce: 100 }
-)
-
-watchDebounced(
-  () => form.value.secondaryColor,
-  (newColor: string) => {
-    if (newColor) {
-      applyColors(form.value.primaryColor, newColor)
-    }
-  },
-  { debounce: 100 }
-)
-
-// Handle logo upload
+// Logo upload logic
 const logoInput = ref<HTMLInputElement | null>(null)
-
-function triggerLogoUpload() {
-  logoInput.value?.click()
-}
+function triggerLogoUpload() { logoInput.value?.click() }
 
 async function handleLogoUpload(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-
   if (!file) return
-
-  // Validate file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
-  if (!allowedTypes.includes(file.type)) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Tipo de arquivo não suportado. Use JPEG, PNG, WebP ou SVG.',
-      icon: 'ph:warning-circle-fill'
-    })
-    return
-  }
-
-  // Validate file size (2MB max)
-  if (file.size > 2 * 1024 * 1024) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Arquivo muito grande. Tamanho máximo: 2MB',
-      icon: 'ph:warning-circle-fill'
-    })
-    return
-  }
 
   isUploadingLogo.value = true
   try {
     const formData = new FormData()
     formData.append('logo', file)
-
     const { data } = await useCustomFetch<any>('/tenant/logo', {
       method: 'POST',
       body: formData
     })
-
-    if (data.success) {
-      tenant.value.logo = data.data.logo
-      toaster.add({
-        title: 'Sucesso',
-        description: 'Logo atualizado com sucesso!',
-        icon: 'ph:check-circle-fill'
-      })
+    if (data.success || data) {
+      tenant.value.logo = (data.data || data).logo
+      toaster.add({ title: 'Sucesso', description: 'Logo atualizado!', icon: 'solar:check-circle-linear' })
     }
   } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao enviar logo',
-      icon: 'ph:warning-circle-fill'
-    })
+    toaster.add({ title: 'Erro', description: 'Erro ao enviar logo', icon: 'solar:danger-circle-linear' })
   } finally {
     isUploadingLogo.value = false
-    // Reset input
     if (target) target.value = ''
   }
 }
+
+// Save settings
+async function saveSettings() {
+  isSaving.value = true
+  try {
+    const { data } = await useCustomFetch<any>('/tenant', {
+      method: 'PUT',
+      body: form.value
+    })
+    if (data.success || data) {
+      applyColors(form.value.primaryColor, form.value.secondaryColor)
+      toaster.add({ title: 'Sucesso', description: 'Visual atualizado!', icon: 'solar:check-circle-linear' })
+    }
+  } catch (error: any) {
+    toaster.add({ title: 'Erro', description: 'Erro ao salvar', icon: 'solar:danger-circle-linear' })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Real-time preview
+watchDebounced(() => form.value.primaryColor, (c) => applyColors(c, form.value.secondaryColor), { debounce: 100 })
+watchDebounced(() => form.value.secondaryColor, (c) => applyColors(form.value.primaryColor, c), { debounce: 100 })
 
 onMounted(fetchTenant)
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="space-y-6">
-      <BasePlaceload class="h-48 w-full rounded-xl" />
-      <BasePlaceload class="h-64 w-full rounded-xl" />
+  <div class="pb-24">
+    <div v-if="isLoading" class="space-y-12">
+      <div v-for="i in 3" :key="i" class="grid grid-cols-12 gap-8">
+        <div class="col-span-12 md:col-span-4">
+          <BasePlaceload class="h-6 w-32 mb-2" />
+          <BasePlaceload class="h-4 w-48" />
+        </div>
+        <div class="col-span-12 md:col-span-8">
+          <BasePlaceload class="h-40 w-full rounded-2xl" />
+        </div>
+      </div>
     </div>
 
-    <template v-else>
-      <!-- Logo Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
-              Logo da Empresa
+    <div v-else class="space-y-20">
+      <!-- Section: Brand Logo -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+              Logo & Marca
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Este logo será exibido no sistema e nas páginas públicas de coleta de documentos.
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Sua marca principal que aparecerá no topo do sistema e em todos os documentos gerados para seus clientes.
             </BaseParagraph>
           </div>
+        </div>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="flex flex-col sm:flex-row items-center gap-10">
+              <div class="relative group">
+                <div
+                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500">
+                  <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-4" />
+                  <Icon v-else name="solar:gallery-linear" class="size-16 text-muted-300" />
 
-          <div class="md:col-span-8">
-            <div class="flex items-center gap-6">
-              <!-- Logo Preview -->
-              <div
-                class="size-32 rounded-xl border-2 border-dashed border-muted-300 dark:border-muted-700 flex items-center justify-center overflow-hidden bg-muted-50 dark:bg-muted-900">
-                <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-2" />
-                <Icon v-else name="lucide:image" class="size-12 text-muted-300" />
+                  <div
+                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <BaseButton color="white" rounded="full" size="sm" @click="triggerLogoUpload">Alterar</BaseButton>
+                  </div>
+                </div>
               </div>
 
-              <!-- Upload Actions -->
-              <div class="flex flex-col gap-3">
-                <input ref="logoInput" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" class="hidden"
-                  @change="handleLogoUpload" />
-                <BaseButton variant="primary" size="sm" :loading="isUploadingLogo" @click="triggerLogoUpload">
-                  <Icon name="lucide:upload" class="size-4 mr-2" />
-                  Enviar Logo
-                </BaseButton>
-                <BaseParagraph size="xs" class="text-muted-400">
-                  JPEG, PNG, WebP ou SVG. Máx 2MB.
-                </BaseParagraph>
+              <div class="flex-1 space-y-6">
+                <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload" />
+                <BaseField label="Nome por Extenso">
+                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva"
+                    icon="solar:buildings-bold-duotone" />
+                </BaseField>
+                <BaseField label="Nome Curto (Menu)">
+                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva"
+                    icon="solar:shop-bold-duotone" />
+                </BaseField>
               </div>
             </div>
-          </div>
+          </BaseCard>
         </div>
-      </BaseCard>
+      </div>
 
-      <!-- Colors Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
+      <!-- Section: Identity Colors -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
               Cores do Sistema
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Escolha as cores do Tailwind CSS para personalizar seu sistema.
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Personalize a paleta de cores para combinar com seu manual de marca. A cor primária afeta botões e
+              destaques.
             </BaseParagraph>
           </div>
-
-          <div class="md:col-span-8 space-y-6">
-            <!-- Primary Color Selection -->
-            <div>
-              <BaseInputWrapper label="Cor Primária">
-                <div class="grid grid-cols-6 gap-2">
-                  <button v-for="color in primaryColors" :key="color.name" type="button"
-                    class="size-12 rounded-lg transition-all duration-200" :class="[
-                      color.class,
-                      form.primaryColor === color.name
-                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-900 scale-110'
-                        : 'hover:scale-105'
-                    ]" :title="color.label" @click="form.primaryColor = color.name" />
+        </div>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="space-y-10">
+              <div>
+                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
+                  Cor Primária (Marca)</BaseHeading>
+                <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
+                  <button v-for="c in primaryColors" :key="c.name" type="button"
+                    class="size-10 rounded-xl transition-all duration-200" :class="[
+                      c.class,
+                      form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100'
+                    ]" @click="form.primaryColor = c.name" />
                 </div>
-                <template #help>
-                  Selecionado: <span class="font-semibold capitalize">{{ form.primaryColor }}</span>
-                </template>
-              </BaseInputWrapper>
-            </div>
+              </div>
 
-            <!-- Muted Color Selection -->
-            <div>
-              <BaseInputWrapper label="Cor Secundária (Tons Neutros)">
-                <div class="flex gap-3">
-                  <button v-for="color in mutedColors" :key="color.name" type="button"
-                    class="size-12 rounded-lg transition-all duration-200" :class="[
-                      color.class,
-                      form.secondaryColor === color.name
-                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-900 scale-110'
-                        : 'hover:scale-105'
-                    ]" :title="color.label" @click="form.secondaryColor = color.name" />
+              <div>
+                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
+                  Tom de Fundo (Muted)</BaseHeading>
+                <div class="flex flex-wrap gap-4">
+                  <button v-for="c in mutedColors" :key="c.name" type="button"
+                    class="size-14 rounded-xl border-2 transition-all duration-200" :class="[
+                      c.class,
+                      form.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110' : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100'
+                    ]" @click="form.secondaryColor = c.name" />
                 </div>
-                <template #help>
-                  Selecionado: <span class="font-semibold capitalize">{{ form.secondaryColor }}</span>
-                </template>
-              </BaseInputWrapper>
-            </div>
+              </div>
 
-            <!-- Preview -->
-            <div class="p-4 rounded-xl border border-muted-200 dark:border-muted-800">
-              <BaseParagraph size="xs" class="text-muted-500 mb-3 uppercase tracking-wider font-medium">
-                Pré-visualização
-              </BaseParagraph>
-              <div class="flex items-center gap-4">
-                <BaseButton variant="primary">
-                  Botão Primário
-                </BaseButton>
-                <BaseButton variant="muted">
-                  Botão Neutro
-                </BaseButton>
-                <BaseBadge variant="primary" rounded="lg">
-                  Badge
-                </BaseBadge>
+              <div
+                class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
+                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
+                  Preview em Tempo Real</BaseHeading>
+                <div class="flex flex-wrap items-center gap-6">
+                  <BaseButton color="primary" class="shadow-lg shadow-primary-500/20">Botão Principal</BaseButton>
+                  <BaseButton variant="muted">Botão Neutro</BaseButton>
+                  <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
+                    Status Badge</BaseTag>
+                  <div class="flex gap-2">
+                    <div class="size-10 rounded-full bg-primary-500 shadow-lg"></div>
+                    <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40"></div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </BaseCard>
         </div>
-      </BaseCard>
+      </div>
 
-      <!-- Company Info Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
-              Informações da Marca
-            </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              O nome da empresa conforme será exibido para seus clientes.
-            </BaseParagraph>
-          </div>
-
-          <div class="md:col-span-8 space-y-4">
-            <BaseInputWrapper label="Nome da Empresa">
-              <BaseInput v-model="form.name" placeholder="Contabilidade Silva & Associados" icon="lucide:building-2" />
-            </BaseInputWrapper>
-
-            <BaseInputWrapper label="Nome Fantasia">
-              <BaseInput v-model="form.tradeName" placeholder="Contábil Silva" icon="lucide:store" />
-              <template #help>
-                Nome mais curto exibido em espaços reduzidos
-              </template>
-            </BaseInputWrapper>
-          </div>
-        </div>
-      </BaseCard>
-
-      <!-- Save Button -->
-      <div class="flex justify-end">
-        <BaseButton variant="primary" size="lg" :loading="isSaving" @click="saveSettings">
-          <Icon name="lucide:save" class="size-4 mr-2" />
-          Salvar Configurações
+      <!-- Action Footer -->
+      <div class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
+        <BaseButton color="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12" @click="saveSettings">
+          Publicar Alterações
         </BaseButton>
       </div>
-    </template>
+    </div>
   </div>
 </template>

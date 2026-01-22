@@ -2,7 +2,7 @@
 import { useApi } from '~/composables/useAuth'
 
 definePageMeta({
-  title: 'Dados da Empresa',
+  title: 'Configurações da Empresa',
 })
 
 const { useCustomFetch } = useApi()
@@ -26,35 +26,35 @@ const form = ref({
   zipCode: '',
 })
 
-// Brazilian states
+// UF options
 const states = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-  'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-  'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ]
 
 // Masks
-const cnpjMask = ref(['99.999.999/9999-99'])
-const phoneMask = ref(['(99) 99999-9999'])
-const cepMask = ref(['99999-999'])
+const cnpjMask = { mask: '##.###.###/####-##' }
+const phoneMask = { mask: '(##) #####-####' }
+const cepMask = { mask: '#####-###' }
 
 // Fetch tenant data
 async function fetchTenant() {
   isLoading.value = true
   try {
     const { data } = await useCustomFetch<any>('/tenant')
-    if (data.success) {
-      tenant.value = data.data
+    const source = data.data || data
+    if (source) {
+      tenant.value = source
       form.value = {
-        name: data.data.name || '',
-        tradeName: data.data.tradeName || '',
-        document: data.data.document || '',
-        email: data.data.email || '',
-        phone: data.data.phone || '',
-        whatsapp: data.data.whatsapp || '',
-        city: data.data.city || '',
-        state: data.data.state || '',
-        zipCode: data.data.zipCode || '',
+        name: source.name || '',
+        tradeName: source.tradeName || '',
+        document: source.document || '',
+        email: source.email || '',
+        phone: source.phone || '',
+        whatsapp: source.whatsapp || '',
+        city: source.city || '',
+        state: source.state || '',
+        zipCode: source.zipCode || '',
       }
     }
   } catch (error) {
@@ -73,19 +73,18 @@ async function saveSettings() {
       body: form.value
     })
 
-    if (data.success) {
-      tenant.value = { ...tenant.value, ...form.value }
+    if (data.success || data) {
       toaster.add({
         title: 'Sucesso',
         description: 'Dados da empresa atualizados!',
-        icon: 'ph:check-circle-fill'
+        icon: 'solar:check-circle-linear'
       })
     }
   } catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao salvar dados',
-      icon: 'ph:warning-circle-fill'
+      icon: 'solar:danger-circle-linear'
     })
   } finally {
     isSaving.value = false
@@ -96,168 +95,189 @@ onMounted(fetchTenant)
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="space-y-6">
-      <BasePlaceload class="h-64 w-full rounded-xl" />
-      <BasePlaceload class="h-64 w-full rounded-xl" />
+  <div class="pb-24">
+    <!-- Skeleton loading -->
+    <div v-if="isLoading" class="space-y-12">
+      <div v-for="i in 3" :key="i" class="grid grid-cols-12 gap-8">
+        <div class="col-span-12 md:col-span-4">
+          <BasePlaceload class="h-6 w-32 mb-2" />
+          <BasePlaceload class="h-4 w-48" />
+        </div>
+        <div class="col-span-12 md:col-span-8">
+          <BasePlaceload class="h-64 w-full rounded-2xl" />
+        </div>
+      </div>
     </div>
 
-    <template v-else>
-      <!-- Company Info Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
-              Dados Básicos
+    <form v-else @submit.prevent="saveSettings" class="space-y-20">
+      <!-- Section: Basic Info -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+              Dados Jurídicos
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Informações principais do seu escritório de contabilidade.
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Informações oficiais do seu CNPJ que serão utilizadas em documentos e faturamento.
             </BaseParagraph>
           </div>
-
-          <div class="md:col-span-8 space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <BaseInputWrapper label="Razão Social">
-                <BaseInput v-model="form.name" placeholder="Contabilidade Silva & Associados" />
-              </BaseInputWrapper>
-
-              <BaseInputWrapper label="Nome Fantasia">
-                <BaseInput v-model="form.tradeName" placeholder="Contábil Silva" />
-              </BaseInputWrapper>
-            </div>
-
-            <BaseInputWrapper label="CNPJ">
-              <BaseInput v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00" icon="lucide:file-text" />
-            </BaseInputWrapper>
-          </div>
         </div>
-      </BaseCard>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="grid grid-cols-12 gap-6">
+              <div class="col-span-12">
+                <BaseField label="Razão Social" required>
+                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
+                    icon="solar:buildings-linear" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <BaseField label="Nome Fantasia">
+                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-linear" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <BaseField label="CNPJ">
+                  <TairoInput v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
+                    icon="solar:document-text-linear" />
+                </BaseField>
+              </div>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
 
-      <!-- Contact Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
-              Contato
+      <!-- Section: Contact -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+              Canais de Atendimento
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Informações de contato que serão exibidas para seus clientes.
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Como seus clientes entrarão em contato com o escritório. O WhatsApp será o canal principal de envio.
             </BaseParagraph>
           </div>
-
-          <div class="md:col-span-8 space-y-4">
-            <BaseInputWrapper label="E-mail">
-              <BaseInput v-model="form.email" type="email" placeholder="contato@escritorio.com.br" icon="lucide:mail" />
-            </BaseInputWrapper>
-
-            <div class="grid grid-cols-2 gap-4">
-              <BaseInputWrapper label="Telefone">
-                <BaseInput v-model="form.phone" v-maska="phoneMask" placeholder="(00) 00000-0000" icon="lucide:phone" />
-              </BaseInputWrapper>
-
-              <BaseInputWrapper label="WhatsApp">
-                <BaseInput v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000" icon="lucide:message-circle" />
-              </BaseInputWrapper>
-            </div>
-          </div>
         </div>
-      </BaseCard>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="grid grid-cols-12 gap-6">
+              <div class="col-span-12">
+                <BaseField label="E-mail de Contato">
+                  <TairoInput v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
+                    icon="solar:letter-linear" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <BaseField label="WhatsApp (Oficial)">
+                  <TairoInput v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                    icon="fa6-brands:whatsapp" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <BaseField label="Telefone Fixo">
+                  <TairoInput v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
+                    icon="solar:phone-rounded-linear" />
+                </BaseField>
+              </div>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
 
-      <!-- Address Section -->
-      <BaseCard rounded="lg" class="p-6">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
+      <!-- Section: Location -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
               Localização
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Endereço do escritório.
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Onde sua sede física está localizada.
             </BaseParagraph>
-          </div>
-
-          <div class="md:col-span-8 space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-              <div class="col-span-2">
-                <BaseInputWrapper label="Cidade">
-                  <BaseInput v-model="form.city" placeholder="São Paulo" icon="lucide:map-pin" />
-                </BaseInputWrapper>
-              </div>
-
-              <BaseInputWrapper label="Estado">
-                <BaseSelect v-model="form.state">
-                  <option value="" disabled>UF</option>
-                  <option v-for="uf in states" :key="uf" :value="uf">{{ uf }}</option>
-                </BaseSelect>
-              </BaseInputWrapper>
-            </div>
-
-            <BaseInputWrapper label="CEP">
-              <BaseInput v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000" icon="lucide:map" class="max-w-xs" />
-            </BaseInputWrapper>
           </div>
         </div>
-      </BaseCard>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="grid grid-cols-12 gap-6">
+              <div class="col-span-12 md:col-span-8">
+                <BaseField label="Cidade">
+                  <TairoInput v-model="form.city" placeholder="Ex: São Paulo" icon="solar:map-point-linear" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-4">
+                <BaseField label="Estado">
+                  <TairoSelect v-model="form.state" icon="solar:earth-linear">
+                    <BaseSelectItem v-for="uf in states" :key="uf" :value="uf">{{ uf }}</BaseSelectItem>
+                  </TairoSelect>
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-4">
+                <BaseField label="CEP">
+                  <TairoInput v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
+                    icon="solar:streets-navigation-linear" />
+                </BaseField>
+              </div>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
 
-      <!-- Plan Info (Read Only) -->
-      <BaseCard rounded="lg" class="p-6 bg-muted-50/50 dark:bg-muted-900/50">
-        <div class="grid gap-8 md:grid-cols-12">
-          <div class="md:col-span-4">
-            <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
-              Plano Atual
-            </BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-              Informações sobre seu plano de assinatura.
-            </BaseParagraph>
-          </div>
-
-          <div class="md:col-span-8">
-            <div class="flex items-center gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="text-sm font-medium text-muted-800 dark:text-muted-100 uppercase">
-                    {{ tenant?.plan || 'Trial' }}
-                  </span>
-                  <span v-if="tenant?.plan === 'trial'" class="px-2 py-0.5 text-xs rounded bg-amber-500/10 text-amber-600">
-                    Período de Teste
-                  </span>
+      <!-- Section: Plan (Info Only) -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
+        <div class="col-span-12 lg:col-span-4">
+          <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+            Plano e Assinatura
+          </BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+            Gerencie seu plano atual e acompanhe seus limites de uso.
+          </BaseParagraph>
+        </div>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8 bg-muted-50/50 dark:bg-muted-900 border-dashed">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <div class="flex items-center gap-3 mb-1">
+                  <BaseTag variant="none" rounded="lg" class="bg-primary-500/20 text-primary-500 font-bold uppercase">
+                    {{ tenant?.plan || 'Free Trial' }}
+                  </BaseTag>
+                  <span class="text-xs text-muted-400 font-medium">Desde {{ new
+                    Date(tenant?.createdAt).toLocaleDateString() }}</span>
                 </div>
-                <BaseParagraph v-if="tenant?.trialEndsAt" size="xs" class="text-muted-500">
-                  Expira em: {{ new Date(tenant.trialEndsAt).toLocaleDateString('pt-BR') }}
+                <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400">
+                  Seu escritório tem acesso total às funcionalidades até o limite de contratado.
                 </BaseParagraph>
               </div>
-              <BaseButton size="sm" variant="primary">
-                <Icon name="lucide:crown" class="size-4 mr-2" />
-                Upgrade
+              <BaseButton variant="none"
+                class="bg-primary-500/20 text-primary-500 hover:bg-primary-500/30 transition-colors">Alterar Plano
               </BaseButton>
             </div>
 
-            <!-- Stats -->
-            <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-muted-200 dark:border-muted-800">
-              <div>
-                <BaseParagraph size="xs" class="text-muted-400 mb-1">Usuários</BaseParagraph>
-                <BaseHeading as="h4" size="lg" weight="medium">{{ tenant?._count?.users || 0 }}</BaseHeading>
+            <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-muted-200 dark:border-muted-800">
+              <div class="text-center">
+                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.users || 0 }}</div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">Usuários</div>
               </div>
-              <div>
-                <BaseParagraph size="xs" class="text-muted-400 mb-1">Clientes</BaseParagraph>
-                <BaseHeading as="h4" size="lg" weight="medium">{{ tenant?._count?.clients || 0 }}</BaseHeading>
+              <div class="text-center">
+                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.clients || 0 }}</div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">Clientes</div>
               </div>
-              <div>
-                <BaseParagraph size="xs" class="text-muted-400 mb-1">Declarações</BaseParagraph>
-                <BaseHeading as="h4" size="lg" weight="medium">{{ tenant?._count?.taxDeclarations || 0 }}</BaseHeading>
+              <div class="text-center">
+                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.taxDeclarations || 0 }}
+                </div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">Declarações</div>
               </div>
             </div>
-          </div>
+          </BaseCard>
         </div>
-      </BaseCard>
+      </div>
 
-      <!-- Save Button -->
-      <div class="flex justify-end">
-        <BaseButton variant="primary" size="lg" :loading="isSaving" @click="saveSettings">
-          <Icon name="lucide:save" class="size-4 mr-2" />
+      <!-- Action Footer -->
+      <div class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
+        <BaseButton type="submit" color="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12">
           Salvar Alterações
         </BaseButton>
       </div>
-    </template>
+    </form>
   </div>
 </template>

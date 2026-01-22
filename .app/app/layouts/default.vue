@@ -37,286 +37,150 @@ const isMobileOpen = ref(false)
       </TairoTopnavHeader>
 
       <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 !z-[40] relative">
-        <TairoMenu>
-          <TairoMenuList>
-            <TairoMenuItem>
-              <TairoMenuTrigger>
-                <span>Minha Empresa</span>
-                <Icon name="lucide:chevron-down"
-                  class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
-              </TairoMenuTrigger>
-              <TairoMenuContent class="!z-[100]">
-                <TairoMenuListItems class="m-0 grid list-none gap-x-[10px] p-[22px] sm:w-[500px]">
-                  <li class="row-span-3 grid">
-                    <div class="grid sm:grid-cols-5 gap-4">
-                      <div class="hidden sm:block sm:col-span-2">
-                        <div class="flex flex-col justify-end h-full w-full bg-primary-950 rounded-xl p-4">
-                          <div>
-                            <TairoLogo class="size-10 text-white mb-3" />
-                            <BaseHeading class="text-white mb-2">
-                              CONTSTAR
-                            </BaseHeading>
-                            <BaseParagraph size="xs" class="max-w-[260px] text-white">
-                              Contabilidade e IR
-                            </BaseParagraph>
+        <ClientOnly>
+          <TairoMenu>
+            <TairoMenuList>
+              <TairoMenuItem>
+                <TairoMenuTrigger>
+                  <span>Minha Empresa</span>
+                  <Icon name="lucide:chevron-down"
+                    class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
+                </TairoMenuTrigger>
+                <TairoMenuContent class="!z-[100]">
+                  <TairoMenuListItems class="m-0 grid list-none gap-x-[10px] p-[22px] sm:w-[500px]">
+                    <li class="row-span-3 grid">
+                      <div class="grid sm:grid-cols-5 gap-4">
+                        <div class="hidden sm:block sm:col-span-2">
+                          <div class="flex flex-col justify-end h-full w-full bg-primary-950 rounded-xl p-4">
+                            <div>
+                              <TairoLogo class="size-10 text-white mb-3" />
+                              <BaseHeading class="text-white mb-2">
+                                CONTSTAR
+                              </BaseHeading>
+                              <BaseParagraph size="xs" class="max-w-[260px] text-white">
+                                Contabilidade e IR
+                              </BaseParagraph>
+                            </div>
                           </div>
                         </div>
+                        <div class="sm:col-span-3 flex flex-col gap-2">
+                          <TairoMenuLink as-child>
+                            <NuxtLink to="/dashboard/settings">
+                              <div class="flex items-center gap-3">
+                                <div class="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center">
+                                  <Icon name="lucide:palette" class="size-4 text-primary-500" />
+                                </div>
+                                <div>
+                                  <BaseHeading size="sm" weight="medium"
+                                    class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                                    Whitelabel
+                                  </BaseHeading>
+                                  <BaseParagraph size="xs" class="text-muted-500">
+                                    Logo e cores do sistema
+                                  </BaseParagraph>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </TairoMenuLink>
+                          <TairoMenuLink as-child>
+                            <NuxtLink to="/dashboard/settings/account">
+                              <div class="flex items-center gap-3">
+                                <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                  <Icon name="lucide:building-2" class="size-4 text-emerald-500" />
+                                </div>
+                                <div>
+                                  <BaseHeading size="sm" weight="medium"
+                                    class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                                    Dados da Empresa
+                                  </BaseHeading>
+                                  <BaseParagraph size="xs" class="text-muted-500">
+                                    CNPJ, contato e localização
+                                  </BaseParagraph>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </TairoMenuLink>
+                          <TairoMenuLink as-child>
+                            <NuxtLink to="/dashboard/settings/team">
+                              <div class="flex items-center gap-3">
+                                <div class="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                  <Icon name="lucide:users" class="size-4 text-amber-500" />
+                                </div>
+                                <div>
+                                  <BaseHeading size="sm" weight="medium"
+                                    class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                                    Equipe
+                                  </BaseHeading>
+                                  <BaseParagraph size="xs" class="text-muted-500">
+                                    Gerenciar funcionários
+                                  </BaseParagraph>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </TairoMenuLink>
+                        </div>
                       </div>
-                      <div class="sm:col-span-3 flex flex-col gap-2">
-                        <TairoMenuLink as-child>
-                          <NuxtLink to="/dashboard/settings">
-                            <div class="flex items-center gap-3">
-                              <div class="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center">
-                                <Icon name="lucide:palette" class="size-4 text-primary-500" />
-                              </div>
-                              <div>
-                                <BaseHeading size="sm" weight="medium"
-                                  class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                                  Whitelabel
-                                </BaseHeading>
-                                <BaseParagraph size="xs" class="text-muted-500">
-                                  Logo e cores do sistema
-                                </BaseParagraph>
-                              </div>
-                            </div>
-                          </NuxtLink>
-                        </TairoMenuLink>
-                        <TairoMenuLink as-child>
-                          <NuxtLink to="/dashboard/settings/account">
-                            <div class="flex items-center gap-3">
-                              <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                <Icon name="lucide:building-2" class="size-4 text-emerald-500" />
-                              </div>
-                              <div>
-                                <BaseHeading size="sm" weight="medium"
-                                  class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                                  Dados da Empresa
-                                </BaseHeading>
-                                <BaseParagraph size="xs" class="text-muted-500">
-                                  CNPJ, contato e localização
-                                </BaseParagraph>
-                              </div>
-                            </div>
-                          </NuxtLink>
-                        </TairoMenuLink>
-                        <TairoMenuLink as-child>
-                          <NuxtLink to="/dashboard/settings/team">
-                            <div class="flex items-center gap-3">
-                              <div class="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                                <Icon name="lucide:users" class="size-4 text-amber-500" />
-                              </div>
-                              <div>
-                                <BaseHeading size="sm" weight="medium"
-                                  class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                                  Equipe
-                                </BaseHeading>
-                                <BaseParagraph size="xs" class="text-muted-500">
-                                  Gerenciar funcionários
-                                </BaseParagraph>
-                              </div>
-                            </div>
-                          </NuxtLink>
-                        </TairoMenuLink>
-                      </div>
-                    </div>
-                  </li>
-                </TairoMenuListItems>
-              </TairoMenuContent>
-            </TairoMenuItem>
+                    </li>
+                  </TairoMenuListItems>
+                </TairoMenuContent>
+              </TairoMenuItem>
 
-            <!-- <TairoMenuItem>
-              <TairoMenuTrigger>
-                <span>Business</span>
-                <Icon name="lucide:chevron-down"
-                  class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
-              </TairoMenuTrigger>
-              <TairoMenuContent>
-                <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                </TairoMenuListItems>
-              </TairoMenuContent>
-            </TairoMenuItem> -->
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard'">
+                  <NuxtLink to="/dashboard">
+                    Dashboard
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+              <TairoMenuItem>
+                <TairoMenuTrigger>
+                  <span>Clientes</span>
+                  <Icon name="lucide:chevron-down"
+                    class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
+                </TairoMenuTrigger>
+                <TairoMenuContent>
+                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
+                    <TairoMenuLink as-child>
+                      <NuxtLink to="#">
+                        <BaseHeading size="sm" weight="medium"
+                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                          Listar Todos
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
+                          Veja todos os clientes cadastrados
+                        </BaseParagraph>
+                      </NuxtLink>
+                    </TairoMenuLink>
+                    <TairoMenuLink as-child>
+                      <NuxtLink to="#">
+                        <BaseHeading size="sm" weight="medium"
+                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                          Cadastrar Cliente
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
+                          Cadastre um novo cliente
+                        </BaseParagraph>
+                      </NuxtLink>
+                    </TairoMenuLink>
+                  </TairoMenuListItems>
+                </TairoMenuContent>
+              </TairoMenuItem>
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
+                  <NuxtLink to="/dashboard/ir">
+                    Imposto de Renda
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
 
-            <!-- <TairoMenuItem>
-              <TairoMenuTrigger>
-                <span>Overview</span>
-                <Icon name="lucide:chevron-down"
-                  class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
-              </TairoMenuTrigger>
-              <TairoMenuContent>
-                <TairoMenuListItems class="m-0 grid list-none gap-x-4 p-4 sm:w-[600px] sm:grid-cols-2">
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Amazing UI
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Build high-quality, accessible design systems and web apps.
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                </TairoMenuListItems>
-              </TairoMenuContent>
-            </TairoMenuItem> -->
-            <TairoMenuItem>
-              <TairoMenuLink as-child :active="$route.path === '/dashboard'">
-                <NuxtLink to="/dashboard">
-                  Dashboard
-                </NuxtLink>
-              </TairoMenuLink>
-            </TairoMenuItem>
-            <TairoMenuItem>
-              <TairoMenuTrigger>
-                <span>Clientes</span>
-                <Icon name="lucide:chevron-down"
-                  class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
-              </TairoMenuTrigger>
-              <TairoMenuContent>
-                <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Listar Todos
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Veja todos os clientes cadastrados
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                  <TairoMenuLink as-child>
-                    <NuxtLink to="#">
-                      <BaseHeading size="sm" weight="medium"
-                        class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
-                        Cadastrar Cliente
-                      </BaseHeading>
-                      <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
-                        Cadastre um novo cliente
-                      </BaseParagraph>
-                    </NuxtLink>
-                  </TairoMenuLink>
-                </TairoMenuListItems>
-              </TairoMenuContent>
-            </TairoMenuItem>
-            <TairoMenuItem>
-              <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
-                <NuxtLink to="/dashboard/ir">
-                  Imposto de Renda
-                </NuxtLink>
-              </TairoMenuLink>
-            </TairoMenuItem>
+              <TairoMenuIndicator />
+            </TairoMenuList>
 
-
-
-            <!-- <TairoMenuItem>
-              <TairoMenuLink as-child :active="$route.path === '/layouts'">
-                <NuxtLink to="/layouts">
-                  Reports
-                </NuxtLink>
-              </TairoMenuLink>
-            </TairoMenuItem>
-            <TairoMenuItem>
-              <TairoMenuLink as-child :active="$route.path === '/dashboards'">
-                <NuxtLink to="/dashboards">
-                  Preferences
-                </NuxtLink>
-              </TairoMenuLink>
-            </TairoMenuItem> -->
-            <TairoMenuIndicator />
-          </TairoMenuList>
-
-          <div class="absolute top-full start-0 flex w-full mt-[10px]">
-            <TairoMenuViewport />
-          </div>
-        </TairoMenu>
+            <div class="absolute top-full start-0 flex w-full mt-[10px]">
+              <TairoMenuViewport />
+            </div>
+          </TairoMenu>
+        </ClientOnly>
       </TairoTopnavHeader>
     </TairoTopnavNavbar>
 
