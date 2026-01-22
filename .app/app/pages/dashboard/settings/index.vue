@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watchDebounced } from '@vueuse/core'
 import { useApi } from '~/composables/useAuth'
 
 definePageMeta({
@@ -115,6 +116,28 @@ async function saveSettings() {
     isSaving.value = false
   }
 }
+
+// Apply colors in real-time for preview (before saving) with debouncing
+
+watchDebounced(
+  () => form.value.primaryColor,
+  (newColor: string) => {
+    if (newColor) {
+      applyColors(newColor, form.value.secondaryColor)
+    }
+  },
+  { debounce: 100 }
+)
+
+watchDebounced(
+  () => form.value.secondaryColor,
+  (newColor: string) => {
+    if (newColor) {
+      applyColors(form.value.primaryColor, newColor)
+    }
+  },
+  { debounce: 100 }
+)
 
 // Handle logo upload
 const logoInput = ref<HTMLInputElement | null>(null)

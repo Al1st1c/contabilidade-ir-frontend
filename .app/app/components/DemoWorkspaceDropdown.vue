@@ -115,7 +115,7 @@ function getRoleBadgeColor(roleName: string) {
 </script>
 
 <template>
-  <div ref="target" class="group/workspace relative w-full">
+  <div ref="target" class="group/workspace relative w-full !z-[60]">
     <button type="button"
       class="w-full max-w-[170px] rounded-lg py-1.5 pe-3 ps-2 border border-muted-200 dark:border-muted-800 transition-colors duration-300 group-hover/workspace:bg-muted-100 dark:group-hover/workspace:bg-muted-900/60 md:max-w-[240px]"
       :class="open && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
@@ -134,7 +134,7 @@ function getRoleBadgeColor(roleName: string) {
       enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in"
       leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
       <div v-if="open"
-        class="absolute end-0 top-12 w-full min-w-[280px] overflow-hidden rounded-xl border border-muted-200 bg-white shadow-xl shadow-muted-400/10 dark:border-muted-800 dark:bg-muted-950 dark:shadow-muted-800/10 md:start-0 md:min-w-[575px] z-50">
+        class="absolute end-0 top-12 w-full min-w-[280px] overflow-hidden rounded-xl border border-muted-200 bg-white shadow-xl shadow-muted-400/10 dark:border-muted-800 dark:bg-muted-950 dark:shadow-muted-800/10 md:start-0 md:min-w-[575px] !z-[60]">
         <div class="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-muted-200 md:dark:divide-muted-800">
           <!-- Left: Team Members -->
           <div>

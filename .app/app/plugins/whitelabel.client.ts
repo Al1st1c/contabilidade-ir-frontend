@@ -3,7 +3,7 @@ import type { TenantData } from '~/types/tenant'
 
 const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'] as const
 
-export default defineNuxtPlugin(async () => {
+export default defineNuxtPlugin((nuxtApp) => {
   const { useCustomFetch } = useApi()
 
   // Default colors
@@ -12,6 +12,8 @@ export default defineNuxtPlugin(async () => {
 
   // Apply whitelabel colors using Tailwind color names
   function applyWhitelabelColors(primaryColor: string, secondaryColor: string) {
+    if (!process.client) return
+
     const root = document.documentElement
 
     // Apply primary color shades
@@ -31,22 +33,24 @@ export default defineNuxtPlugin(async () => {
     }
   }
 
-  // Fetch and apply tenant colors
-  try {
-    const { data } = await useCustomFetch<{ success: boolean; data: TenantData }>('/tenant')
+  // Load and apply tenant colors after app is mounted
+  nuxtApp.hook('app:mounted', async () => {
+    try {
+      const { data } = await useCustomFetch<{ success: boolean; data: TenantData }>('/tenant')
 
-    if (data?.success && data?.data) {
-      const primaryColor = data.data.primaryColor || defaultPrimaryColor
-      const secondaryColor = data.data.secondaryColor || defaultSecondaryColor
+      if (data?.success && data?.data) {
+        const primaryColor = data.data.primaryColor || defaultPrimaryColor
+        const secondaryColor = data.data.secondaryColor || defaultSecondaryColor
 
-      applyWhitelabelColors(primaryColor, secondaryColor)
-    } else {
-      // Apply defaults if no tenant data
+        applyWhitelabelColors(primaryColor, secondaryColor)
+      } else {
+        // Apply defaults if no tenant data
+        applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
+      }
+    } catch (error) {
+      console.error('Failed to load tenant whitelabel settings:', error)
+      // Apply defaults on error
       applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
     }
-  } catch (error) {
-    console.error('Failed to load tenant whitelabel settings:', error)
-    // Apply defaults on error
-    applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
-  }
+  })
 })

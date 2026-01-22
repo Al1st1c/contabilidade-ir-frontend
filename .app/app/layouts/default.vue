@@ -26,7 +26,7 @@ const isMobileOpen = ref(false)
 
     <!-- Desktop -->
     <TairoTopnavNavbar class="hidden md:flex">
-      <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 z-30 relative">
+      <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 !z-[50] relative">
         <div class="flex items-center gap-3 flex-1">
           <NuxtLink to="/" class="flex items-center gap-3">
             <TairoLogo class="size-8 text-primary-heavy dark:text-primary-light" />
@@ -36,7 +36,7 @@ const isMobileOpen = ref(false)
         <DemoToolbarTopnav />
       </TairoTopnavHeader>
 
-      <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 z-40 relative">
+      <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 !z-[40] relative">
         <TairoMenu>
           <TairoMenuList>
             <TairoMenuItem>
@@ -45,7 +45,7 @@ const isMobileOpen = ref(false)
                 <Icon name="lucide:chevron-down"
                   class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
               </TairoMenuTrigger>
-              <TairoMenuContent>
+              <TairoMenuContent class="!z-[100]">
                 <TairoMenuListItems class="m-0 grid list-none gap-x-[10px] p-[22px] sm:w-[500px]">
                   <li class="row-span-3 grid">
                     <div class="grid sm:grid-cols-5 gap-4">
