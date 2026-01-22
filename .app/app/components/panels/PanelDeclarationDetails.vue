@@ -106,29 +106,31 @@ async function fetchTeamMembers() {
 async function fetchDeclaration() {
   isLoading.value = true
   try {
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`)
-    if (data.success) {
-      declaration.value = data.data
+    // Force cache bust with timestamp
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}?t=${Date.now()}`)
+    if (data && data.success) {
+      const result = data.data
+      declaration.value = result
 
       // Populate form
       form.value = {
         // We are using columnId as "Status" for the dropdown as per request
-        status: data.data.column?.id || '',
-        priority: data.data.priority,
-        declarationType: data.data.declarationType,
-        result: data.data.result || 'neutral',
-        resultValue: data.data.resultValue || 0,
-        serviceValue: data.data.serviceValue || 0,
-        paymentStatus: data.data.paymentStatus,
-        dueDate: (data.data.dueDate ? new Date(data.data.dueDate).toISOString().split('T')[0] : '') as string,
-        description: data.data.description || '',
-        internalNotes: data.data.internalNotes || '',
-        assignedToId: data.data.assignedTo?.id || 'unassigned',
+        status: result.column?.id || '',
+        priority: result.priority,
+        declarationType: result.declarationType,
+        result: result.result || 'neutral',
+        resultValue: result.resultValue || 0,
+        serviceValue: result.serviceValue || 0,
+        paymentStatus: result.paymentStatus,
+        dueDate: (result.dueDate ? new Date(result.dueDate).toISOString().split('T')[0] : '') as string,
+        description: result.description || '',
+        internalNotes: result.internalNotes || '',
+        assignedToId: result.assignedTo?.id || 'unassigned',
       }
 
       // Check for latest collection link
-      if (data.data.collectionLinks?.length > 0) {
-        collectionLink.value = data.data.collectionLinks[0]
+      if (result.collectionLinks?.length > 0) {
+        collectionLink.value = result.collectionLinks[0]
       }
     }
   } catch (error) {
@@ -138,153 +140,53 @@ async function fetchDeclaration() {
   }
 }
 
-async function save(field?: string) {
-  isSaving.value = true
-  try {
-    const payload: any = {
-      ...form.value,
-      resultValue: Number(form.value.resultValue),
-      serviceValue: Number(form.value.serviceValue),
-    }
-
-    // Map selected Column ID (form.status) to payload.columnId
-    // And remove 'status' to avoid sending UUID as status enum
-    payload.columnId = form.value.status
-    delete payload.status
-
-    // Handle "unassigned" value (UI specific) -> backend expects empty string or null for removal
-    if (payload.assignedToId === 'unassigned') {
-      payload.assignedToId = ''
-    }
-
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
-      method: 'PUT',
-      body: payload
-    })
-
-    if (data.success) {
-      toaster.add({
-        title: 'Salvo',
-        description: 'Alterações salvas com sucesso',
-        icon: 'ph:check-circle-fill',
-        duration: 2000
-      })
-      emit('saved')
-
-      // Update local declaration state (e.g. audit logs, calculated fields)
-      // BUT do not replace 'form' to avoid breaking active input bindings/focus
-      if (data.data) {
-        declaration.value = data.data
-        // Update collection link if returned?
-        if (data.data.collectionLinks?.length > 0) {
-          collectionLink.value = data.data.collectionLinks[0]
-        }
-      }
-    }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao salvar alterações',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    isSaving.value = false
-  }
-}
-
-async function remove() {
-  if (!confirm('Tem certeza que deseja excluir esta declaração? Esta ação não pode ser desfeita.')) return
-
-  try {
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
-      method: 'DELETE'
-    })
-
-    if (data.success) {
-      toaster.add({
-        title: 'Sucesso',
-        description: 'Declaração excluída',
-        icon: 'ph:check-circle-fill'
-      })
-      emit('saved')
-      emit('close')
-    }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao excluir declaração',
-      icon: 'ph:warning-circle-fill'
-    })
-  }
-}
-
-async function generateLink() {
-  isGeneratingLink.value = true
-  try {
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/collection-link`, {
-      method: 'POST'
-    })
-
-    if (data.success) {
-      collectionLink.value = data.data
-      toaster.add({
-        title: 'Link Gerado',
-        description: 'Link de coleta pronto para envio',
-        icon: 'ph:link-fill'
-      })
-    }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao gerar link',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    isGeneratingLink.value = false
-  }
-}
-
-function viewClient() {
-  if (!declaration.value?.client?.id) return
-  open(PanelsPanelClientDetails, {
-    clientId: declaration.value.client.id
-  })
-}
-
-function copyLink() {
-  if (!collectionLink.value?.url) return
-  const fullUrl = `${window.location.origin}${collectionLink.value.url}`
-  navigator.clipboard.writeText(fullUrl)
-  toaster.add({
-    title: 'Copiado',
-    description: 'Link copiado para a área de transferência',
-    icon: 'ph:copy-fill'
-  })
-}
-
-function triggerUpload() {
-  fileInput.value?.click()
-}
+// ... logic ...
 
 const fileInput = ref<HTMLInputElement | null>(null)
 
 async function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
+  if (!target.files || target.files.length === 0) return
+
+  const file = target.files[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
     toaster.add({
       title: 'Enviando...',
-      description: `Enviando ${target.files.length} arquivos...`,
-      icon: 'ph:clock-fill'
+      description: `Enviando ${file.name}...`,
+      icon: 'ph:clock-fill',
     })
 
-    // Simulate delay
-    setTimeout(() => {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/attachments`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (data.value && (data.value.success || data.value.id)) {
       toaster.add({
         title: 'Sucesso',
-        description: 'Arquivos enviados com sucesso (Mock)',
+        description: 'Arquivo enviado com sucesso',
         icon: 'ph:check-circle-fill'
       })
-    }, 1500)
+
+      // Refresh data from server to get updated attachments and logs
+      await fetchDeclaration()
+
+      // Notify parent to update board (e.g. attachment count)
+      emit('saved')
+    }
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: error.data?.message || 'Erro ao enviar arquivo',
+      icon: 'ph:warning-circle-fill'
+    })
+  } finally {
+    if (fileInput.value) fileInput.value.value = ''
   }
 }
 
@@ -421,7 +323,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                        }}</span>
+                      }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
