@@ -17,7 +17,7 @@ definePageMeta({
 const { useCustomFetch } = useApi()
 const { user } = useAuth()
 const { open } = usePanels()
-import { PanelsPanelDeclarationDetails } from '#components'
+import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs } from '#components'
 // State
 const isLoading = ref(true)
 const stats = ref({
@@ -29,12 +29,13 @@ const stats = ref({
   received: 0,
   overdue: 0,
   completedToday: 0,
+  stuckRevenue: 0,
 })
 
 const pipelineData = ref<any[]>([])
 const teamProductivity = ref<any[]>([])
 const recentDeclarations = ref<any[]>([])
-const showRevenue = ref(false)
+const showRevenue = ref(true)
 const dashboardAlerts = ref({
   waitingDocs: [] as any[],
   nearDeadline: [] as any[],
@@ -71,6 +72,7 @@ async function fetchDashboard() {
         received: Number(payload.stats.received || 0),
         overdue: Number(payload.stats.overdue || 0),
         completedToday: Number(payload.stats.completedToday || 0),
+        stuckRevenue: Number(payload.stats.stuckRevenue || 0),
       }
 
       // Update arrays
@@ -117,6 +119,12 @@ function openDetails(declarationId: string) {
     onSaved: () => {
       fetchDashboard()
     }
+  })
+}
+
+function openWaitingDocs() {
+  open(PanelsPanelWaitingDocs, {
+    cards: dashboardAlerts.value.waitingDocs
   })
 }
 
@@ -187,7 +195,20 @@ const gamificationMessage = computed(() => {
   if (stats.value.completedToday > 0) {
     return `🔥 Mandou bem! +${stats.value.completedToday} entregues hoje.`
   }
-  return '☕️ Que tal começar uma nova declaração?'
+  return ''
+})
+
+const nextAction = computed(() => {
+  if (dashboardAlerts.value.errors.length > 0) {
+    return { text: 'Resolver retificações (Crítico)', icon: 'solar:danger-bold', color: 'text-danger-500' }
+  }
+  if (dashboardAlerts.value.nearDeadline.length > 0) {
+    return { text: 'Enviar declarações próximas do prazo', icon: 'solar:clock-circle-bold', color: 'text-warning-500' }
+  }
+  if (dashboardAlerts.value.waitingDocs.length > 0) {
+    return { text: 'Cobrar documentos pendentes', icon: 'solar:document-add-bold', color: 'text-primary-500' }
+  }
+  return { text: 'Cadastrar novo cliente', icon: 'solar:user-plus-bold', color: 'text-success-500' }
 })
 
 const acessorapido = [
@@ -219,14 +240,41 @@ const acessorapido = [
     logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
     url: '/funcionarios',
   },
-
 ]
+
+function handleNextAction() {
+  if (dashboardAlerts.value.errors.length > 0) {
+    openDetails(dashboardAlerts.value.errors[0].id)
+    return
+  }
+
+  if (dashboardAlerts.value.waitingDocs.length > 0) {
+    openWaitingDocs()
+    return
+  }
+
+  if (dashboardAlerts.value.nearDeadline.length > 0 || dashboardAlerts.value.stuckClients.length > 0) {
+    const el = document.getElementById('dashboard-alerts')
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
+  navigateTo('/imposto-de-renda')
+}
 </script>
 
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20">
+    <div v-if="isLoading" class="flex items-center justify-center min-h-[500px]">
+      <div class="text-center">
+        <BaseSpinner size="xl" class="text-primary-500 mx-auto" />
+        <BaseHeading as="h3" size="lg" weight="medium" class="mt-4">Carregando Dashboard...</BaseHeading>
+        <BaseParagraph size="sm" class="text-muted-400">Preparando seus indicadores estratégicos</BaseParagraph>
+      </div>
+    </div>
+
     <!-- Grid -->
-    <div class="grid grid-cols-12 gap-4">
+    <div v-else class="grid grid-cols-12 gap-4">
       <!-- Grid column -->
       <div class="col-span-12">
         <!-- Header -->
@@ -246,13 +294,23 @@ const acessorapido = [
                       { dateStyle: 'long' }).format(new Date()) }}</span></span>
                 </BaseParagraph>
 
-                <div class="mt-3 flex items-center gap-3">
+                <div class="mt-3 flex flex-wrap items-center gap-3">
                   <div
                     class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-bold uppercase tracking-wider">
                     <Icon name="solar:crown-minimalistic-bold-duotone" class="size-3" />
                     <span>{{ campaignProgress }}% da Campanha</span>
                   </div>
-                  <span class="text-xs text-muted-400 italic">{{ gamificationMessage }}</span>
+                  <span v-if="gamificationMessage" class="text-xs text-muted-400 italic">{{ gamificationMessage
+                    }}</span>
+
+                  <div class="flex items-center gap-2 ps-3 border-s border-muted-200 dark:border-muted-800">
+                    <span class="text-[10px] uppercase font-bold text-muted-400">Próxima Ação:</span>
+                    <BaseButton variant="link" size="sm" :class="nextAction.color"
+                      class="p-0 h-auto font-bold flex items-center gap-1" @click="handleNextAction">
+                      <Icon :name="nextAction.icon" class="size-3" />
+                      {{ nextAction.text }}
+                    </BaseButton>
+                  </div>
                 </div>
               </div>
             </div>
@@ -283,28 +341,54 @@ const acessorapido = [
       <!-- Grid column -->
       <div class="lg:landscape:col-span-8 col-span-12 xl:landscape:col-span-8">
         <!-- Inner grid -->
-        <div class="flex flex-col gap-4">
+        <!-- Error Alert (Pegando Fogo) -->
+        <Transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4"
+          enter-to-class="opacity-100 translate-y-0">
+          <div v-if="dashboardAlerts.errors.length > 0" class="mb-4">
+            <BaseCard rounded="md" class="p-4 border-l-4 border-danger-500 bg-danger-500/5 flex items-center gap-4">
+              <div
+                class="size-10 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-lg shadow-danger-500/20 shrink-0">
+                <Icon name="solar:danger-bold" class="size-6" />
+              </div>
+              <div class="flex-1">
+                <BaseHeading as="h4" size="sm" weight="bold" class="text-danger-800 dark:text-danger-200">
+                  🚨 Existem {{ dashboardAlerts.errors.length }} retificações urgentes!
+                </BaseHeading>
+                <BaseParagraph size="xs" class="text-danger-600/80 dark:text-danger-400/80">
+                  Declarações com erros críticos que precisam de correção imediata para evitar malha fina.
+                </BaseParagraph>
+              </div>
+              <BaseButton color="danger" size="sm" rounded="md" @click="openDetails(dashboardAlerts.errors[0].id)">
+                Resolver agora
+              </BaseButton>
+            </BaseCard>
+          </div>
+        </Transition>
+
+        <div id="dashboard-alerts" class="flex flex-col gap-4">
           <!-- Executive Summary: Resumo do Dia -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Alert 1: Pendências Documentais -->
             <BaseCard rounded="md"
-              class="p-4 border-l-4 border-amber-400 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              class="p-4 border-l-4 border-amber-400 relative overflow-hidden group hover:shadow-lg transition-shadow bg-amber-500/5 cursor-pointer"
+              @click="openWaitingDocs">
               <div class="flex items-center gap-3 mb-3">
                 <div class="size-9 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-500">
                   <Icon name="solar:document-add-linear" class="size-5" />
                 </div>
                 <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold">Aguardando Docs</BaseHeading>
+                  <BaseHeading as="h4" size="xs" weight="semibold">Falta Documentos</BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-400">Críticos/Urgentes</BaseParagraph>
                 </div>
-                <div class="ms-auto">
+                <div class="ms-auto text-end">
                   <BaseTag rounded="full" color="warning" size="sm" weight="bold">
                     {{ dashboardAlerts.waitingDocs.length }}
                   </BaseTag>
+                  <div class="text-[10px] text-amber-600 font-bold mt-1 uppercase tracking-tighter">Cobrar Todos</div>
                 </div>
               </div>
               <div class="space-y-2">
-                <div v-for="c in dashboardAlerts.waitingDocs" :key="c.id" @click="openDetails(c.id)"
+                <div v-for="c in dashboardAlerts.waitingDocs" :key="c.id" @click.stop="openDetails(c.id)"
                   class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                   <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
                   <Icon name="solar:arrow-right-up-linear"
@@ -317,16 +401,16 @@ const acessorapido = [
               </div>
             </BaseCard>
 
-            <!-- Alert 2: Prazos Próximos -->
+            <!-- Alert 2: Próximos Vencimentos -->
             <BaseCard rounded="md"
-              class="p-4 border-l-4 border-danger-500 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              class="p-4 border-l-4 border-danger-500 relative overflow-hidden group hover:shadow-lg transition-shadow bg-danger-500/5">
               <div class="flex items-center gap-3 mb-3">
                 <div class="size-9 rounded-xl bg-danger-500/10 flex items-center justify-center text-danger-500">
                   <Icon name="solar:alarm-linear" class="size-5" />
                 </div>
                 <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold">Vencendo Logo</BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-400">Próximos 5 dias</BaseParagraph>
+                  <BaseHeading as="h4" size="xs" weight="semibold">Próximos Vencimentos</BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-400">Janela de 5 dias</BaseParagraph>
                 </div>
                 <div class="ms-auto">
                   <BaseTag rounded="full" color="danger" size="sm" weight="bold">
@@ -349,9 +433,11 @@ const acessorapido = [
 
             <!-- Alert 3: Clientes Travados -->
             <BaseCard rounded="md"
-              class="p-4 border-l-4 border-primary-500 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              class="p-4 border-l-4 relative overflow-hidden group hover:shadow-lg transition-all duration-300"
+              :class="dashboardAlerts.stuckClients.length > 0 ? 'border-danger-500 bg-danger-500/5' : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950'">
               <div class="flex items-center gap-3 mb-3">
-                <div class="size-9 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                <div class="size-9 rounded-xl flex items-center justify-center transition-colors"
+                  :class="dashboardAlerts.stuckClients.length > 0 ? 'bg-danger-500/10 text-danger-500' : 'bg-muted-100 dark:bg-muted-800 text-muted-400'">
                   <Icon name="solar:hourglass-line-linear" class="size-5" />
                 </div>
                 <div>
@@ -359,7 +445,8 @@ const acessorapido = [
                   <BaseParagraph size="xs" class="text-muted-400">> 7 dias sem ação</BaseParagraph>
                 </div>
                 <div class="ms-auto">
-                  <BaseTag rounded="full" color="primary" size="sm" weight="bold">
+                  <BaseTag rounded="full" :color="dashboardAlerts.stuckClients.length > 0 ? 'danger' : 'muted'"
+                    size="sm" weight="bold">
                     {{ dashboardAlerts.stuckClients.length }}
                   </BaseTag>
                 </div>
