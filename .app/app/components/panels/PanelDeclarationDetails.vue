@@ -390,10 +390,10 @@ onMounted(() => {
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-700 dark:bg-muted-950 border-l bg-white w-full max-w-5xl shadow-2xl flex flex-col h-screen">
+    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-5xl shadow-2xl flex flex-col h-screen overflow-hidden">
     <!-- Header -->
     <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 z-20 bg-white dark:bg-muted-950">
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 z-20 bg-white dark:bg-muted-900">
       <div v-if="declaration" class="flex items-center gap-4">
         <div class="flex flex-col">
           <div class="flex items-center gap-2">
@@ -437,7 +437,7 @@ onMounted(() => {
       <div v-else-if="declaration" class="w-full flex flex-col md:flex-row h-full">
         <!-- Main Content (Left) -->
         <div
-          class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-950 border-r border-muted-200 dark:border-muted-800">
+          class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-900 border-r border-muted-200 dark:border-muted-800">
 
           <!-- Client Data Section -->
           <div class="space-y-4">
@@ -457,7 +457,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                    }}</p>
+                  }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -539,7 +539,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                        }}</span>
+                      }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>

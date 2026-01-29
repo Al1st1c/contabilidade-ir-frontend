@@ -115,10 +115,10 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-700 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl flex flex-col h-screen">
+    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-2xl shadow-2xl flex flex-col h-screen overflow-hidden">
     <!-- Header -->
     <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 bg-white dark:bg-muted-950">
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 bg-white dark:bg-muted-900">
       <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
         Cobrar Documentos Pendentes
       </BaseHeading>
@@ -188,7 +188,7 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
                 </BaseHeading>
                 <div class="flex items-center gap-2 mt-0.5">
                   <BaseTag rounded="full" color="primary" variant="muted" size="sm" class="px-2 py-0">IR {{ card.taxYear
-                  }}</BaseTag>
+                    }}</BaseTag>
                   <span class="text-[10px] text-muted-400 font-mono">{{ card.client?.phone || 'Sem número' }}</span>
                 </div>
               </div>
@@ -236,7 +236,7 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
     </div>
 
     <!-- Footer -->
-    <div class="p-6 border-t border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 mt-auto shrink-0">
+    <div class="p-6 border-t border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900 mt-auto shrink-0">
       <BaseButton class="w-full" rounded="md" @click="emit('close')">
         Fechar Painel
       </BaseButton>
