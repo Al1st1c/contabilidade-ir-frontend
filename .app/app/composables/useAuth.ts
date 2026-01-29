@@ -9,7 +9,16 @@ interface User {
   name: string
   photo?: string
   level?: string
-  // Adicione outros campos conforme necessário
+  role?: {
+    id: string
+    name: string
+    canViewAllCards: boolean
+    canManageTeam: boolean
+    canManageClients: boolean
+    canManageSettings: boolean
+    canExportData: boolean
+    canDeleteRecords: boolean
+  }
 }
 
 interface AuthResponse {

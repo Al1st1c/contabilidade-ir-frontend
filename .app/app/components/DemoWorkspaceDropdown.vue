@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onClickOutside } from '@vueuse/core'
-import { useApi } from '~/composables/useAuth'
+import { useApi, useAuth } from '~/composables/useAuth'
+import { useAppState } from '~/composables/useAppState'
 
 const { useCustomFetch } = useApi()
 const { open } = usePanels()
+const { user } = useAuth()
+const { selectedEmployeeId } = useAppState()
 import { PanelsPanelDeclarationDetails } from '#components'
 
 // State
@@ -18,6 +21,11 @@ const openDropdown = ref(false)
 
 // Selected tenant info
 const tenant = ref<any>(null)
+
+const canViewAll = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || roleName === 'admin' || user.value?.role?.canViewAllCards
+})
 
 // Fetch data when dropdown opens
 async function fetchData() {
@@ -77,6 +85,12 @@ function openDetails(id: string) {
   })
 }
 
+function selectEmployee(id: string | null) {
+  if (!canViewAll.value) return
+  selectedEmployeeId.value = id || ''
+  openDropdown.value = false
+}
+
 // Navigate to create pages
 const router = useRouter()
 
@@ -99,6 +113,11 @@ function getRoleBadgeColor(roleName: string) {
     default: return 'bg-emerald-500'
   }
 }
+
+const selectedMemberName = computed(() => {
+  if (!selectedEmployeeId.value) return null
+  return members.value.find(m => m.id === selectedEmployeeId.value)?.name || 'Filtrado'
+})
 </script>
 
 <template>
@@ -108,9 +127,12 @@ function getRoleBadgeColor(roleName: string) {
       :class="openDropdown && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
       <span class="flex w-full items-center gap-3 text-start">
         <BaseAvatar size="xxs" :src="tenant?.logo" :text="tenant?.tradeName?.charAt(0) || 'E'" />
-        <div>
-          <BaseText size="sm" class="line-clamp-1 block text-muted-800 dark:text-muted-200">
+        <div class="flex-1 min-w-0">
+          <BaseText size="sm" class="line-clamp-1 block text-muted-800 dark:text-muted-200 font-medium">
             {{ tenant?.tradeName || 'Meu Escritório' }}
+          </BaseText>
+          <BaseText v-if="selectedMemberName" size="xs" class="text-primary-500 font-bold truncate block -mt-1">
+            {{ selectedMemberName }}
           </BaseText>
         </div>
         <Icon name="lucide:chevrons-up-down" class="ms-auto size-4 text-muted-400 transition-transform duration-300"
@@ -132,36 +154,52 @@ function getRoleBadgeColor(roleName: string) {
               <input v-model="searchMembers" type="text"
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
                 placeholder="Buscar funcionário...">
-              <button type="button"
-                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800"
-                @click="openDropdown = false">
-                <BaseText size="xs">
-                  Esc
-                </BaseText>
-              </button>
             </div>
             <div class="flex h-[calc(100%_-_2.5rem)] flex-col p-3">
-              <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400">
-                Equipe
-              </BaseHeading>
-              <div class="my-3 xs:nui-slimscroll xs:max-h-[128px] xs:min-h-[128px]">
+              <div class="flex items-center justify-between mb-2">
+                <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400">
+                  Visualizar por
+                </BaseHeading>
+                <button v-if="selectedEmployeeId" type="button" @click="selectEmployee(null)"
+                  class="text-[10px] text-primary-500 font-bold uppercase hover:underline">
+                  Limpar Filtro
+                </button>
+              </div>
+              <div class="my-1 xs:nui-slimscroll xs:max-h-[160px] xs:min-h-[160px]">
                 <!-- Loading -->
                 <div v-if="isLoading" class="space-y-2">
                   <BasePlaceload v-for="i in 3" :key="i" class="h-10 w-full rounded-lg" />
                 </div>
                 <!-- Members List -->
                 <ul v-else-if="filteredMembers.length > 0" class="space-y-1">
+                  <!-- All Option -->
+                  <li>
+                    <button type="button"
+                      class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
+                      :class="!selectedEmployeeId && 'bg-primary-500/5 text-primary-600'" @click="selectEmployee(null)">
+                      <div
+                        class="size-6 rounded-full bg-muted-200 dark:bg-muted-800 flex items-center justify-center shrink-0">
+                        <Icon name="lucide:users" class="size-3" />
+                      </div>
+                      <BaseText size="sm" class="truncate block font-medium">
+                        Todos os Funcionários
+                      </BaseText>
+                      <Icon v-if="!selectedEmployeeId" name="lucide:check" class="ms-auto size-3" />
+                    </button>
+                  </li>
                   <li v-for="member in filteredMembers" :key="member.id">
                     <button type="button"
                       class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
-                      @click="goToCreateMember">
+                      :class="selectedEmployeeId === member.id && 'bg-primary-500/5 text-primary-600'"
+                      @click="selectEmployee(member.id)">
                       <BaseAvatar size="xxs" :src="member.photo" :text="member.name?.charAt(0)" />
                       <div class="flex-1 min-w-0">
-                        <BaseText size="sm" class="truncate block">
+                        <BaseText size="sm" class="truncate block font-medium">
                           {{ member.name }}
                         </BaseText>
                       </div>
-                      <span class="size-2 rounded-full" :class="getRoleBadgeColor(member.role?.name)" />
+                      <Icon v-if="selectedEmployeeId === member.id" name="lucide:check" class="ms-auto size-3" />
+                      <span v-else class="size-2 rounded-full shrink-0" :class="getRoleBadgeColor(member.role?.name)" />
                     </button>
                   </li>
                 </ul>
@@ -172,10 +210,10 @@ function getRoleBadgeColor(roleName: string) {
                   </BaseParagraph>
                 </div>
               </div>
-              <div class="mt-auto">
-                <BaseButton rounded="md" class="w-full" @click="goToCreateMember">
-                  <Icon name="lucide:plus" class="size-4" />
-                  <span>Criar Funcionário</span>
+              <div class="mt-auto pt-2 border-t border-muted-100 dark:border-muted-800">
+                <BaseButton rounded="md" size="sm" class="w-full" @click="goToCreateMember">
+                  <Icon name="lucide:plus" class="size-3.5" />
+                  <span>Gerenciar Equipe</span>
                 </BaseButton>
               </div>
             </div>
@@ -190,19 +228,12 @@ function getRoleBadgeColor(roleName: string) {
               <input v-model="searchDeclarations" type="text"
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
                 placeholder="Buscar declaração...">
-              <button type="button"
-                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800"
-                @click="openDropdown = false">
-                <BaseText size="xs">
-                  Esc
-                </BaseText>
-              </button>
             </div>
             <div class="flex h-[calc(100%_-_2.5rem)] flex-col p-3">
-              <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400">
-                Declarações Recentes
+              <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400 mb-2">
+                Atalhos Rápidos
               </BaseHeading>
-              <div class="my-3 xs:nui-slimscroll xs:max-h-[128px] xs:min-h-[128px]">
+              <div class="my-1 xs:nui-slimscroll xs:max-h-[160px] xs:min-h-[160px]">
                 <!-- Loading -->
                 <div v-if="isLoading" class="space-y-2">
                   <BasePlaceload v-for="i in 3" :key="i" class="h-12 w-full rounded-lg" />
@@ -237,9 +268,9 @@ function getRoleBadgeColor(roleName: string) {
                   </BaseParagraph>
                 </div>
               </div>
-              <div class="mt-auto">
-                <BaseButton rounded="md" variant="dark" class="w-full" @click="goToCreateDeclaration">
-                  <Icon name="lucide:plus" class="size-4" />
+              <div class="mt-auto pt-2 border-t border-muted-100 dark:border-muted-800">
+                <BaseButton rounded="md" variant="dark" size="sm" class="w-full" @click="goToCreateDeclaration">
+                  <Icon name="lucide:plus" class="size-3.5" />
                   <span>Criar Novo IR</span>
                 </BaseButton>
               </div>

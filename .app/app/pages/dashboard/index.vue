@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useApi, useAuth } from '~/composables/useAuth'
+import { useAppState } from '~/composables/useAppState'
 
 definePageMeta({
   title: 'My Projects',
@@ -17,6 +18,7 @@ definePageMeta({
 const { useCustomFetch } = useApi()
 const { user } = useAuth()
 const { open } = usePanels()
+const { selectedEmployeeId } = useAppState() // Global state
 import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs } from '#components'
 // State
 const isLoading = ref(true)
@@ -47,6 +49,26 @@ const dashboardAlerts = ref({
 const revenueTrend = ref<any[]>([])
 const trendLabels = ref<string[]>([])
 
+// Employee Filter
+const teamMembers = ref<any[]>([])
+
+const canViewAll = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || roleName === 'admin' || user.value?.role?.canViewAllCards
+})
+
+const isViewingAdmin = computed(() => {
+  // Se não há funcionário selecionado, usa o contexto do usuário logado
+  if (!selectedEmployeeId.value) return canViewAll.value
+
+  // Se há funcionário selecionado, verifica a role dele na lista de membros
+  const member = teamMembers.value.find(m => m.id === selectedEmployeeId.value)
+  if (!member) return false
+
+  const roleName = member.role?.name?.toLowerCase()
+  return roleName === 'master' || roleName === 'admin' || member.role?.canViewAllCards
+})
+
 // Formatters
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
@@ -55,9 +77,13 @@ async function fetchDashboard() {
   isLoading.value = true
   try {
     const year = new Date().getFullYear()
-    const response = await useCustomFetch<any>(`/declarations/dashboard-stats?taxYear=${year}`)
+    let url = `/declarations/dashboard-stats?taxYear=${year}`
 
-    console.log('Dashboard Data Received:', response)
+    if (selectedEmployeeId.value) {
+      url += `&assignedToId=${selectedEmployeeId.value}`
+    }
+
+    const response = await useCustomFetch<any>(url)
 
     if (response && response.data && response.data.success) {
       const payload = response.data.data
@@ -87,7 +113,7 @@ async function fetchDashboard() {
         completed: Number(p.completed || 0)
       }))
 
-      recentDeclarations.value = payload.recent || []
+      recentDeclarations.value = (payload.recent || []).slice(0, 3)
 
       // Update trend data
       if (payload.trend && payload.trend.series) {
@@ -112,6 +138,21 @@ async function fetchDashboard() {
     isLoading.value = false
   }
 }
+
+async function fetchTeam() {
+  if (!canViewAll.value) return
+  try {
+    const { data } = await useCustomFetch<any>('/tenant/members')
+    teamMembers.value = data.data || data || []
+  } catch (e) {
+    console.error('Error fetching team:', e)
+  }
+}
+
+onMounted(() => {
+  fetchDashboard()
+  fetchTeam()
+})
 
 function openDetails(declarationId: string) {
   open(PanelsPanelDeclarationDetails, {
@@ -183,12 +224,19 @@ const revenueAreaChart = computed(() => ({
   }
 }))
 
-
-onMounted(fetchDashboard)
+// Refresh dashboard when employee filter changes
+watch(selectedEmployeeId, () => {
+  fetchDashboard()
+})
 
 const campaignProgress = computed(() => {
   if (!stats.value.total) return 0
   return Math.round((stats.value.completed / stats.value.total) * 100)
+})
+
+const selectedMemberName = computed(() => {
+  if (!selectedEmployeeId.value) return null
+  return teamMembers.value.find(m => m.id === selectedEmployeeId.value)?.name || '...'
 })
 
 const gamificationMessage = computed(() => {
@@ -211,36 +259,99 @@ const nextAction = computed(() => {
   return { text: 'Cadastrar novo cliente', icon: 'solar:user-plus-bold', color: 'text-success-500' }
 })
 
-const acessorapido = [
-  {
-    id: 1,
-    name: 'Imposto de Renda',
-    description: 'Cadastrar um novo Imposto de Renda',
-    logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-    url: '/imposto-de-renda',
-  },
-  {
-    id: 2,
-    name: 'Whitelabel',
-    description: 'Configurar minha empresa',
-    logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-    url: '/whitelabel',
-  },
-  {
-    id: 1,
-    name: 'Clientes',
-    description: 'Acessar lista de clientes',
-    logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-    url: '/imposto-de-renda',
-  },
-  {
-    id: 1,
-    name: 'Funcionários',
-    description: 'Gerenciar usuários do sistema',
-    logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-    url: '/funcionarios',
-  },
-]
+const acessorapido = computed(() => {
+  const base = [
+    {
+      id: 1,
+      name: 'Imposto de Renda',
+      description: 'Cadastrar um novo Imposto de Renda',
+      logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+      url: '/imposto-de-renda',
+    },
+    {
+      id: 3,
+      name: 'Clientes',
+      description: 'Acessar lista de clientes',
+      logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+      url: '/imposto-de-renda',
+    }
+  ]
+
+  if (isViewingAdmin.value) {
+    base.push(
+      {
+        id: 2,
+        name: 'Whitelabel',
+        description: 'Configurar minha empresa',
+        logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+        url: '/whitelabel',
+      },
+      {
+        id: 4,
+        name: 'Funcionários',
+        description: 'Gerenciar usuários do sistema',
+        logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+        url: '/dashboard/settings/team',
+      }
+    )
+  }
+
+  return base
+})
+
+const productivityChart = computed(() => ({
+  type: 'bar' as const,
+  height: Math.max(160, teamProductivity.value.length * 45),
+  series: [
+    {
+      name: 'Total',
+      data: teamProductivity.value.map(m => m.count)
+    },
+    {
+      name: 'Concluídos',
+      data: teamProductivity.value.map(m => m.completed)
+    }
+  ],
+  options: {
+    chart: {
+      stacked: false,
+      toolbar: { show: false },
+      sparkline: { enabled: false }
+    },
+    colors: ['var(--color-muted-200)', 'var(--color-primary-500)'],
+    plotOptions: {
+      bar: {
+        horizontal: true,
+        barHeight: '60%',
+        borderRadius: 2,
+        dataLabels: { position: 'top' }
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      offsetX: -6,
+      style: { fontSize: '10px', colors: ['#fff'] }
+    },
+    xaxis: {
+      categories: teamProductivity.value.map(m => m.name),
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { show: false }
+    },
+    yaxis: {
+      labels: {
+        style: { fontSize: '11px', fontWeight: 600 }
+      }
+    },
+    grid: { show: false },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'right',
+      fontSize: '10px',
+      offsetY: -10
+    }
+  }
+}))
 
 function handleNextAction() {
   if (dashboardAlerts.value.errors.length > 0) {
@@ -286,7 +397,12 @@ function handleNextAction() {
                 badge-src="/img/icons/flags/united-states-of-america.svg" />
               <div class="text-center md:text-start">
                 <BaseHeading as="h2" size="xl" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
-                  <span>Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
+                  <span v-if="!selectedEmployeeId">Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
+                  <span v-else class="flex flex-col">
+                    <span class="text-xs text-primary-500  uppercase tracking-wider mb-1">Visualizando
+                      Perfil:</span>
+                    <span>{{ selectedMemberName }}</span>
+                  </span>
                 </BaseHeading>
                 <BaseParagraph>
                   <span class="text-muted-600 dark:text-muted-400 font-medium">Campanha de IR {{ new
@@ -296,17 +412,19 @@ function handleNextAction() {
 
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                   <div
-                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-bold uppercase tracking-wider">
+                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px]  uppercase tracking-wider">
                     <Icon name="solar:crown-minimalistic-bold-duotone" class="size-3" />
                     <span>{{ campaignProgress }}% da Campanha</span>
                   </div>
-                  <span v-if="gamificationMessage" class="text-xs text-muted-400 italic">{{ gamificationMessage
-                  }}</span>
+
+                  <span v-if="gamificationMessage" class="text-xs text-muted-400 italic">
+                    {{ gamificationMessage }}
+                  </span>
 
                   <div class="flex items-center gap-2 ps-3 border-s border-muted-200 dark:border-muted-800">
-                    <span class="text-[10px] uppercase font-bold text-muted-400">Próxima Ação:</span>
+                    <span class="text-[10px] uppercase  text-muted-400">Próxima Ação:</span>
                     <BaseButton variant="link" size="sm" :class="nextAction.color"
-                      class="p-0 h-auto font-bold flex items-center gap-1" @click="handleNextAction">
+                      class="p-0 h-auto  flex items-center gap-1" @click="handleNextAction">
                       <Icon :name="nextAction.icon" class="size-3" />
                       {{ nextAction.text }}
                     </BaseButton>
@@ -317,7 +435,7 @@ function handleNextAction() {
 
             <div class="w-full md:w-auto flex flex-col md:flex-row items-center gap-8 md:ms-auto">
               <div class="text-center md:text-right">
-                <BaseHeading as="h3" size="3xl" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
+                <BaseHeading as="h3" size="3xl" lead="tight" class="text-muted-900 dark:text-white">
                   <span>
                     {{ stats.total }}
                     <small class="text-base font-medium">IRs</small>
@@ -377,14 +495,14 @@ function handleNextAction() {
                   <Icon name="solar:document-add-linear" class="size-5" />
                 </div>
                 <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold">Falta Documentos</BaseHeading>
+                  <BaseHeading as="h4" size="xs">Falta Documentos</BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-400">Críticos/Urgentes</BaseParagraph>
                 </div>
                 <div class="ms-auto text-end">
                   <BaseTag rounded="full" color="warning" size="sm" weight="bold">
                     {{ dashboardAlerts.waitingDocs.length }}
                   </BaseTag>
-                  <div class="text-[10px] text-amber-600 font-bold mt-1 uppercase tracking-tighter">Cobrar Todos</div>
+                  <div class="text-[10px] text-amber-600  mt-1 uppercase tracking-tighter">Cobrar Todos</div>
                 </div>
               </div>
               <div class="space-y-2">
@@ -409,7 +527,7 @@ function handleNextAction() {
                   <Icon name="solar:alarm-linear" class="size-5" />
                 </div>
                 <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold">Próximos Vencimentos</BaseHeading>
+                  <BaseHeading as="h4" size="xs">Próximos Vencimentos</BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-400">Janela de 5 dias</BaseParagraph>
                 </div>
                 <div class="ms-auto">
@@ -422,7 +540,7 @@ function handleNextAction() {
                 <div v-for="c in dashboardAlerts.nearDeadline" :key="c.id" @click="openDetails(c.id)"
                   class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                   <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
-                  <span class="text-[10px] text-danger-500 font-bold">HOJE</span>
+                  <span class="text-[10px] text-danger-500 ">HOJE</span>
                 </div>
                 <BaseParagraph v-if="dashboardAlerts.nearDeadline.length === 0" size="xs"
                   class="text-muted-400 italic py-2 text-center">
@@ -441,7 +559,7 @@ function handleNextAction() {
                   <Icon name="solar:hourglass-line-linear" class="size-5" />
                 </div>
                 <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold">Fluxo Travado</BaseHeading>
+                  <BaseHeading as="h4" size="xs">Fluxo Travado</BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-400">> 7 dias sem ação</BaseParagraph>
                 </div>
                 <div class="ms-auto">
@@ -467,7 +585,7 @@ function handleNextAction() {
           <!-- Project list widget -->
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-8 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
                 <span>Acesso Rápido</span>
               </BaseHeading>
             </div>
@@ -505,7 +623,7 @@ function handleNextAction() {
           <!-- Chart -->
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-6 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
                 <span>Distribuição das declarações por etapa do Kanban</span>
               </BaseHeading>
             </div>
@@ -514,7 +632,7 @@ function handleNextAction() {
           <!-- Chart -->
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-6 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-800 dark:text-white">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-800 dark:text-white">
                 <span>Progresso de recebimento vs honorários projetados</span>
               </BaseHeading>
               <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue">
@@ -529,17 +647,17 @@ function handleNextAction() {
               class="w-full mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-muted-100 dark:border-muted-800 transition-all duration-300"
               :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
               <div class="flex flex-col">
-                <span class="text-[10px] uppercase font-bold text-muted-400 mb-1">Receita Esperada</span>
+                <span class="text-[10px] uppercase  text-muted-400 mb-1">Receita Esperada</span>
                 <span class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ showRevenue ?
                   formatCurrency(stats.revenue) : 'R$ ••••••' }}</span>
               </div>
               <div class="flex flex-col">
-                <span class="text-[10px] uppercase font-bold text-success-500 mb-1">Recebido</span>
+                <span class="text-[10px] uppercase  text-success-500 mb-1">Recebido</span>
                 <span class="text-sm font-semibold text-success-600">{{ showRevenue ? formatCurrency(stats.received) :
                   'R$ ••••••' }}</span>
               </div>
               <div class="flex flex-col">
-                <span class="text-[10px] uppercase font-bold text-danger-500 mb-1">Em Atraso</span>
+                <span class="text-[10px] uppercase  text-danger-500 mb-1">Em Atraso</span>
                 <span class="text-sm font-semibold text-danger-600">{{ showRevenue ? formatCurrency(stats.overdue) :
                   'R$ ••••••' }}</span>
               </div>
@@ -549,7 +667,7 @@ function handleNextAction() {
               class="mt-4 p-3 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 text-center transition-all duration-300"
               :class="{ 'blur-sm select-none pointer-events-none opacity-50': !showRevenue }">
               <span class="text-xs text-muted-500">
-                Faltam <span class="font-bold text-primary-500">{{ showRevenue ? formatCurrency(stats.revenue -
+                Faltam <span class=" text-primary-500">{{ showRevenue ? formatCurrency(stats.revenue -
                   stats.received) : 'R$ ••••••' }}</span> para receber
               </span>
             </div>
@@ -561,7 +679,7 @@ function handleNextAction() {
         <!-- Inner grid -->
         <div class="grid gap-4 lg:flex lg:flex-col">
           <!-- Widget -->
-          <DemoActionText title="Upgrade to Pro"
+          <DemoActionText v-if="isViewingAdmin" title="Upgrade to Pro"
             text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quid censes in Latino fore? Nam ante Aristippus, et ille melius."
             label="Upgrade Now" to="#" rounded="md" />
           <!-- Widget -->
@@ -569,7 +687,7 @@ function handleNextAction() {
           <BaseCard class="p-4 md:p-6">
             <!-- Title -->
             <div class="mb-8 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
                 <span>Últimos IRs</span>
               </BaseHeading>
               <BaseText size="sm">
@@ -586,13 +704,11 @@ function handleNextAction() {
                 <BaseAvatar :src="item.client?.photo" :text="item.client?.name?.charAt(0)" size="sm"
                   class="bg-primary-500/10 text-primary-500 shrink-0" />
                 <div class="flex-1 min-w-0">
-                  <BaseHeading as="h4" size="sm" weight="semibold" lead="tight"
-                    class="text-muted-900 dark:text-white truncate">
+                  <BaseHeading as="h4" size="sm" lead="tight" class="text-muted-900 dark:text-white truncate">
                     <span>{{ item.client?.name || 'Sem nome' }}</span>
                   </BaseHeading>
                   <div class="flex items-center gap-2 mt-0.5">
-                    <span
-                      class="text-[10px] font-bold text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
+                    <span class="text-[10px]  text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
                       IR {{ item.taxYear }}
                     </span>
                     <span class="text-[10px] text-muted-400 font-medium truncate">
@@ -606,36 +722,51 @@ function handleNextAction() {
                 </div>
               </div>
 
+              <!-- Empty State: Recent IRs -->
               <div v-if="recentDeclarations.length === 0"
-                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-                <Icon name="solar:document-add-linear" class="size-8 mx-auto mb-2 text-muted-400 opacity-50" />
-                <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500">Nenhum IR recente</BaseHeading>
-                <BaseParagraph size="xs" class="text-muted-400 mt-1">Comece criando uma nova declaração</BaseParagraph>
+                class="py-10 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
+                <Icon name="solar:document-add-linear" class="size-10 mx-auto mb-3 text-muted-400 opacity-50" />
+                <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum IR recente</BaseHeading>
+                <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
+                  Ainda não há atividades registradas para este filtro.
+                </BaseParagraph>
               </div>
             </div>
           </BaseCard>
           <!-- Widget -->
           <BaseCard class="p-6">
-            <BaseHeading as="h3" size="md" weight="semibold" class="mb-6">Produtividade da Equipe</BaseHeading>
+            <BaseHeading as="h3" size="md" class="mb-6">Produtividade da Equipe</BaseHeading>
+
+            <div v-if="teamProductivity.length > 0" class="mb-6">
+              <AddonApexchart v-bind="productivityChart" />
+            </div>
+
             <div class="space-y-6">
-              <div v-for="member in teamProductivity" :key="member.name" class="group">
+              <div v-for="member in teamProductivity" :key="member.id" class="group">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-3">
                     <BaseAvatar :src="member.photo" :text="member.name.charAt(0)" size="xs" rounded="full" />
-                    <BaseParagraph size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">{{ member.name }}
+                    <BaseParagraph size="sm" class="text-muted-800 dark:text-muted-100">{{ member.name }}
                     </BaseParagraph>
                   </div>
-                  <BaseParagraph size="xs" weight="bold" class="text-primary-500">
+                  <BaseParagraph size="xs" class="text-primary-500 font-bold">
                     {{ member.completed }}/{{ member.count }}
                   </BaseParagraph>
                 </div>
-                <BaseProgress size="xs" variant="primary" :model-value="(member.completed / member.count) * 100"
+                <BaseProgress size="xs" variant="primary"
+                  :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
                   class="group-hover:opacity-80 transition-opacity" />
               </div>
             </div>
-            <div v-if="teamProductivity.length === 0" class="py-10 text-center text-muted-400">
-              <Icon name="solar:users-group-two-rounded-linear" class="size-10 mx-auto mb-2 opacity-50" />
-              <BaseParagraph size="xs">Ninguém atribuído ainda</BaseParagraph>
+            <!-- Empty State: Team -->
+            <div v-if="teamProductivity.length === 0"
+              class="py-10 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
+              <Icon name="solar:users-group-two-rounded-linear"
+                class="size-10 mx-auto mb-3 text-muted-400 opacity-50" />
+              <BaseHeading as="h4" size="sm" class="text-muted-500">Ninguém atribuído</BaseHeading>
+              <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
+                Não há funcionários vinculados a estas declarações.
+              </BaseParagraph>
             </div>
           </BaseCard>
 
