@@ -16,7 +16,8 @@ definePageMeta({
 
 const { useCustomFetch } = useApi()
 const { user } = useAuth()
-
+const { open } = usePanels()
+import { PanelsPanelDeclarationDetails } from '#components'
 // State
 const isLoading = ref(true)
 const stats = ref({
@@ -26,11 +27,19 @@ const stats = ref({
   docsWaiting: 0,
   revenue: 0,
   received: 0,
+  overdue: 0,
 })
 
 const pipelineData = ref<any[]>([])
 const teamProductivity = ref<any[]>([])
 const recentDeclarations = ref<any[]>([])
+const showRevenue = ref(false)
+const dashboardAlerts = ref({
+  waitingDocs: [] as any[],
+  nearDeadline: [] as any[],
+  stuckClients: [] as any[],
+  errors: [] as any[],
+})
 
 // Trend Data
 const revenueTrend = ref<any[]>([])
@@ -44,85 +53,69 @@ async function fetchDashboard() {
   isLoading.value = true
   try {
     const year = new Date().getFullYear()
-    const { data } = await useCustomFetch<any>(`/declarations/kanban?taxYear=${year}`)
+    const response = await useCustomFetch<any>(`/declarations/dashboard-stats?taxYear=${year}`)
 
-    if (data.success) {
-      const columns = data.data || []
-      const allCards = columns.flatMap((c: any) => c.cards || [])
+    console.log('Dashboard Data Received:', response)
 
-      // Calculate Stats
-      stats.value.total = allCards.length
-      stats.value.revenue = allCards.reduce((acc: number, c: any) => acc + (Number(c.serviceValue) || 0), 0)
-      stats.value.received = allCards.reduce((acc: number, c: any) =>
-        c.paymentStatus === 'paid' ? acc + (Number(c.serviceValue) || 0) : acc, 0)
+    if (response && response.data && response.data.success) {
+      const payload = response.data.data
 
-      // Find "Completed" column (usually last or by name)
-      const completedCol = columns.find((c: any) =>
-        c.name.toLowerCase().includes('conclu') || c.name.toLowerCase().includes('transmit')
-      )
-      stats.value.completed = completedCol?.cards?.length || 0
+      // Update stats with explicit number coercion for safety
+      stats.value = {
+        total: Number(payload.stats.total || 0),
+        completed: Number(payload.stats.completed || 0),
+        pending: Number(payload.stats.pending || 0),
+        docsWaiting: Number(payload.stats.docsWaiting || 0),
+        revenue: Number(payload.stats.revenue || 0),
+        received: Number(payload.stats.received || 0),
+        overdue: Number(payload.stats.overdue || 0),
+      }
 
-      // Declarations waiting for docs (assuming we can identify this, maybe by column)
-      const waitingDocsCol = columns.find((c: any) => c.name.toLowerCase().includes('doc'))
-      stats.value.docsWaiting = waitingDocsCol?.cards?.length || 0
-      stats.value.pending = stats.value.total - stats.value.completed
-
-      // Pipeline Data
-      pipelineData.value = columns.map((c: any) => ({
-        name: c.name,
-        count: c.cards?.length || 0,
-        color: c.color || 'primary'
+      // Update arrays
+      pipelineData.value = (payload.pipeline || []).map((p: any) => ({
+        ...p,
+        count: Number(p.count || 0)
       }))
 
-      // Team Productivity
-      const productivityMap = new Map()
-      allCards.forEach((c: any) => {
-        if (c.assignedTo) {
-          const name = c.assignedTo.name
-          const current = productivityMap.get(name) || { count: 0, completed: 0, photo: c.assignedTo.photo }
-          current.count++
-          if (c.columnId === completedCol?.id) current.completed++
-          productivityMap.set(name, current)
-        }
-      })
-      teamProductivity.value = Array.from(productivityMap.entries())
-        .map(([name, data]) => ({ name, ...data }))
-        .sort((a, b) => b.count - a.count)
+      teamProductivity.value = (payload.productivity || []).map((p: any) => ({
+        ...p,
+        count: Number(p.count || 0),
+        completed: Number(p.completed || 0)
+      }))
 
-      // Recent Items
-      recentDeclarations.value = allCards
-        .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, 5)
+      recentDeclarations.value = payload.recent || []
 
-      // Trend Calculation
-      const monthsShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-      const currentMonth = new Date().getMonth()
-      const revData = new Array(currentMonth + 1).fill(0)
-      const recData = new Array(currentMonth + 1).fill(0)
+      // Update trend data
+      if (payload.trend && payload.trend.series) {
+        revenueTrend.value = payload.trend.series.map((s: any) => ({
+          ...s,
+          data: s.data.map((v: any) => Number(v || 0))
+        }))
+        trendLabels.value = payload.trend.labels || []
+      }
 
-      allCards.forEach((c: any) => {
-        const date = new Date(c.createdAt || c.updatedAt)
-        if (date.getFullYear() === year) {
-          const m = date.getMonth()
-          if (m <= currentMonth) {
-            const val = Number(c.serviceValue) || 0
-            revData[m] += val
-            if (c.paymentStatus === 'paid') recData[m] += val
-          }
-        }
-      })
-
-      revenueTrend.value = [
-        { name: 'Honorários Totais', data: revData },
-        { name: 'Recebido', data: recData }
-      ]
-      trendLabels.value = monthsShort.slice(0, currentMonth + 1)
+      // Update alerts
+      dashboardAlerts.value = payload.alerts || {
+        waitingDocs: [],
+        nearDeadline: [],
+        stuckClients: [],
+        errors: []
+      }
     }
   } catch (e) {
     console.error('Dash error:', e)
   } finally {
     isLoading.value = false
   }
+}
+
+function openDetails(declarationId: string) {
+  open(PanelsPanelDeclarationDetails, {
+    declarationId,
+    onSaved: () => {
+      fetchDashboard()
+    }
+  })
 }
 
 const pipelineChart = computed(() => ({
@@ -223,8 +216,8 @@ const acessorapido = [
       <!-- Grid column -->
       <div class="col-span-12">
         <!-- Header -->
-        <BaseCard rounded="md" class="p-4 md:p-6">
-          <div class="flex flex-col items-center md:flex-row">
+        <BaseCard rounded="md" class="py-2 px-6">
+          <div class="flex flex-col items-center md:flex-row justify-between">
             <div
               class="lg:landscape:flex-row lg:landscape:items-center flex flex-col items-center gap-4 text-center md:items-start md:text-start xl:landscape::flex-row xl:landscape::items-center">
               <BaseAvatar src="/img/avatars/10.svg" size="xl"
@@ -234,16 +227,15 @@ const acessorapido = [
                   <span>Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
                 </BaseHeading>
                 <BaseParagraph>
-                  <span class="text-muted-600 dark:text-muted-400">Campanha de IR {{ new Date().getFullYear() }} • <span
-                      class="capitalize">{{ new Intl.DateTimeFormat('pt-BR',
-                        { dateStyle: 'long' }).format(new Date()) }}</span></span>
+                  <span class="text-muted-600 dark:text-muted-400 font-medium">Campanha de IR {{ new
+                    Date().getFullYear() }} • <span class="capitalize">{{ new Intl.DateTimeFormat('pt-BR',
+                      { dateStyle: 'long' }).format(new Date()) }}</span></span>
                 </BaseParagraph>
               </div>
             </div>
 
-            <div
-              class="w-full md:w-auto lg:landscape:flex-row lg:landscape:items-center md:ms-auto flex flex-col gap-6 text-center md:text-start xl:landscape:flex-row xl:landscape:items-center">
-              <div class="flex-1">
+            <div class="w-full md:w-auto flex flex-col md:flex-row items-center gap-8 md:ms-auto">
+              <div class="text-center md:text-right">
                 <BaseHeading as="h3" size="3xl" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
                   <span>
                     {{ stats.total }}
@@ -251,13 +243,16 @@ const acessorapido = [
                   </span>
                 </BaseHeading>
                 <BaseParagraph>
-                  <span class="text-muted-600 dark:text-muted-400 text-sm">
+                  <span class="text-muted-600 dark:text-muted-400 text-xs font-medium uppercase tracking-wider">
                     Total de Declarações
                   </span>
                 </BaseParagraph>
               </div>
-              <DashboardIRCanvasClock start-date="2026-01-01T08:00:00" end-date="2026-02-08T23:59:59" :size="160"
-                :show-details="false" />
+
+              <div class="shrink-0 -my-4">
+                <DashboardIRCanvasClock start-date="2026-01-01T08:00:00" end-date="2026-02-08T23:59:59" :size="180"
+                  :show-details="false" />
+              </div>
             </div>
           </div>
         </BaseCard>
@@ -266,6 +261,99 @@ const acessorapido = [
       <div class="lg:landscape:col-span-8 col-span-12 xl:landscape:col-span-8">
         <!-- Inner grid -->
         <div class="flex flex-col gap-4">
+          <!-- Executive Summary: Resumo do Dia -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Alert 1: Pendências Documentais -->
+            <BaseCard rounded="md"
+              class="p-4 border-l-4 border-amber-400 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="size-9 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-500">
+                  <Icon name="solar:document-add-linear" class="size-5" />
+                </div>
+                <div>
+                  <BaseHeading as="h4" size="xs" weight="semibold">Aguardando Docs</BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-400">Críticos/Urgentes</BaseParagraph>
+                </div>
+                <div class="ms-auto">
+                  <BaseTag rounded="full" color="warning" size="sm" weight="bold">
+                    {{ dashboardAlerts.waitingDocs.length }}
+                  </BaseTag>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div v-for="c in dashboardAlerts.waitingDocs" :key="c.id" @click="openDetails(c.id)"
+                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
+                  <Icon name="solar:arrow-right-up-linear"
+                    class="size-3 text-muted-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <BaseParagraph v-if="dashboardAlerts.waitingDocs.length === 0" size="xs"
+                  class="text-muted-400 italic py-2 text-center">
+                  Tudo sob controle 🎉
+                </BaseParagraph>
+              </div>
+            </BaseCard>
+
+            <!-- Alert 2: Prazos Próximos -->
+            <BaseCard rounded="md"
+              class="p-4 border-l-4 border-danger-500 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="size-9 rounded-xl bg-danger-500/10 flex items-center justify-center text-danger-500">
+                  <Icon name="solar:alarm-linear" class="size-5" />
+                </div>
+                <div>
+                  <BaseHeading as="h4" size="xs" weight="semibold">Vencendo Logo</BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-400">Próximos 5 dias</BaseParagraph>
+                </div>
+                <div class="ms-auto">
+                  <BaseTag rounded="full" color="danger" size="sm" weight="bold">
+                    {{ dashboardAlerts.nearDeadline.length }}
+                  </BaseTag>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div v-for="c in dashboardAlerts.nearDeadline" :key="c.id" @click="openDetails(c.id)"
+                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
+                  <span class="text-[10px] text-danger-500 font-bold">HOJE</span>
+                </div>
+                <BaseParagraph v-if="dashboardAlerts.nearDeadline.length === 0" size="xs"
+                  class="text-muted-400 italic py-2 text-center">
+                  Nenhum IR vencendo nos próximos 5 dias
+                </BaseParagraph>
+              </div>
+            </BaseCard>
+
+            <!-- Alert 3: Clientes Travados -->
+            <BaseCard rounded="md"
+              class="p-4 border-l-4 border-primary-500 relative overflow-hidden group hover:shadow-lg transition-shadow">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="size-9 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                  <Icon name="solar:hourglass-line-linear" class="size-5" />
+                </div>
+                <div>
+                  <BaseHeading as="h4" size="xs" weight="semibold">Fluxo Travado</BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-400">> 7 dias sem ação</BaseParagraph>
+                </div>
+                <div class="ms-auto">
+                  <BaseTag rounded="full" color="primary" size="sm" weight="bold">
+                    {{ dashboardAlerts.stuckClients.length }}
+                  </BaseTag>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div v-for="c in dashboardAlerts.stuckClients" :key="c.id" @click="openDetails(c.id)"
+                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
+                  <span class="text-[10px] text-primary-400 font-medium">{{ c.column?.name }}</span>
+                </div>
+                <BaseParagraph v-if="dashboardAlerts.stuckClients.length === 0" size="xs"
+                  class="text-muted-400 italic py-2 text-center">
+                  Fluxo rodando perfeitamente
+                </BaseParagraph>
+              </div>
+            </BaseCard>
+          </div>
           <!-- Project list widget -->
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-8 flex items-center justify-between">
@@ -317,21 +405,43 @@ const acessorapido = [
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-6 flex items-center justify-between">
               <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-800 dark:text-white">
-                <span>Progresso de recebimento vs honorários
-                  projetados</span>
+                <span>Progresso de recebimento vs honorários projetados</span>
               </BaseHeading>
+              <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue">
+                <Icon :name="showRevenue ? 'solar:eye-broken' : 'solar:eye-closed-broken'" class="size-4" />
+              </BaseButton>
             </div>
-            <LazyAddonApexcharts v-bind="revenueAreaChart" />
+            <div class="transition-all duration-500">
+              <LazyAddonApexcharts v-bind="revenueAreaChart" />
+            </div>
 
-            <div class="w-full mt-6 space-y-4 pt-6 border-t border-muted-100 dark:border-muted-800">
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-muted-500">Total Recebido</span>
-                <span class="font-bold text-success-600">{{ formatCurrency(stats.received) }}</span>
+            <div
+              class="w-full mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-muted-100 dark:border-muted-800 transition-all duration-300"
+              :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
+              <div class="flex flex-col">
+                <span class="text-[10px] uppercase font-bold text-muted-400 mb-1">Receita Esperada</span>
+                <span class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ showRevenue ?
+                  formatCurrency(stats.revenue) : 'R$ ••••••' }}</span>
               </div>
-              <div class="flex justify-between items-center text-sm text-muted-500 italic">
-                <span>Restante a Receber</span>
-                <span>{{ formatCurrency(stats.revenue - stats.received) }}</span>
+              <div class="flex flex-col">
+                <span class="text-[10px] uppercase font-bold text-success-500 mb-1">Recebido</span>
+                <span class="text-sm font-semibold text-success-600">{{ showRevenue ? formatCurrency(stats.received) :
+                  'R$ ••••••' }}</span>
               </div>
+              <div class="flex flex-col">
+                <span class="text-[10px] uppercase font-bold text-danger-500 mb-1">Em Atraso</span>
+                <span class="text-sm font-semibold text-danger-600">{{ showRevenue ? formatCurrency(stats.overdue) :
+                  'R$ ••••••' }}</span>
+              </div>
+            </div>
+
+            <div
+              class="mt-4 p-3 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 text-center transition-all duration-300"
+              :class="{ 'blur-sm select-none pointer-events-none opacity-50': !showRevenue }">
+              <span class="text-xs text-muted-500">
+                Faltam <span class="font-bold text-primary-500">{{ showRevenue ? formatCurrency(stats.revenue -
+                  stats.received) : 'R$ ••••••' }}</span> para receber
+              </span>
             </div>
           </BaseCard>
         </div>
@@ -384,7 +494,8 @@ const acessorapido = [
                   </div>
                 </div>
                 <div class="ms-auto flex items-center">
-                  <BaseButton rounded="lg" variant="muted" size="icon-md" class="scale-75">
+                  <BaseButton rounded="lg" variant="muted" size="icon-md" class="scale-75"
+                    @click="openDetails(item.id)">
                     <Icon name="solar:eye-linear" class="size-6" />
                   </BaseButton>
                 </div>
@@ -402,8 +513,8 @@ const acessorapido = [
                     <BaseParagraph size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">{{ member.name }}
                     </BaseParagraph>
                   </div>
-                  <BaseParagraph size="xs" weight="bold" class="text-primary-500">{{ member.completed }}/{{ member.count
-                  }}
+                  <BaseParagraph size="xs" weight="bold" class="text-primary-500">
+                    {{ member.completed }}/{{ member.count }}
                   </BaseParagraph>
                 </div>
                 <BaseProgress size="xs" variant="primary" :model-value="(member.completed / member.count) * 100"
@@ -415,6 +526,7 @@ const acessorapido = [
               <BaseParagraph size="xs">Ninguém atribuído ainda</BaseParagraph>
             </div>
           </BaseCard>
+
         </div>
       </div>
     </div>

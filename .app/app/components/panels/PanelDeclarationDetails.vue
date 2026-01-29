@@ -11,7 +11,8 @@ const emit = defineEmits(['close', 'saved'])
 const { useCustomFetch } = useApi()
 const toaster = useNuiToasts()
 const { open } = usePanels()
-import { PanelsPanelClientDetails } from '#components'
+// No import needed for auto-imported components, or use direct import if needed
+// import PanelsPanelClientDetails from '~/components/panels/PanelClientDetails.vue'
 
 // States
 const isLoading = ref(true)
@@ -20,6 +21,60 @@ const declaration = ref<any>(null)
 const isGeneratingLink = ref(false)
 const collectionLink = ref<any>(null)
 const activeTab = ref('activity')
+const smsMessage = ref('')
+const selectedTemplateIndex = ref<number | null>(null)
+const isSendingSms = ref(false)
+const activeSidebarTab = ref('details')
+
+const smsTemplates = [
+  {
+    id: 1,
+    icon: 'solar:document-add-linear',
+    title: 'Pedir Docs',
+    message: 'Ola [NOME], envie seus documentos para o IR pelo link: [LINK]. Evite multas! ConsTar.'
+  },
+  {
+    id: 2,
+    icon: 'solar:refresh-linear',
+    title: 'Status IR',
+    message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema. ConsTar.'
+  },
+  {
+    id: 3,
+    icon: 'solar:check-circle-linear',
+    title: 'Transmitido',
+    message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve. ConsTar.'
+  },
+  {
+    id: 4,
+    icon: 'solar:info-circle-linear',
+    title: 'Aviso Geral',
+    message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse [LINK] para verificar. Grato.'
+  }
+]
+
+function removeAccents(str: string) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x00-\x7F]/g, '')
+}
+
+function handleSelectTemplate(index: number) {
+  const templateObj = smsTemplates[index]
+  if (!templateObj) return
+
+  selectedTemplateIndex.value = index
+  const firstName = removeAccents(declaration.value?.client?.name?.split(' ')[0] || 'Cliente')
+  const statusName = removeAccents(declaration.value?.column?.name || 'Atualizado')
+  const fullUrl = collectionLink.value
+    ? `${window.location.origin}${collectionLink.value.url}`
+    : 'sistema'
+
+  let msg = templateObj.message
+    .replace('[NOME]', firstName)
+    .replace('[STATUS]', statusName)
+    .replace('[LINK]', fullUrl)
+
+  smsMessage.value = removeAccents(msg).substring(0, 160)
+}
 
 // Form state
 const form = ref({
@@ -76,10 +131,7 @@ async function fetchKanbanColumns() {
     if (data.success) {
       kanbanColumns.value = data.data.map((col: any) => ({
         label: col.name,
-        value: col.id, // Status technically is mapped to column ID roughly in this view or we need to know what constitutes "Status" vs "Column"
-        // Wait, the user said "Status deve listar todas as colunas". The backend schema has 'status' (pending, submitted) AND 'columnId'.
-        // This implies the user wants to move cards between columns via this dropdown.
-        // So we should map 'columnId' to this dropdown, not 'status'.
+        value: col.id,
         id: col.id,
         color: col.color
       }))
@@ -88,6 +140,11 @@ async function fetchKanbanColumns() {
     console.error('Erro ao buscar colunas:', error)
   }
 }
+
+const baseUrl = computed(() => {
+  if (import.meta.server) return ''
+  return window.location.origin
+})
 
 async function fetchTeamMembers() {
   isLoadingTeam.value = true
@@ -140,7 +197,141 @@ async function fetchDeclaration() {
   }
 }
 
-// ... logic ...
+async function sendSms() {
+  if (!smsMessage.value.trim()) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Digite uma mensagem para enviar',
+      icon: 'ph:warning-circle-fill'
+    })
+    return
+  }
+
+  isSendingSms.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/send-sms`, {
+      method: 'POST',
+      body: { message: smsMessage.value }
+    })
+
+    if (data.value && data.value.success) {
+      toaster.add({
+        title: 'Sucesso',
+        description: 'SMS enviado para o cliente!',
+        icon: 'ph:chat-circle-dots-fill'
+      })
+      smsMessage.value = ''
+      // Refresh to see the new log
+      await fetchDeclaration()
+    } else {
+      toaster.add({
+        title: 'Erro',
+        description: data.value?.message || 'Falha ao enviar SMS',
+        icon: 'ph:warning-circle-fill'
+      })
+    }
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Erro na comunicação com o servidor',
+      icon: 'ph:warning-circle-fill'
+    })
+  } finally {
+    isSendingSms.value = false
+  }
+}
+
+async function save() {
+  isSaving.value = true
+  try {
+    const payload = { ...form.value }
+    if (payload.assignedToId === 'unassigned') payload.assignedToId = ''
+
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
+      method: 'PUT',
+      body: payload,
+    })
+
+    if (data.value && data.value.success) {
+      toaster.add({
+        title: 'Salvo',
+        description: 'Alterações gravadas com sucesso',
+        icon: 'ph:check-circle-fill'
+      })
+      await fetchDeclaration()
+      emit('saved')
+    }
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: error.data?.message || 'Erro ao salvar alterações',
+      icon: 'ph:warning-circle-fill'
+    })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function remove() {
+  if (!confirm('Tem certeza que deseja excluir esta declaração?')) return
+
+  try {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
+      method: 'DELETE',
+    })
+
+    if (data.value && data.value.success) {
+      toaster.add({
+        title: 'Excluído',
+        description: 'Declaração removida com sucesso',
+        icon: 'ph:trash-fill'
+      })
+      emit('saved')
+      emit('close')
+    }
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Erro ao excluir declaração',
+      icon: 'ph:warning-circle-fill'
+    })
+  }
+}
+
+function triggerUpload() {
+  fileInput.value?.click()
+}
+
+function copyLink() {
+  if (collectionLink.value) {
+    const fullUrl = `${window.location.origin}${collectionLink.value.url}`
+    navigator.clipboard.writeText(fullUrl)
+    toaster.add({
+      title: 'Copiado',
+      description: 'Link copiado para a área de transferência',
+      icon: 'ph:copy-fill'
+    })
+  }
+}
+
+async function generateLink() {
+  isGeneratingLink.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/collection-link`, {
+      method: 'POST',
+      body: { title: `Documentos para IR ${declaration.value.taxYear}` }
+    })
+
+    if (data.value && data.value.success) {
+      collectionLink.value = data.value.data
+      await fetchDeclaration()
+    }
+  } catch (error) {
+    console.error('Erro ao gerar link:', error)
+  } finally {
+    isGeneratingLink.value = false
+  }
+}
 
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -245,7 +436,32 @@ onMounted(() => {
 
       <div v-else-if="declaration" class="w-full flex flex-col md:flex-row h-full">
         <!-- Main Content (Left) -->
-        <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-950">
+        <div
+          class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-950 border-r border-muted-200 dark:border-muted-800">
+
+          <!-- Client Data Section -->
+          <div class="space-y-4">
+            <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
+              Dados do Cliente
+            </BaseHeading>
+            <BaseCard rounded="lg" class="p-6 bg-muted-50 dark:bg-muted-900/40 border-muted-200 dark:border-muted-800">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Nome Completo</p>
+                  <p class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ declaration.client?.name }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">CPF</p>
+                  <p class="text-sm font-mono text-muted-800 dark:text-muted-100">{{ declaration.client?.cpf }}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
+                  <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
+                    }}</p>
+                </div>
+              </div>
+            </BaseCard>
+          </div>
 
           <!-- Description -->
           <div class="space-y-2">
@@ -323,7 +539,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                      }}</span>
+                        }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
@@ -347,116 +563,223 @@ onMounted(() => {
         <!-- Sidebar (Right) -->
         <!-- Sidebar (Right) -->
         <div
-          class="w-full md:w-80 border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/50 dark:bg-muted-900/20 overflow-y-auto p-6 space-y-8">
+          class="w-full md:w-80 border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/50 dark:bg-muted-900/20 overflow-y-auto flex flex-col h-full">
 
-          <!-- Client Link (Moved to Top) -->
-          <div class="space-y-3">
-            <BaseCard rounded="lg" class="p-4 bg-primary-500/5 border-primary-500/10 border shadow-none">
-              <div class="flex items-center gap-2 mb-2">
-                <Icon name="lucide:share-2" class="size-4 text-primary-500" />
-                <span class="text-xs font-bold text-primary-700 dark:text-primary-400 uppercase">Link do Cliente</span>
-              </div>
-              <BaseParagraph class="text-xs text-muted-500"> Envie esse link para o cliente importar os arquivos
-              </BaseParagraph>
-
-              <div v-if="collectionLink">
-                <p class="text-xs text-muted-500 mb-3 line-clamp-1 break-all">{{ collectionLink.url }}</p>
-                <div class="flex gap-2">
-                  <BaseButton size="sm" class="flex-1" @click="copyLink">Copiar</BaseButton>
-                  <BaseButton size="icon-sm" :to="collectionLink.url" target="_blank">
-                    <Icon name="lucide:external-link" class="size-4" />
-                  </BaseButton>
-                </div>
-              </div>
-              <div v-else>
-                <p class="text-xs text-muted-500 mb-3">Gere um link para o cliente enviar documentos.</p>
-                <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink"
-                  @click="generateLink">Gerar Link</BaseButton>
-              </div>
-            </BaseCard>
+          <!-- Sidebar Tabs -->
+          <div
+            class="flex border-b border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 px-4 shrink-0 overflow-x-auto no-scrollbar">
+            <button @click="activeSidebarTab = 'details'"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
+              :class="activeSidebarTab === 'details' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
+              Card
+            </button>
+            <button @click="activeSidebarTab = 'notification'"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
+              :class="activeSidebarTab === 'notification' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
+              Avisos
+            </button>
+            <button @click="activeSidebarTab = 'financial'"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
+              :class="activeSidebarTab === 'financial' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
+              Financeiro
+            </button>
           </div>
 
-          <!-- Status -->
-          <div class="space-y-3">
-            <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status</label>
-            <BaseSelect v-model="form.status" rounded="md" @update:model-value="() => save()">
-              <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value" class="py-1">
-                <div class="flex items-center gap-2">
-                  <div class="size-2 rounded-full" :class="`bg-${opt.color || 'gray'}-500`"></div>
-                  <span>{{ opt.label }}</span>
-                </div>
-              </BaseSelectItem>
-            </BaseSelect>
-          </div>
+          <div class="flex-1 overflow-y-auto p-6 space-y-8">
+            <!-- TAB: DETALHES -->
+            <div v-if="activeSidebarTab === 'details'" class="space-y-6 animate-fade-in">
+              <!-- Status -->
+              <div class="space-y-3">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status</label>
+                <BaseSelect v-model="form.status" rounded="md" @update:model-value="() => save()">
+                  <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value" class="py-1">
+                    <div class="flex items-center gap-2">
+                      <div class="size-2 rounded-full" :class="`bg-${opt.color || 'gray'}-500`"></div>
+                      <span>{{ opt.label }}</span>
+                    </div>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
 
-          <!-- Assignee -->
-          <div class="space-y-3">
-            <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Responsável</label>
-            <BaseSelect v-model="form.assignedToId" rounded="md" placeholder="Selecione..." @update:model-value="save">
-              <BaseSelectItem value="unassigned">
-                <span class="text-muted-400">Sem responsável</span>
-              </BaseSelectItem>
-              <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
-                <div class="flex items-center gap-2">
-                  <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
-                  <div>
-                    <span class="font-medium text-sm">{{ member.name }}</span>
+              <!-- Assignee -->
+              <div class="space-y-3">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Responsável</label>
+                <BaseSelect v-model="form.assignedToId" rounded="md" placeholder="Selecione..."
+                  @update:model-value="save">
+                  <BaseSelectItem value="unassigned">
+                    <span class="text-muted-400">Sem responsável</span>
+                  </BaseSelectItem>
+                  <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
+                    <div class="flex items-center gap-2">
+                      <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
+                      <div>
+                        <span class="font-medium text-sm">{{ member.name }}</span>
+                      </div>
+                    </div>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
+
+              <!-- Priority -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prioridade</label>
+                <div class="flex flex-wrap gap-2">
+                  <button v-for="p in priorityOptions" :key="p.value" @click="form.priority = p.value; save()"
+                    type="button"
+                    class="px-2 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1" :class="form.priority === p.value
+                      ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
+                      : 'border-transparent hover:bg-muted-200 dark:hover:bg-muted-800 text-muted-500'">
+                    <Icon :name="p.icon" class="size-3" :class="p.color" />
+                    {{ p.label }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Due Date -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo de Entrega</label>
+                <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
+              </div>
+
+              <!-- Declaration Type -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Tipo de Declaração</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button @click="form.declarationType = 'complete'; save()"
+                    class="text-xs p-2 rounded-lg border transition-all"
+                    :class="form.declarationType === 'complete' ? 'border-primary-500 bg-primary-500/5 text-primary-600' : 'border-muted-200 dark:border-muted-800 text-muted-400 hover:bg-muted-200 dark:hover:bg-muted-800'">Completa</button>
+                  <button @click="form.declarationType = 'simplified'; save()"
+                    class="text-xs p-2 rounded-lg border transition-all"
+                    :class="form.declarationType === 'simplified' ? 'border-primary-500 bg-primary-500/5 text-primary-600' : 'border-muted-200 dark:border-muted-800 text-muted-400 hover:bg-muted-200 dark:hover:bg-muted-800'">Simplificada</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB: NOTIFICAÇÕES -->
+            <div v-if="activeSidebarTab === 'notification'" class="space-y-6 animate-fade-in">
+              <!-- Client Link -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Link de Coleta</label>
+                  <Icon name="lucide:share-2" class="size-4 text-primary-500" />
+                </div>
+                <BaseCard rounded="lg" class="p-4 bg-primary-500/5 border-primary-500/10 border shadow-none">
+                  <div v-if="collectionLink">
+                    <p class="text-[10px] font-mono text-muted-500 mb-3 break-all line-clamp-2">
+                      {{ `${baseUrl}${collectionLink.url}` }}
+                    </p>
+                    <div class="flex gap-2">
+                      <BaseButton size="sm" class="flex-1" @click="copyLink">Copiar Link</BaseButton>
+                      <BaseButton size="icon-sm" :to="collectionLink.url" target="_blank">
+                        <Icon name="lucide:external-link" class="size-4" />
+                      </BaseButton>
+                    </div>
                   </div>
+                  <div v-else>
+                    <p class="text-xs text-muted-500 mb-3">Gere um link para o cliente enviar documentos.</p>
+                    <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink"
+                      @click="generateLink">Gerar Novo Link</BaseButton>
+                  </div>
+                </BaseCard>
+              </div>
+
+              <!-- SMS Templates -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Enviar SMS</label>
+                  <BaseTag size="sm" variant="muted" color="success" class="scale-90">GSM Standard</BaseTag>
                 </div>
-              </BaseSelectItem>
-            </BaseSelect>
-          </div>
 
-          <!-- Details Group -->
-          <div class="space-y-4 border-t border-muted-200 dark:border-muted-800 pt-6">
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prioridade</label>
-              <div class="flex flex-wrap gap-2">
-                <button v-for="p in priorityOptions" :key="p.value" @click="form.priority = p.value; save()"
-                  type="button"
-                  class="px-2 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1" :class="form.priority === p.value
-                    ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
-                    : 'border-transparent hover:bg-muted-200 dark:hover:bg-muted-800 text-muted-500'">
-                  <Icon :name="p.icon" class="size-3" :class="p.color" />
-                  {{ p.label }}
-                </button>
+                <div class="space-y-2">
+                  <button v-for="(tpl, idx) in smsTemplates" :key="tpl.id" @click="handleSelectTemplate(idx)"
+                    class="w-full text-left p-2.5 rounded-lg border transition-all duration-200 group"
+                    :class="selectedTemplateIndex === idx
+                      ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500'
+                      : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50'">
+                    <div class="flex items-center gap-3">
+                      <div class="size-7 rounded flex items-center justify-center transition-colors"
+                        :class="selectedTemplateIndex === idx ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500 group-hover:bg-primary-100 group-hover:text-primary-500'">
+                        <Icon :name="tpl.icon" class="size-3.5" />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-bold text-muted-800 dark:text-muted-100 uppercase tracking-wider">{{
+                          tpl.title }}</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <div v-if="selectedTemplateIndex !== null" class="mt-4 animate-fade-in">
+                  <BaseCard rounded="lg" class="p-3 border-primary-500/20 bg-primary-500/5">
+                    <p class="text-xs text-muted-600 dark:text-muted-300 mb-3 italic leading-relaxed">
+                      "{{ smsMessage }}"
+                    </p>
+                    <BaseButton variant="primary" size="sm" class="w-full h-8" :loading="isSendingSms" @click="sendSms">
+                      <Icon name="solar:paper-plane-bold" class="size-3.5 mr-2" />
+                      Enviar Agora
+                    </BaseButton>
+                  </BaseCard>
+                  <p class="text-[10px] text-muted-400 text-center italic mt-2">
+                    Destino: {{ declaration.client?.phone || '...' }}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo</label>
-              <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
-            </div>
-          </div>
+            <!-- TAB: FINANCEIRO -->
+            <div v-if="activeSidebarTab === 'financial'" class="space-y-6 animate-fade-in">
+              <!-- Honorários -->
+              <div class="space-y-3">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Valor do Serviço</label>
+                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
+                  icon="lucide:dollar-sign" @change="save" placeholder="0,00" />
+              </div>
 
-          <!-- Financial Group -->
-          <div class="space-y-4 border-t border-muted-200 dark:border-muted-800 pt-6">
-            <BaseHeading as="h5" size="xs" weight="medium" class="text-muted-800 dark:text-muted-100">Financeiro
-            </BaseHeading>
+              <!-- Pagamento -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status do Pagamento</label>
+                <div class="grid grid-cols-1 gap-1">
+                  <button v-for="opt in paymentStatusOptions" :key="opt.value"
+                    @click="form.paymentStatus = opt.value; save()"
+                    class="flex items-center gap-3 p-3 rounded-lg border transition-all text-sm" :class="form.paymentStatus === opt.value
+                      ? 'border-primary-500 bg-primary-500/5 text-primary-600 font-bold'
+                      : 'border-transparent text-muted-500 hover:bg-muted-100 dark:hover:bg-muted-800'">
+                    <div class="size-2 rounded-full" :class="{
+                      'bg-success-500': opt.value === 'paid',
+                      'bg-warning-500': opt.value === 'partial',
+                      'bg-danger-500': opt.value === 'pending'
+                    }"></div>
+                    {{ opt.label }}
+                    <Icon v-if="form.paymentStatus === opt.value" name="lucide:check" class="ms-auto size-4" />
+                  </button>
+                </div>
+              </div>
 
-            <BaseInputWrapper label="Valor (R$)">
-              <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
-                icon="lucide:dollar-sign" @change="save" />
-            </BaseInputWrapper>
+              <!-- Resultado IR -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Resultado do IR</label>
+                <BaseSelect v-model="form.result" rounded="md" @update:model-value="save">
+                  <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </BaseSelectItem>
+                </BaseSelect>
 
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Pagamento</label>
-              <div class="flex flex-col gap-1">
-                <label v-for="opt in paymentStatusOptions" :key="opt.value"
-                  class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted-200/50 dark:hover:bg-muted-800/50">
-                  <input type="radio" v-model="form.paymentStatus" :value="opt.value" @change="() => save()"
-                    class="text-primary-500 focus:ring-primary-500 border-muted-300 rounded-full" />
-                  <span class="text-sm text-muted-600 dark:text-muted-300">{{ opt.label }}</span>
-                </label>
+                <div v-if="form.result !== 'neutral'" class="mt-2">
+                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Valor do Resultado</p>
+                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md"
+                    icon="lucide:banknote" @change="save" placeholder="0,00" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="border-t border-muted-200 dark:border-muted-800 pt-6 text-center">
-            <button @click="remove" class="text-xs text-rose-500 hover:text-rose-600 hover:underline">Excluir
-              declaração</button>
+            <!-- Account Actions -->
+            <div class="pt-10 text-center">
+              <button @click="remove"
+                class="text-[10px] font-bold uppercase tracking-widest text-muted-400 hover:text-rose-500 transition-colors">
+                Excluir Card
+              </button>
+            </div>
           </div>
-
         </div>
       </div>
     </div>

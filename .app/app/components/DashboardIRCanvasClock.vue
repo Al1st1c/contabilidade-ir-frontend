@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+const colorMode = useColorMode()
 
 interface Props {
   startDate: string | Date
@@ -145,10 +146,17 @@ const draw = () => {
   }
 
   // Círculo externo (moldura do relógio com gradiente metálico)
+  const isDark = colorMode.value === 'dark'
   const ringGradient = ctx.createLinearGradient(0, 0, size, size)
-  ringGradient.addColorStop(0, '#f8fafc')
-  ringGradient.addColorStop(0.5, '#cbd5e1')
-  ringGradient.addColorStop(1, '#94a3b8')
+  if (isDark) {
+    ringGradient.addColorStop(0, '#334155')
+    ringGradient.addColorStop(0.5, '#1e293b')
+    ringGradient.addColorStop(1, '#0f172a')
+  } else {
+    ringGradient.addColorStop(0, '#f8fafc')
+    ringGradient.addColorStop(0.5, '#cbd5e1')
+    ringGradient.addColorStop(1, '#94a3b8')
+  }
 
   ctx.beginPath()
   ctx.arc(center, center, radius + 2, 0, Math.PI * 2)
@@ -158,13 +166,13 @@ const draw = () => {
   // Fundo do mostrador (Branco com leve profundidade)
   ctx.beginPath()
   ctx.arc(center, center, radius, 0, Math.PI * 2)
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = isDark ? '#0f172a' : '#ffffff'
   ctx.fill()
 
   // Sombra interna sutil
   const innerShadow = ctx.createRadialGradient(center, center, radius * 0.8, center, center, radius)
   innerShadow.addColorStop(0, 'rgba(255,255,255,0)')
-  innerShadow.addColorStop(1, 'rgba(0,0,0,0.03)')
+  innerShadow.addColorStop(1, isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)')
   ctx.fillStyle = innerShadow
   ctx.fill()
 
@@ -190,7 +198,7 @@ const draw = () => {
     ctx.beginPath()
     ctx.moveTo(x1, y1)
     ctx.lineTo(x2, y2)
-    ctx.strokeStyle = isQuarter ? '#64748b' : '#cbd5e1'
+    ctx.strokeStyle = isQuarter ? (isDark ? '#94a3b8' : '#64748b') : (isDark ? '#475569' : '#cbd5e1')
     ctx.lineWidth = isQuarter ? 2.5 : 1
     ctx.lineCap = 'butt'
     ctx.stroke()
@@ -230,7 +238,7 @@ const draw = () => {
 
       // Ponteiro de MINUTOS (médio) - uma volta completa em 60min
       const minuteAngle = ((minutes + seconds / 60) / 60) * 360 - 90
-      drawHand(ctx, center, center, radius * 0.65, minuteAngle, 3, '#475569')
+      drawHand(ctx, center, center, radius * 0.65, minuteAngle, 3, isDark ? '#94a3b8' : '#475569')
 
       // Ponteiro de SEGUNDOS (fino) - uma volta completa em 60s
       const secondAngle = (seconds / 60) * 360 - 90
@@ -245,11 +253,11 @@ const draw = () => {
 
       // Ponteiro de HORAS (médio)
       const hourAngle = ((hours + minutes / 60) / 24) * 360 - 90
-      drawHand(ctx, center, center, radius * 0.6, hourAngle, 3, '#475569')
+      drawHand(ctx, center, center, radius * 0.6, hourAngle, 3, isDark ? '#cbd5e1' : '#475569')
 
       // Ponteiro de MINUTOS (fino)
       const minuteAngle = (minutes / 60) * 360 - 90
-      drawHand(ctx, center, center, radius * 0.7, minuteAngle, 2, '#64748b')
+      drawHand(ctx, center, center, radius * 0.7, minuteAngle, 2, isDark ? '#64748b' : '#64748b')
     }
   }
 }
@@ -290,7 +298,7 @@ onUnmounted(() => {
   if (rafId) cancelAnimationFrame(rafId)
 })
 
-watch([progress, () => props.size], draw)
+watch([progress, () => props.size, () => colorMode.value], draw)
 
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('pt-BR', {

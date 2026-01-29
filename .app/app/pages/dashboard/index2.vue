@@ -333,7 +333,7 @@ onMounted(fetchDashboard)
                   </BaseParagraph>
                 </div>
                 <BaseParagraph size="xs" weight="bold" class="text-primary-500">{{ member.completed }}/{{ member.count
-                }}
+                  }}
                 </BaseParagraph>
               </div>
               <BaseProgress size="xs" variant="primary" :model-value="(member.completed / member.count) * 100"
