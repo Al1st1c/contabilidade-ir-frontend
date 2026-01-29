@@ -734,7 +734,7 @@ function handleNextAction() {
             </div>
           </BaseCard>
           <!-- Widget -->
-          <BaseCard class="p-6">
+          <BaseCard v-if="canViewAll" class="p-6">
             <BaseHeading as="h3" size="md" class="mb-6">Produtividade da Equipe</BaseHeading>
 
             <div v-if="teamProductivity.length > 0" class="mb-6">
