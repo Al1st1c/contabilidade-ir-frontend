@@ -301,7 +301,7 @@ function handleNextAction() {
                     <span>{{ campaignProgress }}% da Campanha</span>
                   </div>
                   <span v-if="gamificationMessage" class="text-xs text-muted-400 italic">{{ gamificationMessage
-                    }}</span>
+                  }}</span>
 
                   <div class="flex items-center gap-2 ps-3 border-s border-muted-200 dark:border-muted-800">
                     <span class="text-[10px] uppercase font-bold text-muted-400">Próxima Ação:</span>
@@ -579,36 +579,38 @@ function handleNextAction() {
               </BaseText>
             </div>
 
-            <div class="mb-2 space-y-5">
-              <div v-for="item in recentDeclarations" :key="item.id" class="flex items-center gap-3">
-                <BaseAvatar :src="item.client?.photo" :text="item.client?.name?.charAt(0)" size="xs"
-                  class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 shrink-0" />
-                <div>
-                  <BaseHeading as="h4" size="sm" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
+            <div class="mb-6 space-y-4">
+              <div v-for="item in recentDeclarations" :key="item.id"
+                class="flex items-center gap-3 p-2 rounded-xl hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors cursor-pointer group"
+                @click="openDetails(item.id)">
+                <BaseAvatar :src="item.client?.photo" :text="item.client?.name?.charAt(0)" size="sm"
+                  class="bg-primary-500/10 text-primary-500 shrink-0" />
+                <div class="flex-1 min-w-0">
+                  <BaseHeading as="h4" size="sm" weight="semibold" lead="tight"
+                    class="text-muted-900 dark:text-white truncate">
                     <span>{{ item.client?.name || 'Sem nome' }}</span>
                   </BaseHeading>
-                  <div class="flex items-center gap-2 mt-1">
-                    <BaseTag rounded="full" variant="none" :class="{
-                      'bg-danger-500/10 text-danger-600 dark:text-danger-400': item.priority?.toLowerCase() === 'high',
-                      'bg-warning-500/10 text-warning-600 dark:text-warning-400': item.priority?.toLowerCase() === 'medium',
-                      'bg-success-500/10 text-success-600 dark:text-success-400': item.priority?.toLowerCase() === 'low',
-                      'bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-400': !['high', 'medium', 'low'].includes(item.priority?.toLowerCase())
-                    }" class="px-2 py-0.5 text-[10px] font-bold uppercase">
-                      {{ item.priority == 'high' ? 'Alta' : item.priority == 'medium' ? 'Media' : item.priority == 'low'
-                        ? 'Baixa' : 'N/A' }}
-                    </BaseTag>
-                    <span class="text-muted-400">•</span>
-                    <BaseParagraph size="xs" class="text-muted-600 dark:text-muted-400 font-medium">
-                      {{ formatCurrency(item.serviceValue || 0) }}
-                    </BaseParagraph>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span
+                      class="text-[10px] font-bold text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
+                      IR {{ item.taxYear }}
+                    </span>
+                    <span class="text-[10px] text-muted-400 font-medium truncate">
+                      • {{ item.column?.name || 'Sem etapa' }}
+                    </span>
                   </div>
                 </div>
                 <div class="ms-auto flex items-center">
-                  <BaseButton rounded="lg" variant="muted" size="icon-md" class="scale-75"
-                    @click="openDetails(item.id)">
-                    <Icon name="solar:eye-linear" class="size-6" />
-                  </BaseButton>
+                  <Icon name="solar:alt-arrow-right-linear"
+                    class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
                 </div>
+              </div>
+
+              <div v-if="recentDeclarations.length === 0"
+                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
+                <Icon name="solar:document-add-linear" class="size-8 mx-auto mb-2 text-muted-400 opacity-50" />
+                <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500">Nenhum IR recente</BaseHeading>
+                <BaseParagraph size="xs" class="text-muted-400 mt-1">Comece criando uma nova declaração</BaseParagraph>
               </div>
             </div>
           </BaseCard>

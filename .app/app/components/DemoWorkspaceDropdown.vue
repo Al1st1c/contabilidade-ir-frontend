@@ -3,6 +3,8 @@ import { onClickOutside } from '@vueuse/core'
 import { useApi } from '~/composables/useAuth'
 
 const { useCustomFetch } = useApi()
+const { open } = usePanels()
+import { PanelsPanelDeclarationDetails } from '#components'
 
 // State
 const members = ref<any[]>([])
@@ -12,7 +14,7 @@ const searchMembers = ref('')
 const searchDeclarations = ref('')
 
 const target = ref(null)
-const open = ref(false)
+const openDropdown = ref(false)
 
 // Selected tenant info
 const tenant = ref<any>(null)
@@ -23,46 +25,24 @@ async function fetchData() {
 
   isLoading.value = true
   try {
-    // Fetch team members
-    const { data: membersData } = await useCustomFetch<any>('/tenant/members')
-    if (membersData.success) {
-      members.value = membersData.data || []
-    }
+    const { data: res } = await useCustomFetch<any>('/declarations/workspace-data')
 
-    // Fetch recent declarations (last 3 updated)
-    const { data: declarationsData } = await useCustomFetch<any>('/declarations/kanban?taxYear=2024')
-    if (declarationsData.success) {
-      // Flatten all cards from columns and sort by updatedAt
-      const allCards: any[] = []
-      declarationsData.data?.columns?.forEach((col: any) => {
-        col.cards?.forEach((card: any) => {
-          allCards.push({
-            ...card,
-            columnName: col.title
-          })
-        })
-      })
-      // Sort by updatedAt and take last 3
-      recentDeclarations.value = allCards
-        .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-        .slice(0, 3)
-    }
-
-    // Fetch tenant info
-    const { data: tenantData } = await useCustomFetch<any>('/tenant')
-    if (tenantData.success) {
-      tenant.value = tenantData.data
+    if (res && res.success) {
+      const payload = res.data
+      tenant.value = payload.tenant
+      recentDeclarations.value = payload.recent || []
+      members.value = payload.members || []
     }
   } catch (error) {
-    console.error('Error fetching data:', error)
+    console.error('Error fetching workspace data:', error)
   } finally {
     isLoading.value = false
   }
 }
 
 function toggleDropdown() {
-  open.value = !open.value
-  if (open.value) {
+  openDropdown.value = !openDropdown.value
+  if (openDropdown.value) {
     fetchData()
   }
 }
@@ -70,7 +50,7 @@ function toggleDropdown() {
 onClickOutside(
   target,
   () => {
-    open.value = false
+    openDropdown.value = false
   },
 )
 
@@ -90,16 +70,23 @@ const filteredDeclarations = computed(() => {
   )
 })
 
+function openDetails(id: string) {
+  openDropdown.value = false
+  open(PanelsPanelDeclarationDetails, {
+    declarationId: id
+  })
+}
+
 // Navigate to create pages
 const router = useRouter()
 
 function goToCreateMember() {
-  open.value = false
+  openDropdown.value = false
   router.push('/dashboard/settings/team')
 }
 
 function goToCreateDeclaration() {
-  open.value = false
+  openDropdown.value = false
   router.push('/dashboard/ir')
 }
 
@@ -117,8 +104,8 @@ function getRoleBadgeColor(roleName: string) {
 <template>
   <div ref="target" class="group/workspace relative w-full !z-[60]">
     <button type="button"
-      class="w-full max-w-[170px] rounded-lg py-1.5 pe-3 ps-2 border border-muted-200 dark:border-muted-800 transition-colors duration-300 group-hover/workspace:bg-muted-100 dark:group-hover/workspace:bg-muted-900/60 md:max-w-[240px]"
-      :class="open && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
+      class="w-full max-w-[170px] rounded-lg py-1.5 pe-3 ps-2 border border-muted-200 dark:border-muted-800 transition-colors duration-300 hover:bg-muted-100 dark:hover:bg-muted-900/60 md:max-w-[240px]"
+      :class="openDropdown && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
       <span class="flex w-full items-center gap-3 text-start">
         <BaseAvatar size="xxs" :src="tenant?.logo" :text="tenant?.tradeName?.charAt(0) || 'E'" />
         <div>
@@ -127,13 +114,13 @@ function getRoleBadgeColor(roleName: string) {
           </BaseText>
         </div>
         <Icon name="lucide:chevrons-up-down" class="ms-auto size-4 text-muted-400 transition-transform duration-300"
-          :class="open && 'rotate-180'" />
+          :class="openDropdown && 'rotate-180'" />
       </span>
     </button>
     <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0"
       enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in"
       leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-      <div v-if="open"
+      <div v-if="openDropdown"
         class="absolute end-0 top-12 w-full min-w-[280px] overflow-hidden rounded-xl border border-muted-200 bg-white shadow-xl shadow-muted-400/10 dark:border-muted-800 dark:bg-muted-950 dark:shadow-muted-800/10 md:start-0 md:min-w-[575px] !z-[60]">
         <div class="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-muted-200 md:dark:divide-muted-800">
           <!-- Left: Team Members -->
@@ -146,7 +133,8 @@ function getRoleBadgeColor(roleName: string) {
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
                 placeholder="Buscar funcionário...">
               <button type="button"
-                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800">
+                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800"
+                @click="openDropdown = false">
                 <BaseText size="xs">
                   Esc
                 </BaseText>
@@ -164,9 +152,9 @@ function getRoleBadgeColor(roleName: string) {
                 <!-- Members List -->
                 <ul v-else-if="filteredMembers.length > 0" class="space-y-1">
                   <li v-for="member in filteredMembers" :key="member.id">
-                    <NuxtLink to="/dashboard/settings/team"
-                      class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800"
-                      @click="open = false">
+                    <button type="button"
+                      class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
+                      @click="goToCreateMember">
                       <BaseAvatar size="xxs" :src="member.photo" :text="member.name?.charAt(0)" />
                       <div class="flex-1 min-w-0">
                         <BaseText size="sm" class="truncate block">
@@ -174,7 +162,7 @@ function getRoleBadgeColor(roleName: string) {
                         </BaseText>
                       </div>
                       <span class="size-2 rounded-full" :class="getRoleBadgeColor(member.role?.name)" />
-                    </NuxtLink>
+                    </button>
                   </li>
                 </ul>
                 <!-- Empty State -->
@@ -203,7 +191,8 @@ function getRoleBadgeColor(roleName: string) {
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
                 placeholder="Buscar declaração...">
               <button type="button"
-                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800">
+                class="me-2 ms-auto rounded-lg border border-muted-200 px-2 py-0.5 dark:border-muted-800"
+                @click="openDropdown = false">
                 <BaseText size="xs">
                   Esc
                 </BaseText>
@@ -221,9 +210,9 @@ function getRoleBadgeColor(roleName: string) {
                 <!-- Declarations List -->
                 <ul v-else-if="filteredDeclarations.length > 0" class="space-y-1">
                   <li v-for="declaration in filteredDeclarations" :key="declaration.id">
-                    <NuxtLink to="/dashboard/ir"
-                      class="flex w-full items-center gap-3 rounded-lg py-2 px-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800"
-                      @click="open = false">
+                    <button type="button"
+                      class="flex w-full items-center gap-3 rounded-lg py-2 px-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
+                      @click="openDetails(declaration.id)">
                       <div class="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
                         <Icon name="lucide:file-text" class="size-4 text-primary-500" />
                       </div>
@@ -235,16 +224,16 @@ function getRoleBadgeColor(roleName: string) {
                           {{ declaration.taxYear }} · {{ declaration.columnName }}
                         </BaseText>
                       </div>
-                    </NuxtLink>
+                    </button>
                   </li>
                 </ul>
                 <!-- Empty State -->
-                <div v-else>
+                <div v-else class="text-center py-4">
                   <BaseHeading size="sm" weight="medium">
-                    Nenhuma declaração ainda
+                    Nenhuma declaração
                   </BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-400">
-                    Crie sua primeira declaração de IR
+                    Crie seu primeiro IR
                   </BaseParagraph>
                 </div>
               </div>
