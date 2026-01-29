@@ -376,11 +376,24 @@ function handleNextAction() {
 
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20">
-    <div v-if="isLoading" class="flex items-center justify-center min-h-[500px]">
-      <div class="text-center">
-        <BaseSpinner size="xl" class="text-primary-500 mx-auto" />
-        <BaseHeading as="h3" size="lg" weight="medium" class="mt-4">Carregando Dashboard...</BaseHeading>
-        <BaseParagraph size="sm" class="text-muted-400">Preparando seus indicadores estratégicos</BaseParagraph>
+    <!-- Loading State (Skeleton) -->
+    <div v-if="isLoading" class="grid grid-cols-12 gap-4 animate-pulse">
+      <div class="col-span-12">
+        <BasePlaceload class="h-32 w-full rounded-2xl" />
+      </div>
+      <div class="col-span-12 lg:col-span-8 space-y-4">
+        <div class="grid grid-cols-3 gap-4">
+          <BasePlaceload class="h-32 w-full rounded-2xl" />
+          <BasePlaceload class="h-32 w-full rounded-2xl" />
+          <BasePlaceload class="h-32 w-full rounded-2xl" />
+        </div>
+        <BasePlaceload class="h-64 w-full rounded-2xl" />
+        <BasePlaceload class="h-80 w-full rounded-2xl" />
+      </div>
+      <div class="col-span-12 lg:col-span-4 space-y-4">
+        <BasePlaceload class="h-48 w-full rounded-2xl" />
+        <BasePlaceload class="h-64 w-full rounded-2xl" />
+        <BasePlaceload class="h-64 w-full rounded-2xl" />
       </div>
     </div>
 
