@@ -28,6 +28,7 @@ const stats = ref({
   revenue: 0,
   received: 0,
   overdue: 0,
+  completedToday: 0,
 })
 
 const pipelineData = ref<any[]>([])
@@ -69,6 +70,7 @@ async function fetchDashboard() {
         revenue: Number(payload.stats.revenue || 0),
         received: Number(payload.stats.received || 0),
         overdue: Number(payload.stats.overdue || 0),
+        completedToday: Number(payload.stats.completedToday || 0),
       }
 
       // Update arrays
@@ -176,6 +178,18 @@ const revenueAreaChart = computed(() => ({
 
 onMounted(fetchDashboard)
 
+const campaignProgress = computed(() => {
+  if (!stats.value.total) return 0
+  return Math.round((stats.value.completed / stats.value.total) * 100)
+})
+
+const gamificationMessage = computed(() => {
+  if (stats.value.completedToday > 0) {
+    return `🔥 Mandou bem! +${stats.value.completedToday} entregues hoje.`
+  }
+  return '☕️ Que tal começar uma nova declaração?'
+})
+
 const acessorapido = [
   {
     id: 1,
@@ -231,6 +245,15 @@ const acessorapido = [
                     Date().getFullYear() }} • <span class="capitalize">{{ new Intl.DateTimeFormat('pt-BR',
                       { dateStyle: 'long' }).format(new Date()) }}</span></span>
                 </BaseParagraph>
+
+                <div class="mt-3 flex items-center gap-3">
+                  <div
+                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-bold uppercase tracking-wider">
+                    <Icon name="solar:crown-minimalistic-bold-duotone" class="size-3" />
+                    <span>{{ campaignProgress }}% da Campanha</span>
+                  </div>
+                  <span class="text-xs text-muted-400 italic">{{ gamificationMessage }}</span>
+                </div>
               </div>
             </div>
 
