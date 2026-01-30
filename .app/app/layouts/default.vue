@@ -74,7 +74,8 @@ const isMobileOpen = ref(false)
                     class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
                 </TairoMenuTrigger>
                 <TairoMenuContent>
-                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col gap-2">
+                  <TairoMenuListItems
+                    class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col gap-2 bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-xl shadow-2xl overflow-hidden relative z-50">
                     <TairoMenuLink as-child>
                       <NuxtLink to="/dashboard/clients"
                         class="flex flex-col gap-1 p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
@@ -110,11 +111,12 @@ const isMobileOpen = ref(false)
                     class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
                 </TairoMenuTrigger>
                 <TairoMenuContent class="!z-[100]">
-                  <TairoMenuListItems class="m-0 grid list-none gap-x-[10px] p-[22px] sm:w-[500px]">
+                  <TairoMenuListItems
+                    class="m-0 grid list-none gap-x-[10px] p-[22px] sm:w-[500px] bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-xl shadow-2xl overflow-hidden relative z-50">
                     <li class="row-span-3 grid">
                       <div class="grid sm:grid-cols-5 gap-4">
                         <div class="hidden sm:block sm:col-span-2">
-                          <div class="flex flex-col justify-end h-full w-full bg-primary-950 rounded-xl p-4">
+                          <div class="flex flex-col justify-end h-full w-full bg-primary-800 rounded-xl p-4">
                             <div>
                               <TairoLogo class="size-10 text-white mb-3" />
                               <BaseHeading class="text-white mb-2 leading-tight">
