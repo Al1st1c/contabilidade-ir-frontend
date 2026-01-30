@@ -51,6 +51,34 @@ const stats = ref({
   byCategory: {} as Record<string, number>
 })
 
+// Storage Quota (mock data - será integrado com backend futuramente)
+const storageQuota = ref({
+  totalQuotaMB: 500, // Quota total em MB (plano contratado)
+  usedMB: 0, // Será calculado a partir dos stats
+})
+
+// Computed - Storage calculations
+const storageUsedMB = computed(() => {
+  return parseFloat(stats.value.totalSizeMB) || 0
+})
+
+const storageRemainingMB = computed(() => {
+  return Math.max(0, storageQuota.value.totalQuotaMB - storageUsedMB.value)
+})
+
+const storagePercentage = computed(() => {
+  if (storageQuota.value.totalQuotaMB === 0) return 0
+  return Math.min(100, (storageUsedMB.value / storageQuota.value.totalQuotaMB) * 100)
+})
+
+const storageStatus = computed(() => {
+  const pct = storagePercentage.value
+  if (pct >= 100) return { level: 'critical', label: 'Esgotado', color: 'danger', icon: 'solar:danger-triangle-bold' }
+  if (pct >= 95) return { level: 'danger', label: 'Crítico', color: 'danger', icon: 'solar:danger-triangle-bold' }
+  if (pct >= 80) return { level: 'warning', label: 'Atenção', color: 'warning', icon: 'solar:bell-bold' }
+  return { level: 'normal', label: 'Ok', color: 'success', icon: 'solar:check-circle-bold' }
+})
+
 // Categorias
 const categories = [
   { value: 'document', label: 'Documentos', icon: 'solar:document-text-bold-duotone', color: 'primary' },
@@ -113,6 +141,11 @@ const allFiles = computed(() => {
     })
   })
   return files
+})
+
+// Computed - Contador de arquivos enviados pelo cliente
+const uploadedByClientCount = computed(() => {
+  return allFiles.value.filter((file: any) => file.uploadedViaLink).length
 })
 
 // Computed - Resultados filtrados
@@ -222,199 +255,339 @@ watch(searchTerms, () => {
 </script>
 
 <template>
-  <div class="w-full px-4 md:px-6 lg:px-8 pb-20 dark:[--color-input-default-bg:var(--color-muted-950)]">
-    <!-- Search Bar -->
-    <div class="my-6 flex w-full items-center gap-3">
-      <BaseInput v-model="searchTerms" icon="lucide:search" placeholder="Buscar por cliente, CPF ou arquivo..."
-        rounded="full" />
-      <div>
-        <BaseText size="sm" class="text-muted-400">
-          {{ filteredResults.length }} resultado{{ filteredResults.length !== 1 ? 's' : '' }}
-        </BaseText>
-      </div>
-    </div>
-
-    <!-- Empty State (no data at all) -->
-    <div v-if="!isLoading && filesData.length === 0">
-      <BasePlaceholderPage title="Nenhum arquivo encontrado"
-        subtitle="Ainda não há arquivos no sistema. Comece anexando documentos às declarações de IR.">
-        <template #image>
-          <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
-            alt="Sem arquivos" />
-          <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
-            alt="Sem arquivos" />
-        </template>
-      </BasePlaceholderPage>
-    </div>
-
-    <!-- Main Content -->
-    <div v-else>
-      <!-- Tabs -->
-      <div class="border-muted-200 dark:border-muted-800 flex items-center gap-4 border-b font-sans">
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'all'
-          ? 'text-muted-700 dark:text-muted-100 border-primary-500'
-          : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
-          @click="activeTab = 'all'">
-          Todos
-        </button>
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'clients'
-          ? 'text-muted-700 dark:text-muted-100 border-primary-500'
-          : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
-          @click="activeTab = 'clients'">
-          Clientes
-        </button>
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'files'
-          ? 'text-muted-700 dark:text-muted-100 border-primary-500'
-          : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
-          @click="activeTab = 'files'">
-          Arquivos
-        </button>
-      </div>
-
-      <!-- Grid Layout -->
-      <div class="grid grid-cols-12 gap-4">
-        <!-- Sidebar - Filters -->
-        <div class="col-span-12 lg:col-span-4 xl:col-span-3">
-          <div class="flex flex-col gap-4 mt-4">
-            <!-- Category Filters -->
-            <BaseCard rounded="md" class="p-4">
-              <BaseHeading as="h3" weight="medium" size="md" class="mb-4 text-muted-900 dark:text-muted-100">
-                Categorias
-              </BaseHeading>
-              <ul class="space-y-4">
-                <li v-for="cat in categories" :key="cat.value" class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.category[cat.value]" variant="default" :label="cat.label"
-                    :classes="{ label: 'text-xs' }" />
-                  <BaseTag rounded="full" size="sm" :color="cat.color">
-                    {{ stats.byCategory[cat.value] || 0 }}
-                  </BaseTag>
-                </li>
-              </ul>
-            </BaseCard>
-
-            <!-- Upload Source Filter -->
-            <BaseCard rounded="md" class="p-4">
-              <BaseHeading as="h3" weight="medium" size="md" class="mb-4 text-muted-900 dark:text-muted-100">
-                Origem do Upload
-              </BaseHeading>
-              <ul class="space-y-4">
-                <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.uploadedBy.client" variant="default" label="Enviado pelo cliente"
-                    :classes="{ label: 'text-xs' }" />
-                </li>
-                <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.uploadedBy.system" variant="default" label="Enviado pelo sistema"
-                    :classes="{ label: 'text-xs' }" />
-                </li>
-              </ul>
-            </BaseCard>
-
-            <!-- Stats Card -->
-            <BaseCard rounded="md" class="p-4 bg-gradient-to-br from-primary-500/5 to-primary-500/10">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="size-10 rounded-xl bg-primary-500 text-white flex items-center justify-center">
-                  <Icon name="solar:database-bold-duotone" class="size-5" />
-                </div>
-                <div>
-                  <BaseText size="xs" class="text-muted-400 uppercase font-semibold">Espaço Total</BaseText>
-                  <BaseHeading as="h4" size="lg" weight="bold" class="text-primary-600 dark:text-primary-400">
-                    {{ stats.totalSizeMB }} MB
+  <div class="overflow-hidden relative px-4 md:px-6 lg:px-8 pb-20">
+    <!-- Grid -->
+    <div class="grid grid-cols-12 gap-4">
+      <!-- Column -->
+      <div class="col-span-12">
+        <!-- Inner grid -->
+        <div class="grid grid-cols-12 gap-4">
+          <!-- Header -->
+          <div class="col-span-12">
+            <div class="bg-primary-800 flex flex-col items-center rounded-2xl p-4 sm:flex-row">
+              <div class="relative h-[180px] w-[250px] shrink-0 sm:h-[175px]">
+                <img class="pointer-events-none absolute start-6 top-[-15] sm:-start-10"
+                  src="/img/illustrations/dashboards/drive/files-manager.png" alt="Drive illustration">
+              </div>
+              <div class="mt-6 grow sm:mt-0">
+                <div class="pb-4 text-center sm:pb-0 sm:text-start">
+                  <BaseHeading tag="h1" size="2xl" class="text-white">
+                    <span>Drive de Arquivos</span>
                   </BaseHeading>
+                  <BaseParagraph size="sm" class="max-w-xs text-white/90">
+                    <span>
+                      Gerencie todos os documentos dos seus clientes em um só lugar. Busque, organize e acesse
+                      rapidamente.
+                    </span>
+                  </BaseParagraph>
                 </div>
               </div>
-              <div class="text-xs text-muted-500">
-                {{ stats.totalFiles }} arquivos • {{ stats.totalClients }} clientes
-              </div>
-            </BaseCard>
-          </div>
-        </div>
+              <!-- Storage Quota Card -->
+              <div class="mt-4 sm:mt-0 sm:ms-auto shrink-0">
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 min-w-[220px]">
+                  <!-- Header with status -->
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <div class="size-8 rounded-lg bg-white/20 text-white flex items-center justify-center">
+                        <Icon name="solar:server-bold-duotone" class="size-4" />
+                      </div>
+                      <BaseText size="xs" class="text-white/70 uppercase font-semibold">Armazenamento</BaseText>
+                    </div>
+                    <!-- Status Badge -->
+                    <div v-if="storageStatus.level !== 'normal'"
+                      class="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse"
+                      :class="{
+                        'bg-warning-500 text-warning-950': storageStatus.level === 'warning',
+                        'bg-danger-500 text-white': storageStatus.level === 'danger' || storageStatus.level === 'critical'
+                      }">
+                      <Icon :name="storageStatus.icon" class="size-3" />
+                      <span>{{ storageStatus.label }}</span>
+                    </div>
+                  </div>
 
-        <!-- Main Content Area -->
-        <div class="col-span-12 lg:col-span-8 xl:col-span-9">
-          <!-- Loading -->
-          <div v-if="isLoading" class="flex items-center justify-center py-20">
-            <div class="text-center">
-              <Icon name="svg-spinners:blocks-shuffle-3" class="size-12 text-primary-500 mx-auto mb-4" />
-              <BaseText size="sm" class="text-muted-400">Carregando...</BaseText>
-            </div>
-          </div>
+                  <!-- Usage Display -->
+                  <div class="mb-3">
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold text-white">{{ storageUsedMB.toFixed(1) }}</span>
+                      <span class="text-sm text-white/60">/ {{ storageQuota.totalQuotaMB }} MB</span>
+                    </div>
+                  </div>
 
-          <!-- Empty filtered results -->
-          <div v-else-if="filteredResults.length === 0" class="py-20">
-            <BasePlaceholderPage title="Nenhum resultado"
-              subtitle="Não encontramos nada com esses filtros. Tente ajustar sua busca.">
-              <template #image>
-                <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
-                  alt="Sem resultados" />
-                <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
-                  alt="Sem resultados" />
-              </template>
-            </BasePlaceholderPage>
-          </div>
+                  <!-- Progress Bar -->
+                  <div class="mb-3">
+                    <div class="h-2 bg-white/20 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full transition-all duration-500" :class="{
+                        'bg-success-400': storageStatus.level === 'normal',
+                        'bg-warning-400': storageStatus.level === 'warning',
+                        'bg-danger-400': storageStatus.level === 'danger' || storageStatus.level === 'critical'
+                      }" :style="{ width: `${storagePercentage}%` }" />
+                    </div>
+                    <div class="flex justify-between mt-1">
+                      <span class="text-[10px] text-white/50">{{ storagePercentage.toFixed(0) }}% usado</span>
+                      <span class="text-[10px] text-white/50">{{ storageRemainingMB.toFixed(1) }} MB livres</span>
+                    </div>
+                  </div>
 
-          <!-- Results -->
-          <div v-else class="space-y-4 py-4">
-            <BaseCard v-for="result in filteredResults" :key="result.id" rounded="md"
-              class="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              @click="result.type === 'client' ? openClientFiles(result) : downloadFile(result)">
-              <div class="flex w-full items-center gap-4">
-                <!-- Client Avatar -->
-                <BaseAvatar v-if="result.type === 'client'" :text="result.name.charAt(0)" size="md"
-                  class="ring-2 ring-primary-500/20" />
+                  <!-- Stats Footer -->
+                  <div class="text-xs text-white/60 border-t border-white/10 pt-2 flex justify-between">
+                    <span>📁 {{ stats.totalFiles }}</span>
+                    <span>👤 {{ stats.totalClients }}</span>
+                  </div>
 
-                <!-- File Icon -->
-                <div v-else class="size-10 rounded-xl flex items-center justify-center shrink-0"
-                  :class="`bg-${getCategoryInfo(result.category).color}-500/10 text-${getCategoryInfo(result.category).color}-500`">
-                  <Icon :name="getFileIcon(result.mimeType)" class="size-5" />
-                </div>
-
-                <!-- Content -->
-                <div class="flex-1 min-w-0">
-                  <BaseHeading as="h3" weight="medium" size="sm" class="text-muted-900 dark:text-muted-100 truncate"
-                    lead="tight">
-                    {{ result.type === 'client' ? result.name : result.fileName }}
-                  </BaseHeading>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <!-- Client Info -->
-                    <BaseText v-if="result.type === 'client'" size="xs" class="text-muted-600 dark:text-muted-400">
-                      CPF: {{ result.cpf }} • {{ result.totalFiles }} arquivo{{ result.totalFiles !== 1 ? 's' : '' }}
-                      ({{
-                        formatFileSize(result.totalSize) }})
-                    </BaseText>
-
-                    <!-- File Info -->
-                    <template v-else>
-                      <BaseTag rounded="full" size="sm" :color="getCategoryInfo(result.category).color"
-                        class="text-[10px]">
-                        {{ getCategoryInfo(result.category).label }}
-                      </BaseTag>
-                      <span class="text-[10px] text-muted-400">
-                        {{ formatFileSize(result.fileSize) }}
-                      </span>
-                      <span class="text-muted-300 dark:text-muted-600">•</span>
-                      <span class="text-[10px] text-muted-400">
-                        {{ result.client.name }}
-                      </span>
-                      <span v-if="result.uploadedViaLink" class="text-[10px] text-success-500 font-semibold">
-                        📤 Cliente
-                      </span>
-                    </template>
+                  <!-- Upgrade CTA (when storage is low) -->
+                  <div v-if="storageStatus.level !== 'normal'" class="mt-3">
+                    <BaseButton size="xs" class="w-full bg-white/20 hover:bg-white/30 text-white border-0">
+                      <Icon name="solar:bolt-bold" class="size-3" />
+                      <span>Aumentar espaço</span>
+                    </BaseButton>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+          <!-- Content -->
+          <div class="col-span-12">
+            <!-- Sub grid -->
+            <div class="grid grid-cols-12 gap-4">
+              <!-- Sub column -->
+              <div class="col-span-12 sm:col-span-6">
+                <div class="flex flex-col gap-4">
+                  <!-- Tile grid -->
+                  <div class="grid grid-cols-12 gap-4">
+                    <!-- Tile - Total Arquivos -->
+                    <div class="col-span-4">
+                      <BaseCard rounded="lg" class="p-4">
+                        <div class="flex items-center gap-2 mb-1">
+                          <Icon name="solar:folder-with-files-bold-duotone" class="size-4 text-primary-500" />
+                          <BaseParagraph size="xs" weight="medium" class="text-muted-400 uppercase">
+                            Arquivos
+                          </BaseParagraph>
+                        </div>
+                        <span class="text-muted-900 dark:text-muted-100 block font-sans text-2xl font-bold">
+                          {{ stats.totalFiles }}
+                        </span>
+                      </BaseCard>
+                    </div>
+                    <!-- Tile - Total Clientes -->
+                    <div class="col-span-4">
+                      <BaseCard rounded="lg" class="p-4">
+                        <div class="flex items-center gap-2 mb-1">
+                          <Icon name="solar:users-group-rounded-bold-duotone" class="size-4 text-info-500" />
+                          <BaseParagraph size="xs" weight="medium" class="text-muted-400 uppercase">
+                            Clientes
+                          </BaseParagraph>
+                        </div>
+                        <span class="text-muted-900 dark:text-muted-100 block font-sans text-2xl font-bold">
+                          {{ stats.totalClients }}
+                        </span>
+                      </BaseCard>
+                    </div>
+                    <!-- Tile - Enviados por Cliente -->
+                    <div class="col-span-4">
+                      <BaseCard rounded="lg" class="p-4">
+                        <div class="flex items-center gap-2 mb-1">
+                          <Icon name="solar:upload-bold-duotone" class="size-4 text-success-500" />
+                          <BaseParagraph size="xs" weight="medium" class="text-muted-400 uppercase">
+                            Via Link
+                          </BaseParagraph>
+                        </div>
+                        <span class="text-muted-900 dark:text-muted-100 block font-sans text-2xl font-bold">
+                          {{ uploadedByClientCount }}
+                        </span>
+                      </BaseCard>
+                    </div>
+                  </div>
+                  <!-- Widget -->
+                  <BaseCard class="p-0 md:p-6" rounded="lg">
+                    <!-- Title -->
+                    <div class="my-2 flex w-full items-center gap-3 mt-0">
+                      <BaseInput v-model="searchTerms" icon="lucide:search"
+                        placeholder="Buscar por cliente, CPF ou arquivo..." rounded="full" />
+                      <div>
+                        <BaseText size="sm" class="text-muted-400">
+                          ({{ filteredResults.length }})
+                        </BaseText>
+                      </div>
+                    </div>
 
-                <!-- Action Button -->
-                <div class="ms-auto">
-                  <BaseTooltip :content="result.type === 'client' ? 'Ver arquivos' : 'Baixar arquivo'">
-                    <BaseButton rounded="full" size="icon-sm" color="muted">
-                      <Icon :name="result.type === 'client' ? 'lucide:arrow-right' : 'lucide:arrow-down'" />
-                    </BaseButton>
-                  </BaseTooltip>
+                    <div class="col-span-12 lg:col-span-4 xl:col-span-3">
+                      <div class="flex flex-col gap-4 mt-4">
+                        <!-- Category Filters -->
+                        <BaseCard rounded="md" class="p-4">
+                          <BaseHeading as="h3" weight="medium" size="md"
+                            class="mb-4 text-muted-900 dark:text-muted-100">
+                            Categorias
+                          </BaseHeading>
+                          <ul class="space-y-4">
+                            <li v-for="cat in categories" :key="cat.value" class="flex items-center justify-between">
+                              <BaseCheckbox v-model="filters.category[cat.value]" variant="default" :label="cat.label"
+                                :classes="{ label: 'text-xs' }" />
+                              <BaseTag rounded="full" size="sm" :color="cat.color">
+                                {{ stats.byCategory[cat.value] || 0 }}
+                              </BaseTag>
+                            </li>
+                          </ul>
+                        </BaseCard>
+
+                        <!-- Upload Source Filter -->
+                        <BaseCard rounded="md" class="p-4">
+                          <BaseHeading as="h3" weight="medium" size="md"
+                            class="mb-4 text-muted-900 dark:text-muted-100">
+                            Origem do Upload
+                          </BaseHeading>
+                          <ul class="space-y-4">
+                            <li class="flex items-center justify-between">
+                              <BaseCheckbox v-model="filters.uploadedBy.client" variant="default"
+                                label="Enviado pelo cliente" :classes="{ label: 'text-xs' }" />
+                            </li>
+                            <li class="flex items-center justify-between">
+                              <BaseCheckbox v-model="filters.uploadedBy.system" variant="default"
+                                label="Enviado pelo sistema" :classes="{ label: 'text-xs' }" />
+                            </li>
+                          </ul>
+                        </BaseCard>
+                      </div>
+                    </div>
+                  </BaseCard>
                 </div>
               </div>
-            </BaseCard>
+              <!-- Sub column -->
+              <div class="col-span-12 sm:col-span-6">
+                <!-- Widget -->
+                <BaseCard class="p-4 md:p-6" rounded="lg">
+                  <div v-if="!isLoading && filesData.length === 0">
+                    <BasePlaceholderPage title="Nenhum arquivo encontrado"
+                      subtitle="Ainda não há arquivos no sistema. Comece anexando documentos às declarações de IR.">
+                      <template #image>
+                        <img class="block dark:hidden"
+                          src="/img/illustrations/placeholders/flat/placeholder-search-4.svg" alt="Sem arquivos" />
+                        <img class="hidden dark:block"
+                          src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg" alt="Sem arquivos" />
+                      </template>
+                    </BasePlaceholderPage>
+                  </div>
+                  <div v-else>
+                    <div class="border-muted-200 dark:border-muted-800 flex items-center gap-4 border-b font-sans">
+                      <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'all'
+                        ? 'text-muted-700 dark:text-muted-100 border-primary-500'
+                        : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
+                        @click="activeTab = 'all'">
+                        Todos
+                      </button>
+                      <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'clients'
+                        ? 'text-muted-700 dark:text-muted-100 border-primary-500'
+                        : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
+                        @click="activeTab = 'clients'">
+                        Clientes
+                      </button>
+                      <button type="button" class="cursor-pointer border-b-2 p-3 text-sm transition-colors" :class="activeTab === 'files'
+                        ? 'text-muted-700 dark:text-muted-100 border-primary-500'
+                        : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'"
+                        @click="activeTab = 'files'">
+                        Arquivos
+                      </button>
+                    </div>
+
+
+                    <div class="col-span-12 lg:col-span-8 xl:col-span-9">
+                      <!-- Loading -->
+                      <div v-if="isLoading" class="flex items-center justify-center py-20">
+                        <div class="text-center">
+                          <Icon name="svg-spinners:blocks-shuffle-3" class="size-12 text-primary-500 mx-auto mb-4" />
+                          <BaseText size="sm" class="text-muted-400">Carregando...</BaseText>
+                        </div>
+                      </div>
+
+                      <!-- Empty filtered results -->
+                      <div v-else-if="filteredResults.length === 0" class="py-20">
+                        <BasePlaceholderPage title="Nenhum resultado"
+                          subtitle="Não encontramos nada com esses filtros. Tente ajustar sua busca.">
+                          <template #image>
+                            <img class="block dark:hidden"
+                              src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
+                              alt="Sem resultados" />
+                            <img class="hidden dark:block"
+                              src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
+                              alt="Sem resultados" />
+                          </template>
+                        </BasePlaceholderPage>
+                      </div>
+
+                      <!-- Results -->
+                      <div v-else class="space-y-4 py-4">
+                        <BaseCard v-for="result in filteredResults" :key="result.id" rounded="md"
+                          class="p-4 hover:shadow-md transition-shadow cursor-pointer"
+                          @click="result.type === 'client' ? openClientFiles(result) : downloadFile(result)">
+                          <div class="flex w-full items-center gap-4">
+                            <!-- Client Avatar -->
+                            <BaseAvatar v-if="result.type === 'client'" :text="result.name.charAt(0)" size="md"
+                              class="ring-2 ring-primary-500/20" />
+
+                            <!-- File Icon -->
+                            <div v-else class="size-10 rounded-xl flex items-center justify-center shrink-0"
+                              :class="`bg-${getCategoryInfo(result.category).color}-500/10 text-${getCategoryInfo(result.category).color}-500`">
+                              <Icon :name="getFileIcon(result.mimeType)" class="size-5" />
+                            </div>
+
+                            <!-- Content -->
+                            <div class="flex-1 min-w-0">
+                              <BaseHeading as="h3" weight="medium" size="sm"
+                                class="text-muted-900 dark:text-muted-100 truncate" lead="tight">
+                                {{ result.type === 'client' ? result.name : result.fileName }}
+                              </BaseHeading>
+                              <div class="flex items-center gap-2 mt-0.5">
+                                <!-- Client Info -->
+                                <BaseText v-if="result.type === 'client'" size="xs"
+                                  class="text-muted-600 dark:text-muted-400">
+                                  CPF: {{ result.cpf }} • {{ result.totalFiles }} arquivo{{ result.totalFiles !== 1 ?
+                                    's'
+                                    : '' }}
+                                  ({{
+                                    formatFileSize(result.totalSize) }})
+                                </BaseText>
+
+                                <!-- File Info -->
+                                <template v-else>
+                                  <BaseTag rounded="full" size="sm" :color="getCategoryInfo(result.category).color"
+                                    class="text-[10px]">
+                                    {{ getCategoryInfo(result.category).label }}
+                                  </BaseTag>
+                                  <span class="text-[10px] text-muted-400">
+                                    {{ formatFileSize(result.fileSize) }}
+                                  </span>
+                                  <span class="text-muted-300 dark:text-muted-600">•</span>
+                                  <span class="text-[10px] text-muted-400">
+                                    {{ result.client.name }}
+                                  </span>
+                                  <span v-if="result.uploadedViaLink"
+                                    class="text-[10px] text-success-500 font-semibold">
+                                    📤 Cliente
+                                  </span>
+                                </template>
+                              </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <div class="ms-auto">
+                              <BaseTooltip :content="result.type === 'client' ? 'Ver arquivos' : 'Baixar arquivo'">
+                                <BaseButton rounded="full" size="icon-sm" color="muted">
+                                  <Icon :name="result.type === 'client' ? 'lucide:arrow-right' : 'lucide:arrow-down'" />
+                                </BaseButton>
+                              </BaseTooltip>
+                            </div>
+                          </div>
+                        </BaseCard>
+                      </div>
+                    </div>
+                  </div>
+                </BaseCard>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+
 </template>

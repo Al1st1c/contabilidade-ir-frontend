@@ -417,6 +417,33 @@ const productivityChart = computed(() => ({
   }
 }))
 
+// Top 3 Podium - Sorted by completion rate (completed/count)
+const topPerformers = computed(() => {
+  if (teamProductivity.value.length === 0) return []
+
+  // Sort by completion rate descending, then by absolute completed count
+  const sorted = [...teamProductivity.value]
+    .filter(m => m.count > 0) // Only include members with tasks
+    .sort((a, b) => {
+      const rateA = a.completed / a.count
+      const rateB = b.completed / b.count
+      if (rateB !== rateA) return rateB - rateA
+      return b.completed - a.completed
+    })
+    .slice(0, 3)
+
+  return sorted.map((m, index) => ({
+    ...m,
+    rank: index + 1,
+    completionRate: m.count > 0 ? Math.round((m.completed / m.count) * 100) : 0
+  }))
+})
+
+// Get specific podium positions (reordered for visual layout: 2nd, 1st, 3rd)
+const podiumFirst = computed(() => topPerformers.value.find(p => p.rank === 1))
+const podiumSecond = computed(() => topPerformers.value.find(p => p.rank === 2))
+const podiumThird = computed(() => topPerformers.value.find(p => p.rank === 3))
+
 const activeAlertTab = ref('all')
 
 const irStartDate = ref("2026-03-01T08:00:00")
@@ -886,9 +913,175 @@ const filteredMembers = computed(() => {
               </NuxtLink>
             </div>
 
-            <!-- Chart (if data exists) -->
-            <div v-if="teamProductivity.length > 0" class="mb-4">
-              <LazyAddonApexcharts v-bind="productivityChart" />
+            <!-- Podium Section -->
+            <div v-if="topPerformers.length > 0" class="mb-4">
+              <!-- Podium Container -->
+              <div class="relative">
+                <!-- Confetti Animation for Winner -->
+                <div v-if="podiumFirst"
+                  class="absolute inset-x-0 top-0 flex justify-center pointer-events-none overflow-hidden h-16 opacity-50">
+                  <div class="animate-pulse">
+                    <Icon name="solar:star-bold" class="size-2 text-primary-400 absolute top-1 left-1/4 animate-bounce"
+                      style="animation-delay: 0.1s" />
+                    <Icon name="solar:star-bold"
+                      class="size-1.5 text-primary-300 absolute top-3 left-1/3 animate-bounce"
+                      style="animation-delay: 0.3s" />
+                    <Icon name="solar:star-bold" class="size-2 text-primary-400 absolute top-0 right-1/4 animate-bounce"
+                      style="animation-delay: 0.2s" />
+                    <Icon name="solar:star-bold"
+                      class="size-1.5 text-primary-300 absolute top-4 right-1/3 animate-bounce"
+                      style="animation-delay: 0.4s" />
+                  </div>
+                </div>
+
+                <!-- Podium Stands -->
+                <div class="flex items-end justify-center gap-1 pt-4">
+                  <!-- 2nd Place (Left) -->
+                  <div class="flex flex-col items-center w-16">
+                    <template v-if="podiumSecond">
+                      <!-- Avatar with Silver Ring -->
+                      <div class="relative mb-1 group">
+                        <div
+                          class="absolute -inset-0.5 bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 rounded-full opacity-60 group-hover:opacity-100 blur-[2px] transition-opacity">
+                        </div>
+                        <BaseAvatar :src="podiumSecond.photo" :text="podiumSecond.name?.charAt(0) || '?'" size="sm"
+                          class="relative ring-1 ring-slate-300 shadow-md" />
+                        <!-- Silver Medal -->
+                        <div
+                          class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 flex items-center justify-center shadow-sm border border-slate-200">
+                          <span class="text-[8px] font-bold text-slate-600">2</span>
+                        </div>
+                      </div>
+                      <!-- Name -->
+                      <span
+                        class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full">{{
+                          podiumSecond.name?.split(' ')[0] }}</span>
+                      <!-- Stats -->
+                      <span class="text-[9px] font-bold text-slate-500">{{ podiumSecond.completionRate }}%</span>
+                    </template>
+                    <!-- Empty 2nd Place -->
+                    <template v-else>
+                      <div
+                        class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1">
+                      </div>
+                      <span class="text-[9px] text-muted-400">-</span>
+                    </template>
+                    <!-- Silver Podium Stand -->
+                    <div
+                      class="w-full h-10 mt-1 rounded-t-md bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 dark:from-slate-600 dark:via-slate-700 dark:to-slate-800 flex items-center justify-center shadow-inner relative overflow-hidden">
+                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                      <span class="text-lg font-black text-slate-500 dark:text-slate-400 drop-shadow-sm">2</span>
+                    </div>
+                  </div>
+
+                  <!-- 1st Place (Center - Elevated) -->
+                  <div class="flex flex-col items-center w-20 -mt-2">
+                    <template v-if="podiumFirst">
+                      <!-- Crown Icon -->
+                      <div class="mb-0.5 animate-bounce" style="animation-duration: 2s">
+                        <Icon name="solar:crown-bold" class="size-4 text-primary-400 drop-shadow-md" />
+                      </div>
+                      <!-- Avatar with Primary Ring -->
+                      <div class="relative group">
+                        <div
+                          class="absolute -inset-1 bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 rounded-full opacity-60 group-hover:opacity-100 blur-[3px] animate-pulse transition-opacity">
+                        </div>
+                        <BaseAvatar :src="podiumFirst.photo" :text="podiumFirst.name?.charAt(0) || '?'" size="md"
+                          class="relative ring-2 ring-primary-400 shadow-lg" />
+                        <!-- Primary Medal -->
+                        <div
+                          class="absolute -bottom-0.5 -right-0.5 size-5 rounded-full bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 flex items-center justify-center shadow-md border border-primary-300">
+                          <Icon name="solar:star-bold" class="size-2.5 text-white" />
+                        </div>
+                      </div>
+                      <!-- Name -->
+                      <span class="text-xs font-bold text-muted-800 dark:text-white text-center truncate w-full mt-1">{{
+                        podiumFirst.name?.split(' ')[0] }}</span>
+                      <!-- Stats -->
+                      <div class="flex items-center gap-0.5">
+                        <span class="text-[10px] font-bold text-primary-500">{{ podiumFirst.completionRate }}%</span>
+                        <Icon name="solar:fire-bold" class="size-2.5 text-primary-400" />
+                      </div>
+                    </template>
+                    <!-- Empty 1st Place -->
+                    <template v-else>
+                      <div
+                        class="size-10 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1">
+                      </div>
+                      <span class="text-[10px] text-muted-400">-</span>
+                    </template>
+                    <!-- Primary Podium Stand -->
+                    <div
+                      class="w-full h-14 mt-1 rounded-t-md bg-gradient-to-b from-primary-300 via-primary-400 to-primary-500 dark:from-primary-500 dark:via-primary-600 dark:to-primary-700 flex items-center justify-center shadow-lg relative overflow-hidden">
+                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                      <span class="text-xl font-black text-white drop-shadow-md">1</span>
+                    </div>
+                  </div>
+
+                  <!-- 3rd Place (Right) -->
+                  <div class="flex flex-col items-center w-16">
+                    <template v-if="podiumThird">
+                      <!-- Avatar with Bronze Ring -->
+                      <div class="relative mb-1 group">
+                        <div
+                          class="absolute -inset-0.5 bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-full opacity-50 group-hover:opacity-100 blur-[2px] transition-opacity">
+                        </div>
+                        <BaseAvatar :src="podiumThird.photo" :text="podiumThird.name?.charAt(0) || '?'" size="sm"
+                          class="relative ring-1 ring-orange-400 shadow-md" />
+                        <!-- Bronze Medal -->
+                        <div
+                          class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600 flex items-center justify-center shadow-sm border border-orange-300">
+                          <span class="text-[8px] font-bold text-orange-800">3</span>
+                        </div>
+                      </div>
+                      <!-- Name -->
+                      <span
+                        class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full">{{
+                          podiumThird.name?.split(' ')[0] }}</span>
+                      <!-- Stats -->
+                      <span class="text-[9px] font-bold text-orange-500">{{ podiumThird.completionRate }}%</span>
+                    </template>
+                    <!-- Empty 3rd Place -->
+                    <template v-else>
+                      <div
+                        class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1">
+                      </div>
+                      <span class="text-[9px] text-muted-400">-</span>
+                    </template>
+                    <!-- Bronze Podium Stand -->
+                    <div
+                      class="w-full h-8 mt-1 rounded-t-md bg-gradient-to-b from-orange-300 via-orange-400 to-orange-500 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 flex items-center justify-center shadow-inner relative overflow-hidden">
+                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                      <span class="text-sm font-black text-orange-700 dark:text-orange-300 drop-shadow-sm">3</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Podium Base -->
+                <div
+                  class="h-1 bg-gradient-to-r from-transparent via-muted-200 dark:via-muted-700 to-transparent rounded-full mx-2">
+                </div>
+              </div>
+
+              <!-- Motivational Message -->
+              <div v-if="podiumFirst" class="mt-3 text-center">
+                <p class="text-[10px] text-muted-500 dark:text-muted-400">
+                  🏆 <span class="font-semibold text-primary-500">{{ podiumFirst.name?.split(' ')[0] }}</span> lidera
+                  com {{ podiumFirst.completed }} entregas!
+                </p>
+              </div>
+            </div>
+
+            <!-- Empty Podium State -->
+            <div v-else class="py-4 text-center">
+              <div class="flex justify-center gap-1 mb-3 opacity-30">
+                <div class="w-8 h-5 bg-muted-200 dark:bg-muted-700 rounded-t-sm"></div>
+                <div class="w-10 h-8 bg-muted-300 dark:bg-muted-600 rounded-t-sm -mt-3"></div>
+                <div class="w-8 h-4 bg-muted-200 dark:bg-muted-700 rounded-t-sm"></div>
+              </div>
+              <BaseParagraph size="xs" class="text-muted-400">
+                O pódio aparecerá quando houver membros com tarefas atribuídas.
+              </BaseParagraph>
             </div>
             <div class="space-y-2">
               <div v-for="user in teamProductivity" :key="user.id" class="flex items-center gap-2 mb-2">

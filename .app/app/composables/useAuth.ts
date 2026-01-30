@@ -246,17 +246,18 @@ export function useAuth() {
 
 // Composable para requisições autenticadas
 export function useApi() {
-  const { token } = useAuth()
-
   const useCustomFetch = async <T = any>(
     url: string,
     options: any = {},
   ): Promise<{ data: T }> => {
+    // Obter token fresh a cada requisição para evitar problemas de SSR/hidratação
+    const { token } = useAuth()
+
     // Debug: verificar se o token está disponível
     console.log('Token disponível para requisição:', token.value ? 'SIM' : 'NÃO')
     console.log('URL da requisição:', url)
 
-    const headers: any = {}
+    const headers: any = { ...options.headers }
     if (token.value) {
       headers.Authorization = `Bearer ${token.value}`
       console.log('Header Authorization adicionado')
@@ -278,7 +279,7 @@ export function useApi() {
       },
     }
 
-    const finalOptions = { ...defaults, ...options }
+    const finalOptions = { ...defaults, ...options, headers }
     const data = await $fetch<T>(url, finalOptions)
 
     // Verifica se há erro no payload (API NestJS retorna error: 1)
