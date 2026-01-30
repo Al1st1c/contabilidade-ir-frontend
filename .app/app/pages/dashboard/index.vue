@@ -396,6 +396,13 @@ const productivityChart = computed(() => ({
 
 const activeAlertTab = ref('all')
 
+function handleAlertAction(alert: any) {
+  if (alert.type === 'waitingDocs') {
+    openWaitingDocs()
+  } else {
+    openDetails(alert.id)
+  }
+}
 const irStartDate = ref("2026-03-01T08:00:00")
 const irEndDate = ref("2026-05-31T23:59:59")
 
@@ -478,13 +485,14 @@ function handleNextAction() {
           <div class="grid grid-cols-12 gap-4">
             <!-- Left: User Profile & Rookies & Job Feed (Col 7/8) -->
             <div class="col-span-12 lg:col-span-7 2xl:col-span-8">
-              <div class="bg-primary-800 rounded-2xl px-6 py-8 h-full flex items-center">
+              <div
+                class="bg-primary-800 rounded-2xl px-6 py-10 h-full flex items-center shadow-xl shadow-primary-500/10 border border-primary-700/50">
                 <div class="flex w-full flex-col items-center gap-y-6 sm:flex-row">
                   <!-- User Profile -->
                   <div class="flex flex-1 flex-col gap-y-2 px-4 border-muted-700/50">
                     <BaseAvatar :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="lg"
-                      class="border-primary-200/50 ring-primary-200/50 ring-offset-primary-600 mb-2 border ring-2 ring-offset-4" />
-                    <BaseHeading as="h2" size="2xl" weight="semibold" lead="none" class="text-white">
+                      class="border-primary-200/50 ring-primary-200/50 ring-offset-primary-600 mb-2 border ring-2 ring-offset-4 shadow-lg shadow-black/20" />
+                    <BaseHeading as="h2" size="2xl" weight="bold" lead="none" class="text-white">
                       <span>Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
                     </BaseHeading>
                     <BaseParagraph size="xs" class="text-primary-100 hidden sm:block">
@@ -493,34 +501,36 @@ function handleNextAction() {
                   </div>
 
                   <!-- New Rookies (Team Members) -->
-                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-muted-700/50 sm:border-l">
-                    <BaseHeading as="h2" size="lg" weight="semibold" lead="tight" class="mb-1 text-white">
+                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-primary-700/50 sm:border-l">
+                    <BaseHeading as="h2" size="md" weight="bold" lead="tight" class="mb-1 text-white">
                       <span>Sua Equipe</span>
                     </BaseHeading>
-                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
-                      Acompanhe a produtividade dos seus colaboradores em tempo real.
+                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-50">
+                      Acompanhe a produtividade dos seus colaboradores.
                     </BaseParagraph>
                     <div class="mt-auto flex items-center gap-2">
                       <div class="flex -space-x-2">
                         <BaseAvatar v-for="rookie in rookies" :key="rookie.name" size="sm" rounded="full"
-                          :src="rookie.avatar" class="border-2 border-primary-800" />
+                          :src="rookie.avatar" class="border-2 border-primary-800 ring-1 ring-primary-500/30" />
                       </div>
-                      <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team">
+                      <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team"
+                        class="hover:bg-primary-700 transition-colors">
                         <Icon name="lucide:plus" class="size-4" />
                       </BaseButton>
                     </div>
                   </div>
 
                   <!-- Job Feed (New IR Action) -->
-                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-muted-700/50 sm:border-l">
-                    <BaseHeading as="h2" size="lg" weight="semibold" lead="tight" class="mb-1 text-white">
-                      <span>Novo Imposto de Renda</span>
+                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-primary-700/50 sm:border-l">
+                    <BaseHeading as="h2" size="md" weight="bold" lead="tight" class="mb-1 text-white">
+                      <span>Nova Declaração</span>
                     </BaseHeading>
-                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
-                      Cadastre um novo cliente ou declaração para iniciar o processo.
+                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-50">
+                      Cadastre um novo cliente ou declaração de IR.
                     </BaseParagraph>
                     <div class="mt-auto">
-                      <BaseButton class="w-full" variant="default" to="/imposto-de-renda">
+                      <BaseButton class="w-full shadow-lg shadow-primary-900/40" variant="default"
+                        to="/imposto-de-renda">
                         <span>Cadastrar Agora</span>
                       </BaseButton>
                     </div>
@@ -530,14 +540,14 @@ function handleNextAction() {
             </div>
 
             <!-- Right: Standing Orders (Timer) (Col 5/4) -->
-            <div class="col-span-12 lg:col-span-5 2xl:col-span-4">
+            <div class="col-span-12 lg:col-span-5 2xl:col-span-4 h-full">
               <BaseCard rounded="md" variant="none"
-                class="bg-primary-900 border-primary-900 h-full p-4 md:p-6 lg:p-10 relative">
+                class="bg-primary-900 border-primary-800 h-full p-6 md:p-8 lg:p-6 relative overflow-hidden group shadow-xl shadow-primary-950/20">
 
-                <!-- Clip illustration without clipping the clock tooltip -->
+                <!-- Background Illustration -->
                 <div class="absolute inset-0 overflow-hidden rounded-md pointer-events-none">
-                  <!-- Background Illustration (Repositioned to Left) -->
-                  <div class="absolute -left-12 -bottom-10 opacity-20 transform -rotate-12 z-0">
+                  <div
+                    class="absolute -left-12 -bottom-10 opacity-10 transform -rotate-12 group-hover:rotate-0 transition-transform duration-700">
                     <VectorIllustrationCalendar class="size-64 text-primary-400" />
                   </div>
                 </div>
@@ -545,28 +555,33 @@ function handleNextAction() {
                 <div class="grid grid-cols-12 gap-4 h-full items-center relative z-10">
                   <!-- Text Area -->
                   <div class="col-span-12 sm:col-span-6">
-                    <BaseHeading as="h3" size="xl" weight="semibold" class="text-white mb-2">
+                    <BaseHeading as="h3" size="xl" weight="bold" class="text-white mb-2 drop-shadow-sm">
                       {{ isIrPeriodStarted ? 'Tempo Restante' : 'Campanha IR' }}
                     </BaseHeading>
-                    <BaseParagraph size="xs" class="text-primary-100 mb-6 leading-relaxed opacity-90">
+                    <BaseParagraph size="xs" class="text-primary-50 mb-6 leading-relaxed opacity-90">
                       {{ isIrPeriodStarted
-                        ? 'Fique atento aos prazos! Acompanhe o tempo restante para a entrega das declarações de 2026.'
-                        : 'Prepare sua equipe! O período oficial de entrega das declarações do IR 2026 inicia em breve.'
+                        ? 'Acompanhe o tempo restante para a entrega das declarações de 2026.'
+                        : 'O período de entrega das declarações do IR inicia em breve.'
                       }}
                     </BaseParagraph>
-                    <BaseButton size="sm" variant="default" class="w-fit" to="/imposto-de-renda">
-                      {{ isIrPeriodStarted ? 'Gerenciar IRs' : 'Ver Cronograma' }}
+                    <BaseButton size="sm" variant="default" class="w-fit shadow-md shadow-black/20"
+                      to="/imposto-de-renda">
+                      {{ isIrPeriodStarted ? 'Gerenciar' : 'Cronograma' }}
                     </BaseButton>
                   </div>
 
                   <!-- Visual Area (Interactive Clock) -->
                   <div class="col-span-12 sm:col-span-6 flex flex-col items-center justify-center min-h-[160px]">
-                    <div class="transition-all duration-300 cursor-pointer" :class="[
+                    <div class="transition-all duration-500 cursor-pointer hover:scale-105 active:scale-95" :class="[
                       isClockZoomed
-                        ? 'z-[100] relative'
-                        : 'scale-[0.8] sm:scale-90 lg:scale-100 z-10 relative'
+                        ? 'z-[100] relative scale-125 md:scale-150'
+                        : 'scale-[0.9] sm:scale-100 z-10 relative shadow-2xl shadow-black/40 rounded-full'
                     ]" @click="isClockZoomed = !isClockZoomed">
-                      <DashboardIRCanvasClock :start-date="irStartDate" :end-date="irEndDate" :size="140" />
+                      <div v-if="!isClockZoomed"
+                        class="absolute inset-0 rounded-full ring-4 ring-primary-500/20 group-hover:ring-primary-400/40 transition-all duration-300 animate-pulse">
+                      </div>
+                      <DashboardIRCanvasClock :start-date="irStartDate" :end-date="irEndDate"
+                        :size="isClockZoomed ? 160 : 130" />
                     </div>
                   </div>
                 </div>
@@ -579,12 +594,11 @@ function handleNextAction() {
       <div class="lg:landscape:col-span-8 col-span-12 xl:landscape:col-span-8">
         <!-- Inner grid -->
         <!-- Alerts Feed Section -->
-        <div id="dashboard-alerts" class="mt-6 flex flex-col gap-4">
-          <!-- Feed Settings / Tabs -->
-          <div class="flex flex-col items-center justify-between gap-6 sm:flex-row mb-2">
+        <div id="dashboard-alerts" class="mt-6">
+          <div class="flex flex-col items-center justify-between gap-6 sm:flex-row mb-6">
             <div>
-              <BaseHeading as="h3" size="lg" weight="medium" lead="tight" class="text-muted-900 dark:text-muted-100">
-                <span>Alertas de Campanha</span>
+              <BaseHeading as="h3" size="lg" weight="bold" lead="tight" class="text-muted-900 dark:text-muted-100">
+                <span>Resumo da Campanha</span>
               </BaseHeading>
             </div>
             <div class="flex gap-2 sm:justify-end">
@@ -598,127 +612,284 @@ function handleNextAction() {
               </BaseButton>
               <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'waitingDocs' ? 'primary' : 'default'"
                 @click="activeAlertTab = 'waitingDocs'">
-                Documentos
+                Docs
               </BaseButton>
               <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'stuckClients' ? 'primary' : 'default'"
                 @click="activeAlertTab = 'stuckClients'">
-                Travados
+                Parados
               </BaseButton>
             </div>
           </div>
 
-          <!-- Feed Content -->
-          <div class="space-y-2 min-h-[200px]">
-            <TransitionGroup enter-active-class="transform-gpu duration-300 ease-out"
-              enter-from-class="opacity-0 -translate-x-4" enter-to-class="opacity-100 translate-x-0"
-              leave-active-class="absolute transform-gpu duration-200 ease-in" leave-from-class="opacity-100"
-              leave-to-class="opacity-0 translate-x-4">
-              <DemoFlexTableRow v-for="(alert, index) in filteredAlerts" :key="alert.id" rounded="sm"
-                class="hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors cursor-pointer"
-                @click="openDetails(alert.id)">
-                <template #start>
-                  <div class="flex items-center gap-3">
+          <div class="grid grid-cols-12 gap-6 mt-6">
+            <!-- Left: Campaign Summary (Acesso Rápido) -->
+            <div class="col-span-12 xl:col-span-4">
+              <div class="flex flex-col gap-8">
+
+                <!-- Quick Access Section -->
+                <div>
+                  <div class="grid grid-cols-1 gap-2">
+                    <NuxtLink v-for="item in acessorapido" :key="item.id" :to="item.url" class="group">
+                      <div
+                        class="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-muted-800 border border-muted-200 dark:border-muted-700 hover:border-primary-500 transition-all duration-300">
+                        <div
+                          class="size-9 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
+                          :class="item.iconColor">
+                          <Icon :name="item.icon" class="size-5" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <BaseHeading tag="h5" size="sm" weight="medium"
+                            class="text-muted-800 dark:text-muted-100 line-clamp-1">
+                            {{ item.name }}
+                          </BaseHeading>
+                          <BaseParagraph size="xs" class="text-muted-400 line-clamp-1">
+                            {{ item.description }}
+                          </BaseParagraph>
+                        </div>
+                        <Icon name="lucide:chevron-right"
+                          class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
+                      </div>
+                    </NuxtLink>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Feed -->
+            <div class="col-span-12 xl:col-span-8">
+              <div class="space-y-2 min-h-[240px]">
+                <TransitionGroup enter-active-class="transform-gpu duration-300 ease-out"
+                  enter-from-class="opacity-0 -translate-x-4" enter-to-class="opacity-100 translate-x-0"
+                  leave-active-class="absolute transform-gpu duration-200 ease-in" leave-from-class="opacity-100"
+                  leave-to-class="opacity-0 translate-x-4">
+                  <DemoFlexTableRow v-for="(alert, index) in filteredAlerts" :key="alert.id" rounded="sm" condensed
+                    class="hover:bg-muted-50 dark:hover:bg-muted-900 transition-all cursor-pointer border-transparent hover:border-primary-500/30"
+                    @click="openDetails(alert.id)">
+                    <template #start>
+                      <DemoFlexTableStart :title="alert.client?.name || 'Cliente'"
+                        :subtitle="alert.column?.name || 'Etapa não definida'" :icon="alert.icon"
+                        :icon-color="alert.iconColor" :icon-bg="alert.iconBg" label="Cliente" :hide-label="index > 0" />
+                    </template>
+                    <template #end>
+                      <DemoFlexTableCell label="Alerta" :hide-label="index > 0" class="w-full sm:w-24">
+                        <BaseTag
+                          :color="alert.type === 'error' ? 'danger' : alert.type === 'nearDeadline' ? 'warning' : 'muted'"
+                          rounded="full" size="sm" class="capitalize">
+                          {{ alert.label }}
+                        </BaseTag>
+                      </DemoFlexTableCell>
+                      <DemoFlexTableCell label="Ação" :hide-label="index > 0">
+                        <BaseButton variant="link" size="sm" color="primary"
+                          class="p-0 h-auto font-medium hover:underline">
+                          Ver Detalhes
+                        </BaseButton>
+                      </DemoFlexTableCell>
+                    </template>
+                  </DemoFlexTableRow>
+
+                  <!-- Empty State -->
+                  <div v-if="filteredAlerts.length === 0" key="empty"
+                    class="py-12 flex flex-col items-center justify-center text-center bg-muted-50 dark:bg-muted-900/40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800">
                     <div
-                      :class="['size-10 rounded-xl flex items-center justify-center shrink-0', alert.iconBg, alert.iconColor]">
-                      <Icon :name="alert.icon" class="size-5" />
+                      class="size-14 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400 mb-4">
+                      <Icon name="solar:check-circle-bold" class="size-7 text-success-500" />
                     </div>
-                    <div>
-                      <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
-                        {{ alert.client?.name }}
-                      </BaseHeading>
-                      <BaseParagraph size="xs" class="text-muted-400">
-                        {{ alert.column?.name || 'Etapa não definida' }}
+                    <BaseHeading as="h4" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
+                      Tudo em ordem!
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-muted-500">
+                      Não existem alertas pendentes para esta categoria.
+                    </BaseParagraph>
+                  </div>
+                </TransitionGroup>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Section -->
+          <!-- Charts Section: Stacked Vertically -->
+          <div class="flex flex-col gap-6 mt-8">
+            <!-- Pipeline Chart -->
+            <BaseCard rounded="md" class="flex flex-col p-6">
+              <div class="mb-6 flex items-center justify-between">
+                <BaseHeading as="h4" size="sm" weight="bold" lead="none"
+                  class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
+                  Processamento IR
+                </BaseHeading>
+              </div>
+              <div class="border-muted-100 dark:border-muted-800 mb-6 flex justify-between border-b pb-4">
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Total
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold">{{ stats.total }}</BaseHeading>
+                </div>
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Aguardando
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold">{{ stats.pending }}</BaseHeading>
+                </div>
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Finalizados
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold" class="text-success-600">{{ stats.completed }}
+                  </BaseHeading>
+                </div>
+              </div>
+              <div class="mt-auto pt-4">
+                <LazyAddonApexcharts v-bind="pipelineChart" :height="350" />
+              </div>
+            </BaseCard>
+
+            <!-- Revenue Chart -->
+            <BaseCard rounded="md" class="flex flex-col p-6">
+              <div class="mb-6 flex items-center justify-between">
+                <BaseHeading as="h4" size="sm" weight="bold" lead="none"
+                  class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
+                  Faturamento Projetado
+                </BaseHeading>
+                <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue"
+                  class="size-7">
+                  <Icon :name="showRevenue ? 'solar:eye-broken' : 'solar:eye-closed-broken'" class="size-3.5" />
+                </BaseButton>
+              </div>
+              <div class="border-muted-100 dark:border-muted-800 mb-6 flex justify-between border-b pb-4">
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Total
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold">
+                    {{ showRevenue ? formatCurrency(stats.revenue) : 'R$ •••••' }}
+                  </BaseHeading>
+                </div>
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Recebido
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold" class="text-success-600">
+                    {{ showRevenue ? formatCurrency(stats.received) : 'R$ •••••' }}
+                  </BaseHeading>
+                </div>
+                <div>
+                  <BaseParagraph size="xs" weight="medium" class="text-muted-500 dark:text-muted-400 mb-1">Pendente
+                  </BaseParagraph>
+                  <BaseHeading as="h5" size="lg" weight="bold" class="text-danger-600">
+                    {{ showRevenue ? formatCurrency(stats.revenue - stats.received) : 'R$ •••••' }}
+                  </BaseHeading>
+                </div>
+              </div>
+              <div class="mt-auto pt-4" :class="{ 'blur-md opacity-20 select-none': !showRevenue }">
+                <LazyAddonApexcharts v-bind="revenueAreaChart" :height="350" />
+              </div>
+            </BaseCard>
+          </div>
+
+          <div v-if="canViewAll" class="mt-8">
+            <BaseCard rounded="md" class="p-6">
+              <!-- Header -->
+              <div class="mb-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="size-10 rounded-xl bg-success-500/10 flex items-center justify-center text-success-500">
+                    <Icon name="solar:chart-2-bold-duotone" class="size-6" />
+                  </div>
+                  <div>
+                    <BaseHeading as="h3" size="lg" weight="semibold" lead="tight"
+                      class="text-muted-900 dark:text-white">
+                      Produtividade da Equipe
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-muted-400">
+                      Desempenho e entregas dos seus colaboradores no período
+                    </BaseParagraph>
+                  </div>
+                </div>
+                <NuxtLink to="/dashboard/settings/team"
+                  class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1 bg-primary-500/5 px-3 py-1.5 rounded-lg">
+                  Ver Equipe Completa
+                  <Icon name="solar:arrow-right-linear" class="size-3" />
+                </NuxtLink>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Chart Area -->
+                <div v-if="teamProductivity.length > 0" class="lg:col-span-4">
+                  <div
+                    class="h-full flex flex-col justify-center border-muted-100 dark:border-muted-800 lg:border-r lg:pr-8">
+                    <AddonApexchart v-bind="productivityChart" />
+                  </div>
+                </div>
+
+                <!-- Members List Area -->
+                <div :class="teamProductivity.length > 0 ? 'lg:col-span-8' : 'lg:col-span-12'">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div v-for="member in teamProductivity" :key="member.id" class="group">
+                      <BaseCard rounded="sm" class="p-6 transition-all hover:shadow-md hover:border-primary-500/30">
+                        <div class="flex items-center gap-3 mb-3">
+                          <!-- Avatar -->
+                          <div
+                            class="size-12 rounded-xl bg-gradient-to-br from-success-500/20 to-success-500/5 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-muted-100 dark:ring-muted-800">
+                            <BaseAvatar v-if="member.photo" :src="member.photo" size="md" rounded="lg" />
+                            <span v-else class="text-lg font-bold text-success-500">
+                              {{ member.name?.charAt(0) || '?' }}
+                            </span>
+                          </div>
+
+                          <!-- Content -->
+                          <div class="flex-1 min-w-0">
+                            <BaseHeading as="h4" size="md" weight="semibold"
+                              class="truncate text-muted-800 dark:text-muted-100">
+                              {{ member.name }}
+                            </BaseHeading>
+                            <div class="flex items-center gap-2 mt-0.5">
+                              <span
+                                class="text-[10px] font-bold text-muted-400 uppercase tracking-widest bg-muted-100 dark:bg-muted-800 px-1.5 py-0.5 rounded">
+                                {{ member.count }} IRs
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- Stats Badge -->
+                          <div class="text-right shrink-0">
+                            <div class="text-base font-bold text-muted-900 dark:text-white tabular-nums">
+                              {{ member.completed }}<span class="text-muted-400 font-normal text-xs">/{{ member.count
+                                }}</span>
+                            </div>
+                            <div class="text-[10px] font-bold uppercase"
+                              :class="member.count > 0 && member.completed === member.count ? 'text-success-500' : 'text-primary-500'">
+                              {{ member.count > 0 ? Math.round((member.completed / member.count) * 100) : 0 }}%
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="space-y-1">
+                          <div class="flex justify-between items-center text-[10px] font-medium text-muted-400">
+                            <span>Progresso</span>
+                            <span>{{ member.count > 0 ? Math.round((member.completed / member.count) * 100) : 0
+                              }}%</span>
+                          </div>
+                          <BaseProgress size="xs" variant="primary"
+                            :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
+                            class="transition-all duration-700" />
+                        </div>
+                      </BaseCard>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-if="teamProductivity.length === 0"
+                      class="col-span-full py-12 text-center bg-muted-50/50 dark:bg-muted-900/20 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800">
+                      <div
+                        class="size-16 mx-auto mb-4 rounded-2xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400">
+                        <Icon name="solar:users-group-two-rounded-linear" class="size-8" />
+                      </div>
+                      <BaseHeading as="h4" size="md" weight="medium" class="text-muted-700 dark:text-muted-200">Sem
+                        atividade na
+                        equipe</BaseHeading>
+                      <BaseParagraph size="xs" class="text-muted-400 mt-2 max-w-[260px] mx-auto leading-relaxed">
+                        Não há funcionários com declarações de IR atribuídas para exibição de métricas.
                       </BaseParagraph>
                     </div>
                   </div>
-                </template>
-                <template #end>
-                  <DemoFlexTableCell label="Prioridade" :hide-label="index > 0" class="w-full sm:w-24">
-                    <BaseTag
-                      :color="alert.type === 'error' ? 'danger' : alert.type === 'nearDeadline' ? 'warning' : 'muted'"
-                      rounded="full" size="sm">
-                      {{ alert.label }}
-                    </BaseTag>
-                  </DemoFlexTableCell>
-                  <DemoFlexTableCell label="Ação" :hide-label="index > 0">
-                    <BaseButton variant="link" size="sm" color="primary" class="p-0 h-auto font-medium">
-                      Resolver
-                    </BaseButton>
-                  </DemoFlexTableCell>
-                </template>
-              </DemoFlexTableRow>
-
-              <!-- Empty State -->
-              <div v-if="filteredAlerts.length === 0" key="empty"
-                class="py-12 flex flex-col items-center justify-center text-center">
-                <div
-                  class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400 mb-4">
-                  <Icon name="solar:check-circle-bold" class="size-8 text-success-500" />
                 </div>
-                <BaseHeading as="h4" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
-                  Tudo em ordem por aqui!
-                </BaseHeading>
-                <BaseParagraph size="sm" class="text-muted-500">
-                  Não existem alertas pendentes para esta categoria.
-                </BaseParagraph>
               </div>
-            </TransitionGroup>
+            </BaseCard>
           </div>
-
-          <!-- Pipeline Chart -->
-          <BaseCard rounded="md" class="p-4 md:p-5">
-            <div class="mb-4 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Total de documentos por status</span>
-              </BaseHeading>
-            </div>
-
-            <LazyAddonApexcharts v-bind="pipelineChart" />
-          </BaseCard>
-          <!-- Revenue Chart -->
-          <BaseCard rounded="md" class="p-4 md:p-5">
-            <div class="mb-4 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-800 dark:text-white">
-                <span>Honorários Projetados</span>
-              </BaseHeading>
-              <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue">
-                <Icon :name="showRevenue ? 'solar:eye-broken' : 'solar:eye-closed-broken'" class="size-4" />
-              </BaseButton>
-            </div>
-
-            <div class="transition-all duration-500">
-              <LazyAddonApexcharts v-bind="revenueAreaChart" />
-            </div>
-
-            <div
-              class="w-full mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-muted-100 dark:border-muted-800 transition-all duration-300"
-              :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
-              <div class="flex flex-col">
-                <span class="text-[10px] uppercase  text-muted-400 mb-1">Receita Esperada</span>
-                <span class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ showRevenue ?
-                  formatCurrency(stats.revenue) : 'R$ ••••••' }}</span>
-              </div>
-              <div class="flex flex-col">
-                <span class="text-[10px] uppercase  text-success-500 mb-1">Recebido</span>
-                <span class="text-sm font-semibold text-success-600">{{ showRevenue ? formatCurrency(stats.received) :
-                  'R$ ••••••' }}</span>
-              </div>
-              <div class="flex flex-col">
-                <span class="text-[10px] uppercase  text-danger-500 mb-1">Em Atraso</span>
-                <span class="text-sm font-semibold text-danger-600">{{ showRevenue ? formatCurrency(stats.overdue) :
-                  'R$ ••••••' }}</span>
-              </div>
-            </div>
-
-            <div
-              class="mt-4 p-3 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 text-center transition-all duration-300"
-              :class="{ 'blur-sm select-none pointer-events-none opacity-50': !showRevenue }">
-              <span class="text-xs text-muted-500">
-                Faltam <span class=" text-primary-500">{{ showRevenue ? formatCurrency(stats.revenue -
-                  stats.received) : 'R$ ••••••' }}</span> para receber
-              </span>
-            </div>
-          </BaseCard>
         </div>
       </div>
       <!-- Grid column -->
@@ -727,7 +898,7 @@ function handleNextAction() {
         <div class="grid gap-4 lg:flex lg:flex-col">
           <!-- Plan Status Widget (Trial or Premium) -->
           <BaseCard v-if="isViewingAdmin && tenant" rounded="md"
-            class="p-5 relative overflow-hidden min-h-[125px] flex flex-col justify-center">
+            class="p-6 relative overflow-hidden min-h-[125px] flex flex-col justify-center">
             <!-- Decorative gradient orb -->
             <div
               class="absolute -top-12 -right-12 size-32 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full blur-2xl" />
@@ -791,47 +962,9 @@ function handleNextAction() {
             </div>
           </BaseCard>
 
-          <!-- Widget -->
-          <!-- Project list widget -->
-          <BaseCard rounded="md" class="p-4 md:p-6">
-            <div class="mb-6 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Acesso Rápido</span>
-              </BaseHeading>
-            </div>
-            <div class="pb-2">
-              <div class="grid gap-2 grid-cols-1">
-                <TransitionGroup enter-active-class="transform-gpu" enter-from-class="opacity-0 -translate-x-full"
-                  enter-to-class="opacity-100 translate-x-0" leave-active-class="absolute transform-gpu"
-                  leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 -translate-x-full">
-                  <NuxtLink class="group block" v-for="item in acessorapido" :key="item.id" :to="item.url">
-                    <BaseCard rounded="sm" elevated-hover class="group-hover:border-primary-500! p-4">
-                      <div class="flex items-center gap-3">
-                        <div
-                          class="size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                          :class="item.iconColor">
-                          <Icon :name="item.icon" class="size-5" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <BaseHeading tag="h5" size="sm" weight="medium" class="line-clamp-1">
-                            {{ item.name }}
-                          </BaseHeading>
-                          <BaseParagraph size="xs" class="text-muted-400">
-                            {{ item.description }}
-                          </BaseParagraph>
-                        </div>
-                        <Icon name="solar:arrow-right-linear"
-                          class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
-                      </div>
-                    </BaseCard>
-                  </NuxtLink>
-                </TransitionGroup>
-              </div>
-            </div>
-          </BaseCard>
 
           <!-- Widget: Últimos IRs -->
-          <BaseCard rounded="md" class="p-4 md:p-6">
+          <BaseCard rounded="md" class="p-6">
             <!-- Header -->
             <div class="mb-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -853,7 +986,7 @@ function handleNextAction() {
             <div class="space-y-2">
               <div v-for="item in recentDeclarations" :key="item.id" class="group cursor-pointer"
                 @click="openDetails(item.id)">
-                <BaseCard rounded="sm" elevated-hover class="p-3 group-hover:border-primary-500! transition-all">
+                <BaseCard rounded="sm" elevated-hover class="p-4 group-hover:border-primary-500! transition-all">
                   <div class="flex items-center gap-3">
                     <!-- Avatar/Icon -->
                     <div
@@ -899,89 +1032,6 @@ function handleNextAction() {
             </div>
           </BaseCard>
 
-          <!-- Widget: Produtividade da Equipe -->
-          <BaseCard v-if="canViewAll" rounded="md" class="p-4 md:p-6">
-            <!-- Header -->
-            <div class="mb-4 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="size-9 rounded-xl bg-success-500/10 flex items-center justify-center text-success-500">
-                  <Icon name="solar:chart-2-bold-duotone" class="size-5" />
-                </div>
-                <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                  Produtividade
-                </BaseHeading>
-              </div>
-              <NuxtLink to="/dashboard/settings/team"
-                class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
-                Ver equipe
-                <Icon name="solar:arrow-right-linear" class="size-3" />
-              </NuxtLink>
-            </div>
-
-            <!-- Chart (if data exists) -->
-            <div v-if="teamProductivity.length > 0" class="mb-4">
-              <AddonApexchart v-bind="productivityChart" />
-            </div>
-
-            <!-- Team Members List -->
-            <div class="space-y-2">
-              <div v-for="member in teamProductivity" :key="member.id" class="group">
-                <BaseCard rounded="sm" class="p-3 transition-all hover:shadow-sm">
-                  <div class="flex items-center gap-3 mb-2">
-                    <!-- Avatar -->
-                    <div
-                      class="size-10 rounded-xl bg-gradient-to-br from-success-500/20 to-success-500/5 flex items-center justify-center shrink-0 overflow-hidden">
-                      <BaseAvatar v-if="member.photo" :src="member.photo" size="sm" rounded="lg" />
-                      <span v-else class="text-sm font-bold text-success-500">
-                        {{ member.name?.charAt(0) || '?' }}
-                      </span>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="flex-1 min-w-0">
-                      <BaseHeading as="h4" size="sm" weight="medium" class="truncate text-muted-900 dark:text-white">
-                        {{ member.name }}
-                      </BaseHeading>
-                      <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-[10px] font-medium text-muted-400">
-                          IRs atribuídos
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Stats Badge -->
-                    <div class="text-right shrink-0">
-                      <div class="text-sm font-bold text-muted-900 dark:text-white tabular-nums">
-                        {{ member.completed }}<span class="text-muted-400 font-normal">/{{ member.count }}</span>
-                      </div>
-                      <div class="text-[10px] font-semibold"
-                        :class="member.count > 0 && member.completed === member.count ? 'text-success-500' : 'text-primary-500'">
-                        {{ member.count > 0 ? Math.round((member.completed / member.count) * 100) : 0 }}% concluído
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Progress Bar -->
-                  <BaseProgress size="xs" variant="primary"
-                    :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
-                    class="transition-all" />
-                </BaseCard>
-              </div>
-
-              <!-- Empty State -->
-              <div v-if="teamProductivity.length === 0"
-                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-                <div
-                  class="size-12 mx-auto mb-3 rounded-xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
-                  <Icon name="solar:users-group-two-rounded-linear" class="size-6 text-muted-400" />
-                </div>
-                <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum membro</BaseHeading>
-                <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
-                  Não há funcionários com IRs atribuídos.
-                </BaseParagraph>
-              </div>
-            </div>
-          </BaseCard>
 
         </div>
       </div>
