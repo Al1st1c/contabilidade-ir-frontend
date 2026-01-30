@@ -563,7 +563,7 @@ function handleNextAction() {
                   <div class="col-span-12 sm:col-span-6 flex flex-col items-center justify-center min-h-[160px]">
                     <div class="transition-all duration-300 cursor-pointer" :class="[
                       isClockZoomed
-                        ? 'z-[100] relative drop-shadow-2xl'
+                        ? 'z-[100] relative'
                         : 'scale-[0.8] sm:scale-90 lg:scale-100 z-10 relative'
                     ]" @click="isClockZoomed = !isClockZoomed">
                       <DashboardIRCanvasClock :start-date="irStartDate" :end-date="irEndDate" :size="140" />
@@ -669,36 +669,8 @@ function handleNextAction() {
           <BaseCard rounded="md" class="p-4 md:p-5">
             <div class="mb-4 flex items-center justify-between">
               <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Etapas do Kanban</span>
+                <span>Total de documentos por status</span>
               </BaseHeading>
-            </div>
-
-            <!-- Clean Header Stats (Banking style) -->
-            <div class="border-muted-200 dark:border-muted-800 mb-6 flex justify-between border-b pb-4 gap-4">
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-1 uppercase tracking-wider">
-                  Total
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold">
-                  {{ stats.total }}
-                </BaseHeading>
-              </div>
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-primary-500 mb-1 uppercase tracking-wider">
-                  Pendentes
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold" class="text-primary-600">
-                  {{ stats.pending }}
-                </BaseHeading>
-              </div>
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-success-500 mb-1 uppercase tracking-wider">
-                  Concluídos
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold" class="text-success-600">
-                  {{ stats.completed }}
-                </BaseHeading>
-              </div>
             </div>
 
             <LazyAddonApexcharts v-bind="pipelineChart" />
@@ -712,35 +684,6 @@ function handleNextAction() {
               <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue">
                 <Icon :name="showRevenue ? 'solar:eye-broken' : 'solar:eye-closed-broken'" class="size-4" />
               </BaseButton>
-            </div>
-
-            <!-- Clean Header Stats (Banking style) -->
-            <div class="border-muted-200 dark:border-muted-800 mb-6 flex justify-between border-b pb-4 gap-4"
-              :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-1 uppercase tracking-wider">
-                  Total Esperado
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold">
-                  {{ showRevenue ? formatCurrency(stats.revenue) : 'R$ ••••••' }}
-                </BaseHeading>
-              </div>
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-success-500 mb-1 uppercase tracking-wider">
-                  Recebido
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold" class="text-success-600">
-                  {{ showRevenue ? formatCurrency(stats.received) : 'R$ ••••••' }}
-                </BaseHeading>
-              </div>
-              <div>
-                <BaseParagraph size="xs" weight="medium" class="text-danger-500 mb-1 uppercase tracking-wider">
-                  Em Atraso
-                </BaseParagraph>
-                <BaseHeading as="h5" size="md" weight="semibold" class="text-danger-600">
-                  {{ showRevenue ? formatCurrency(stats.overdue) : 'R$ ••••••' }}
-                </BaseHeading>
-              </div>
             </div>
 
             <div class="transition-all duration-500">

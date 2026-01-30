@@ -123,7 +123,7 @@ const draw = () => {
   ctx.scale(dpr, dpr)
 
   const center = size / 2
-  const radius = (size / 2) - 20
+  const radius = (size / 2) - 6
 
   ctx.clearRect(0, 0, size, size)
 
@@ -313,12 +313,12 @@ const showDetails = ref(false)
   <div class="relative inline-block" @click="showDetails = !showDetails">
     <!-- Relógio Analógico -->
     <div class="relative cursor-pointer" :style="{ width: `${size}px`, height: `${size}px` }">
-      <canvas ref="canvasRef" :style="{ width: `${size}px`, height: `${size}px` }" class="block" />
+      <canvas ref="canvasRef" :style="{ width: `${size}px`, height: `${size}px` }" class="block drop-shadow-xl" />
 
       <!-- Informação Minimalista no Centro -->
       <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-        <div class="mt-14">
-          <div class="text-[9px] uppercase font-bold tracking-widest mb-0.5"
+        <div class="pt-8">
+          <div class="text-[10px] uppercase font-bold tracking-widest mb-0.5"
             :style="{ color: clockState.color + '99' }">
             {{ isNotStarted ? 'Início em' : isFinished ? 'Encerrado' : isLast24Hours ? 'Últimas' : 'Falta' }}
           </div>
