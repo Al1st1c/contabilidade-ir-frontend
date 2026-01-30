@@ -15,6 +15,29 @@ definePageMeta({
   },
 })
 
+const links = [
+  {
+    title: 'Profile',
+    icon: 'solar:user-rounded-bold-duotone',
+    url: '#',
+  },
+  {
+    title: 'Settings',
+    icon: 'solar:stopwatch-bold-duotone',
+    url: '#',
+  },
+  {
+    title: 'Messages',
+    icon: 'solar:chat-line-bold-duotone',
+    url: '#',
+  },
+  {
+    title: 'Tasks',
+    icon: 'solar:add-square-bold-duotone',
+    url: '#',
+  },
+]
+
 
 const { useCustomFetch } = useApi()
 const { user } = useAuth()
@@ -444,6 +467,22 @@ function handleNextAction() {
 
   navigateTo('/imposto-de-renda')
 }
+
+
+
+const filter = ref('')
+
+const filteredMembers = computed(() => {
+  if (!filter.value) {
+    return recentDeclarations.value
+  }
+  const filterRe = new RegExp(filter.value, 'i')
+  return recentDeclarations.value.filter((item) => {
+    return [item.client.name, item.client.cpf].some(item =>
+      item.match(filterRe),
+    )
+  })
+})
 </script>
 
 <template>
@@ -579,7 +618,7 @@ function handleNextAction() {
       <div class="lg:landscape:col-span-8 col-span-12 xl:landscape:col-span-8">
         <!-- Inner grid -->
         <!-- Alerts Feed Section -->
-        <div id="dashboard-alerts" class="mt-6 flex flex-col gap-4">
+        <div id="dashboard-alerts" class="mt-3 flex flex-col gap-4">
           <!-- Feed Settings / Tabs -->
           <div class="flex flex-col items-center justify-between gap-6 sm:flex-row mb-2">
             <div>
@@ -619,7 +658,7 @@ function handleNextAction() {
                 <template #start>
                   <div class="flex items-center gap-3">
                     <div
-                      :class="['size-10 rounded-xl flex items-center justify-center shrink-0', alert.iconBg, alert.iconColor]">
+                      :class="['size-10 rounded-xl flex items-center justify-center shrink-0 ml-2', alert.iconBg, alert.iconColor]">
                       <Icon :name="alert.icon" class="size-5" />
                     </div>
                     <div>
@@ -722,75 +761,9 @@ function handleNextAction() {
         </div>
       </div>
       <!-- Grid column -->
-      <div class="lg:landscape:col-span-4 col-span-12 xl:landscape:col-span-4">
+      <div class="lg:landscape:col-span-4 mt-3 col-span-12 xl:landscape:col-span-4">
         <!-- Inner grid -->
         <div class="grid gap-4 lg:flex lg:flex-col">
-          <!-- Plan Status Widget (Trial or Premium) -->
-          <BaseCard v-if="isViewingAdmin && tenant" rounded="md"
-            class="p-5 relative overflow-hidden min-h-[125px] flex flex-col justify-center">
-            <!-- Decorative gradient orb -->
-            <div
-              class="absolute -top-12 -right-12 size-32 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full blur-2xl" />
-
-            <div class="relative">
-              <!-- Trial Warning -->
-              <template v-if="trialDaysLeft !== null">
-                <div class="flex items-center gap-3 mb-4">
-                  <div
-                    class="size-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
-                    <Icon name="solar:clock-circle-bold-duotone" class="size-5" />
-                  </div>
-                  <div>
-                    <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-900 dark:text-white">
-                      {{ planLabel }}
-                    </BaseHeading>
-                    <BaseParagraph size="xs" class="text-muted-400">
-                      <span v-if="trialDaysLeft > 0">{{ trialDaysLeft }} dias restantes</span>
-                      <span v-else class="text-danger-500 font-semibold">Período expirado!</span>
-                    </BaseParagraph>
-                  </div>
-                </div>
-
-                <!-- Progress bar for trial -->
-                <div class="mb-4">
-                  <div class="flex justify-between text-[10px] uppercase font-semibold text-muted-400 mb-1">
-                    <span>Período de teste</span>
-                    <span class="text-primary-500">{{ Math.max(0, trialDaysLeft) }}/14 dias</span>
-                  </div>
-                  <div class="h-2 bg-muted-100 dark:bg-muted-800 rounded-full overflow-hidden">
-                    <div
-                      class="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-500 rounded-full"
-                      :style="{ width: `${Math.max(0, (trialDaysLeft / 14) * 100)}%` }" />
-                  </div>
-                </div>
-
-                <BaseButton to="/dashboard/settings" color="primary" size="sm" rounded="md" shadow class="w-full">
-                  <Icon name="solar:star-bold" class="size-4 me-2" />
-                  Escolher um Plano
-                </BaseButton>
-              </template>
-
-              <!-- Active Plan (Not Trial) -->
-              <template v-else-if="tenant?.plan">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="size-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/20">
-                    <Icon name="solar:verified-check-bold-duotone" class="size-5" />
-                  </div>
-                  <div>
-                    <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-900 dark:text-white">
-                      {{ planLabel }}
-                    </BaseHeading>
-                    <BaseParagraph size="xs" class="text-success-500 font-medium flex items-center gap-1">
-                      <Icon name="solar:check-circle-bold" class="size-3" />
-                      Plano ativo
-                    </BaseParagraph>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </BaseCard>
-
           <!-- Widget -->
           <!-- Project list widget -->
           <BaseCard rounded="md" class="p-4 md:p-6">
@@ -800,33 +773,27 @@ function handleNextAction() {
               </BaseHeading>
             </div>
             <div class="pb-2">
-              <div class="grid gap-2 grid-cols-1">
-                <TransitionGroup enter-active-class="transform-gpu" enter-from-class="opacity-0 -translate-x-full"
-                  enter-to-class="opacity-100 translate-x-0" leave-active-class="absolute transform-gpu"
-                  leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 -translate-x-full">
-                  <NuxtLink class="group block" v-for="item in acessorapido" :key="item.id" :to="item.url">
-                    <BaseCard rounded="sm" elevated-hover class="group-hover:border-primary-500! p-4">
-                      <div class="flex items-center gap-3">
-                        <div
-                          class="size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                          :class="item.iconColor">
-                          <Icon :name="item.icon" class="size-5" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <BaseHeading tag="h5" size="sm" weight="medium" class="line-clamp-1">
-                            {{ item.name }}
-                          </BaseHeading>
-                          <BaseParagraph size="xs" class="text-muted-400">
-                            {{ item.description }}
-                          </BaseParagraph>
-                        </div>
-                        <Icon name="solar:arrow-right-linear"
-                          class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
-                      </div>
-                    </BaseCard>
-                  </NuxtLink>
-                </TransitionGroup>
+              <div class="grid grid-cols-2 gap-4">
+                <NuxtLink v-for="link in acessorapido" :key="link.name" :to="link.url"
+                  class="dark:bg-muted-950 border-muted-200 hover:border-primary-500 dark:hover:border-primary-500 dark:border-muted-800 hover:shadow-muted-300/30 dark:hover:shadow-muted-900/30 group flex flex-col border bg-white py-5 transition-all duration-300 hover:shadow-xl"
+                  :class="[
+                    'rounded',
+                  ]">
+                  <div class="text-center">
+                    <div class="mb-2">
+                      <BaseIconBox variant="none"
+                        class="bg-primary-500/20 text-primary-500 group-hover:bg-primary-500 transition-colors duration-300 group-hover:text-white"
+                        rounded="none" mask="blob">
+                        <Icon :name="link.icon" />
+                      </BaseIconBox>
+                    </div>
+                    <p class="text-muted-600 dark:text-muted-200 font-sans text-sm font-medium">
+                      {{ link.name }}
+                    </p>
+                  </div>
+                </NuxtLink>
               </div>
+
             </div>
           </BaseCard>
 
@@ -835,9 +802,9 @@ function handleNextAction() {
             <!-- Header -->
             <div class="mb-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="size-9 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                <!-- <div class="size-9 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
                   <Icon name="solar:document-text-bold-duotone" class="size-5" />
-                </div>
+                </div> -->
                 <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
                   Últimos IRs
                 </BaseHeading>
@@ -849,54 +816,55 @@ function handleNextAction() {
               </NuxtLink>
             </div>
 
-            <!-- List -->
-            <div class="space-y-2">
-              <div v-for="item in recentDeclarations" :key="item.id" class="group cursor-pointer"
-                @click="openDetails(item.id)">
-                <BaseCard rounded="sm" elevated-hover class="p-3 group-hover:border-primary-500! transition-all">
-                  <div class="flex items-center gap-3">
-                    <!-- Avatar/Icon -->
-                    <div
-                      class="size-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-primary-500/5 flex items-center justify-center text-primary-500 shrink-0 transition-transform group-hover:scale-105">
-                      <span class="text-sm font-bold">{{ item.client?.name?.charAt(0) || '?' }}</span>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="flex-1 min-w-0">
-                      <BaseHeading as="h4" size="sm" weight="medium" class="truncate text-muted-900 dark:text-white">
-                        {{ item.client?.name || 'Sem nome' }}
-                      </BaseHeading>
-                      <div class="flex items-center gap-2 mt-0.5">
-                        <span
-                          class="inline-flex items-center text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
-                          IR {{ item.taxYear }}
-                        </span>
-                        <span class="text-[10px] text-muted-400 font-medium truncate">
-                          {{ item.column?.name || 'Sem etapa' }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Arrow -->
-                    <Icon name="solar:arrow-right-linear"
-                      class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors shrink-0" />
-                  </div>
-                </BaseCard>
-              </div>
-
-              <!-- Empty State -->
-              <div v-if="recentDeclarations.length === 0"
-                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-                <div
-                  class="size-12 mx-auto mb-3 rounded-xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
-                  <Icon name="solar:document-add-linear" class="size-6 text-muted-400" />
+            <div class="mb-2 space-y-1">
+              <BaseField class="mb-4">
+                <TairoInput v-model="filter" placeholder="Pesquisar..." :rounded="'md'" icon="lucide:search" />
+              </BaseField>
+              <div v-if="filteredMembers.length === 0">
+                <div class="flex flex-col items-center py-10 text-center">
+                  <Icon name="solar:user-rounded-linear" class="text-primary-500 size-10" />
+                  <BaseHeading as="h4" size="md" weight="medium" lead="tight">
+                    <span>Nenhum resultado encontrado</span>
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-600 dark:text-muted-400 mx-auto max-w-[240px]">
+                    <span>
+                      Parece que não conseguimos encontrar nenhum resultado correspondente. Tente termos de
+                      pesquisa diferentes.
+                    </span>
+                  </BaseParagraph>
                 </div>
-                <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum IR recente</BaseHeading>
-                <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
-                  Ainda não há atividades registradas.
-                </BaseParagraph>
+              </div>
+              <div v-else>
+                <div v-for="member in filteredMembers" :key="member.id"
+                  class="hover:bg-muted-100 focus-within:bg-muted-100 dark:hover:bg-muted-700/70 dark:focus-within:bg-muted-700/70 group flex items-center gap-3 p-2"
+                  :class="[
+                    'rounded-md',
+                  ]">
+                  <BaseAvatar :src="member.client?.image" :text="member.client?.name?.charAt(0) || '?'" size="xs"
+                    class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 ms-1 shrink-0" />
+                  <div>
+                    <BaseHeading as="h4" size="xs" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
+                      <span>
+                        {{ member.client?.name || '?' }}.
+                      </span>
+                    </BaseHeading>
+                    <BaseParagraph size="xs">
+                      <span class="text-muted-600 dark:text-muted-400">
+                        {{ member.column?.name || 'Sem etapa' }} - IR {{ member.taxYear }}
+                      </span>
+                    </BaseParagraph>
+                  </div>
+                  <div
+                    class="ms-auto flex -translate-x-1 items-center opacity-0 transition-all duration-300 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100">
+                    <BaseButton @click="openDetails(member.id)" :rounded="'sm'" variant="default" size="icon-md"
+                      class="scale-75">
+                      <Icon name="lucide:arrow-right" class="size-4" />
+                    </BaseButton>
+                  </div>
+                </div>
               </div>
             </div>
+
           </BaseCard>
 
           <!-- Widget: Produtividade da Equipe -->
@@ -904,9 +872,9 @@ function handleNextAction() {
             <!-- Header -->
             <div class="mb-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="size-9 rounded-xl bg-success-500/10 flex items-center justify-center text-success-500">
+                <!-- <div class="size-9 rounded-xl bg-success-500/10 flex items-center justify-center text-success-500">
                   <Icon name="solar:chart-2-bold-duotone" class="size-5" />
-                </div>
+                </div> -->
                 <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
                   Produtividade
                 </BaseHeading>
@@ -920,67 +888,34 @@ function handleNextAction() {
 
             <!-- Chart (if data exists) -->
             <div v-if="teamProductivity.length > 0" class="mb-4">
-              <AddonApexchart v-bind="productivityChart" />
+              <LazyAddonApexcharts v-bind="productivityChart" />
             </div>
-
-            <!-- Team Members List -->
             <div class="space-y-2">
-              <div v-for="member in teamProductivity" :key="member.id" class="group">
-                <BaseCard rounded="sm" class="p-3 transition-all hover:shadow-sm">
-                  <div class="flex items-center gap-3 mb-2">
-                    <!-- Avatar -->
-                    <div
-                      class="size-10 rounded-xl bg-gradient-to-br from-success-500/20 to-success-500/5 flex items-center justify-center shrink-0 overflow-hidden">
-                      <BaseAvatar v-if="member.photo" :src="member.photo" size="sm" rounded="lg" />
-                      <span v-else class="text-sm font-bold text-success-500">
-                        {{ member.name?.charAt(0) || '?' }}
-                      </span>
-                    </div>
-
-                    <!-- Content -->
-                    <div class="flex-1 min-w-0">
-                      <BaseHeading as="h4" size="sm" weight="medium" class="truncate text-muted-900 dark:text-white">
-                        {{ member.name }}
-                      </BaseHeading>
-                      <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-[10px] font-medium text-muted-400">
-                          IRs atribuídos
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Stats Badge -->
-                    <div class="text-right shrink-0">
-                      <div class="text-sm font-bold text-muted-900 dark:text-white tabular-nums">
-                        {{ member.completed }}<span class="text-muted-400 font-normal">/{{ member.count }}</span>
-                      </div>
-                      <div class="text-[10px] font-semibold"
-                        :class="member.count > 0 && member.completed === member.count ? 'text-success-500' : 'text-primary-500'">
-                        {{ member.count > 0 ? Math.round((member.completed / member.count) * 100) : 0 }}% concluído
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Progress Bar -->
-                  <BaseProgress size="xs" variant="primary"
-                    :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
-                    class="transition-all" />
-                </BaseCard>
-              </div>
-
-              <!-- Empty State -->
-              <div v-if="teamProductivity.length === 0"
-                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-                <div
-                  class="size-12 mx-auto mb-3 rounded-xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
-                  <Icon name="solar:users-group-two-rounded-linear" class="size-6 text-muted-400" />
+              <div v-for="user in teamProductivity" :key="user.id" class="flex items-center gap-2 mb-2">
+                <BaseAvatar :src="user.photo || '/img/avatars/11.svg'" size="sm" :rounded="'md'" />
+                <div>
+                  <BaseHeading as="h3" size="sm" weight="medium" lead="tight"
+                    class="text-muted-900 dark:text-muted-100">
+                    <span>{{ user.name }}</span>
+                  </BaseHeading>
                 </div>
-                <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum membro</BaseHeading>
-                <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
-                  Não há funcionários com IRs atribuídos.
-                </BaseParagraph>
+                <div>
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="user.count > 0 ? (user.completed / user.count) * 100 : 0" class="transition-all" />
+                </div>
+                <div class="ms-auto flex items-center justify-end gap-4">
+                  <BaseParagraph size="sm" weight="semibold"
+                    :class="user.count > 0 && user.completed === user.count ? 'text-success-500' : 'text-primary-500'">
+                    <span>{{ user.count > 0 ? Math.round((user.completed / user.count) * 100) : 0 }}% </span>
+                  </BaseParagraph>
+                  <div class="text-sm font-bold text-muted-900 dark:text-white tabular-nums">
+                    {{ user.completed }}<span class="text-muted-400 font-normal">/{{ user.count }}</span>
+                  </div>
+                </div>
               </div>
             </div>
+
+
           </BaseCard>
 
         </div>

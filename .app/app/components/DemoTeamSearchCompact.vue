@@ -69,22 +69,12 @@ const filteredMembers = computed(() => {
 <template>
   <div class="mb-2 space-y-1">
     <BaseField class="mb-4">
-      <TairoInput
-        v-model="filter"
-        placeholder="Search team members..."
-        :rounded="props.rounded"
-        icon="lucide:search"
-      />
+      <TairoInput v-model="filter" placeholder="Search team members..." :rounded="props.rounded" icon="lucide:search" />
     </BaseField>
     <div v-if="filteredMembers.length === 0">
       <div class="flex flex-col items-center py-10 text-center">
         <Icon name="solar:user-rounded-linear" class="text-primary-500 size-10" />
-        <BaseHeading
-          as="h4"
-          size="md"
-          weight="medium"
-          lead="tight"
-        >
+        <BaseHeading as="h4" size="md" weight="medium" lead="tight">
           <span>No matching results</span>
         </BaseHeading>
         <BaseParagraph size="xs" class="text-muted-600 dark:text-muted-400 mx-auto max-w-[240px]">
@@ -96,31 +86,18 @@ const filteredMembers = computed(() => {
       </div>
     </div>
     <div v-else>
-      <div
-        v-for="member in filteredMembers"
-        :key="member.id"
+      <div v-for="member in filteredMembers" :key="member.id"
         class="hover:bg-muted-100 focus-within:bg-muted-100 dark:hover:bg-muted-700/70 dark:focus-within:bg-muted-700/70 group flex items-center gap-3 p-2"
         :class="[
           props.rounded === 'sm' ? 'rounded-md' : '',
           props.rounded === 'md' ? 'rounded-lg' : '',
           props.rounded === 'lg' ? 'rounded-xl' : '',
           props.rounded === 'full' ? 'rounded-full' : '',
-        ]"
-      >
-        <BaseAvatar
-          :src="member.image"
-          :text="member.text"
-          size="xs"
-          class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 ms-1 shrink-0"
-        />
+        ]">
+        <BaseAvatar :src="member.image" :text="member.text" size="xs"
+          class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 ms-1 shrink-0" />
         <div>
-          <BaseHeading
-            as="h4"
-            size="xs"
-            weight="medium"
-            lead="tight"
-            class="text-muted-900 dark:text-white"
-          >
+          <BaseHeading as="h4" size="xs" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
             <span>
               {{ member.firstName }} {{ member.lastName.slice(0, 1) }}.
             </span>
@@ -132,15 +109,8 @@ const filteredMembers = computed(() => {
           </BaseParagraph>
         </div>
         <div
-          class="ms-auto flex -translate-x-1 items-center opacity-0 transition-all duration-300 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100"
-        >
-          <BaseButton
-            to="#"
-            :rounded="props.rounded"
-            variant="default"
-            size="icon-md"
-            class="scale-75"
-          >
+          class="ms-auto flex -translate-x-1 items-center opacity-0 transition-all duration-300 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100">
+          <BaseButton to="#" :rounded="props.rounded" variant="default" size="icon-md" class="scale-75">
             <Icon name="lucide:arrow-right" class="size-4" />
           </BaseButton>
         </div>
