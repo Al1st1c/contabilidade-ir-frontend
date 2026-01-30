@@ -25,6 +25,9 @@ const smsMessage = ref('')
 const selectedTemplateIndex = ref<number | null>(null)
 const isSendingSms = ref(false)
 const activeSidebarTab = ref('details')
+const checklistItems = ref<any[]>([])
+const isSavingChecklist = ref(false)
+const newChecklistTitle = ref('')
 
 const smsTemplates = [
   {
@@ -189,11 +192,68 @@ async function fetchDeclaration() {
       if (result.collectionLinks?.length > 0) {
         collectionLink.value = result.collectionLinks[0]
       }
+
+      // Populate checklist
+      checklistItems.value = result.checklist || []
     }
   } catch (error) {
     console.error('Erro ao buscar detalhes da declaração:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+async function addChecklistItem() {
+  if (!newChecklistTitle.value.trim()) return
+
+  const newItem = {
+    title: newChecklistTitle.value,
+    isRequired: true,
+    status: 'pending'
+  }
+
+  checklistItems.value.push(newItem)
+  newChecklistTitle.value = ''
+  await syncChecklist()
+}
+
+async function removeChecklistItem(index: number) {
+  checklistItems.value.splice(index, 1)
+  await syncChecklist()
+}
+
+async function toggleItemRequired(index: number) {
+  checklistItems.value[index].isRequired = !checklistItems.value[index].isRequired
+  await syncChecklist()
+}
+
+async function syncChecklist() {
+  isSavingChecklist.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/sync`, {
+      method: 'POST',
+      body: { items: checklistItems.value }
+    })
+
+    if (data && data.success) {
+      checklistItems.value = data.data
+    }
+  } catch (error) {
+    console.error('Erro ao sincronizar checklist:', error)
+  } finally {
+    isSavingChecklist.value = false
+  }
+}
+
+async function updateItemStatus(itemId: string, status: string, comment?: string) {
+  try {
+    await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/${itemId}`, {
+      method: 'PATCH',
+      body: { status, comment }
+    })
+    await fetchDeclaration()
+  } catch (error) {
+    console.error('Erro ao atualizar status do item:', error)
   }
 }
 
@@ -214,7 +274,7 @@ async function sendSms() {
       body: { message: smsMessage.value }
     })
 
-    if (data.value && data.value.success) {
+    if (data && data.success) {
       toaster.add({
         title: 'Sucesso',
         description: 'SMS enviado para o cliente!',
@@ -226,7 +286,7 @@ async function sendSms() {
     } else {
       toaster.add({
         title: 'Erro',
-        description: data.value?.message || 'Falha ao enviar SMS',
+        description: data?.message || 'Falha ao enviar SMS',
         icon: 'ph:warning-circle-fill'
       })
     }
@@ -252,7 +312,7 @@ async function save() {
       body: payload,
     })
 
-    if (data.value && data.value.success) {
+    if (data && data.success) {
       toaster.add({
         title: 'Salvo',
         description: 'Alterações gravadas com sucesso',
@@ -280,7 +340,7 @@ async function remove() {
       method: 'DELETE',
     })
 
-    if (data.value && data.value.success) {
+    if (data && data.success) {
       toaster.add({
         title: 'Excluído',
         description: 'Declaração removida com sucesso',
@@ -296,10 +356,6 @@ async function remove() {
       icon: 'ph:warning-circle-fill'
     })
   }
-}
-
-function triggerUpload() {
-  fileInput.value?.click()
 }
 
 function copyLink() {
@@ -322,8 +378,8 @@ async function generateLink() {
       body: { title: `Documentos para IR ${declaration.value.taxYear}` }
     })
 
-    if (data.value && data.value.success) {
-      collectionLink.value = data.value.data
+    if (data && data.success) {
+      collectionLink.value = data.data
       await fetchDeclaration()
     }
   } catch (error) {
@@ -334,6 +390,13 @@ async function generateLink() {
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const pendingFile = ref<File | null>(null)
+const showChecklistModal = ref(false)
+const selectedChecklistItemId = ref<string | null>(null)
+
+function triggerUpload() {
+  fileInput.value?.click()
+}
 
 async function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -342,8 +405,28 @@ async function handleFileUpload(event: Event) {
   const file = target.files[0]
   if (!file) return
 
+  // Verificar se há itens pendentes no checklist
+  const pendingItems = checklistItems.value.filter(item => item.status === 'pending')
+
+  if (pendingItems.length > 0) {
+    // Mostrar modal para selecionar item do checklist
+    pendingFile.value = file
+    selectedChecklistItemId.value = pendingItems[0].id
+    showChecklistModal.value = true
+  } else {
+    // Upload direto sem vincular a checklist
+    await uploadFile(file, null)
+  }
+}
+
+async function uploadFile(file: File, checklistItemId: string | null) {
   const formData = new FormData()
   formData.append('file', file)
+
+  // Adicionar checklistItemId se fornecido
+  if (checklistItemId) {
+    formData.append('checklistItemId', checklistItemId)
+  }
 
   try {
     toaster.add({
@@ -357,10 +440,12 @@ async function handleFileUpload(event: Event) {
       body: formData,
     })
 
-    if (data.value && (data.value.success || data.value.id)) {
+    if (data && (data.success || data.id)) {
       toaster.add({
         title: 'Sucesso',
-        description: 'Arquivo enviado com sucesso',
+        description: checklistItemId
+          ? 'Arquivo vinculado ao checklist com sucesso'
+          : 'Arquivo enviado com sucesso',
         icon: 'ph:check-circle-fill'
       })
 
@@ -369,6 +454,11 @@ async function handleFileUpload(event: Event) {
 
       // Notify parent to update board (e.g. attachment count)
       emit('saved')
+
+      // Fechar modal e limpar estados
+      showChecklistModal.value = false
+      pendingFile.value = null
+      selectedChecklistItemId.value = null
     }
   } catch (error: any) {
     toaster.add({
@@ -379,6 +469,19 @@ async function handleFileUpload(event: Event) {
   } finally {
     if (fileInput.value) fileInput.value.value = ''
   }
+}
+
+function confirmChecklistUpload() {
+  if (pendingFile.value) {
+    uploadFile(pendingFile.value, selectedChecklistItemId.value)
+  }
+}
+
+function cancelChecklistUpload() {
+  showChecklistModal.value = false
+  pendingFile.value = null
+  selectedChecklistItemId.value = null
+  if (fileInput.value) fileInput.value.value = ''
 }
 
 onMounted(() => {
@@ -457,7 +560,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                  }}</p>
+                    }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -539,7 +642,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                      }}</span>
+                        }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
@@ -582,6 +685,11 @@ onMounted(() => {
               class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
               :class="activeSidebarTab === 'financial' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
               Financeiro
+            </button>
+            <button @click="activeSidebarTab = 'checklist'"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
+              :class="activeSidebarTab === 'checklist' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
+              Checklist
             </button>
           </div>
 
@@ -772,6 +880,83 @@ onMounted(() => {
               </div>
             </div>
 
+            <!-- TAB: CHECKLIST -->
+            <div v-if="activeSidebarTab === 'checklist'" class="space-y-6 animate-fade-in">
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Documentos
+                    Necessários</label>
+                  <div v-if="isSavingChecklist" class="animate-spin text-primary-500">
+                    <Icon name="svg-spinners:ring-resize" class="size-4" />
+                  </div>
+                </div>
+
+                <!-- Add Item -->
+                <div class="flex gap-2">
+                  <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante..." size="sm"
+                    rounded="md" class="flex-1" @keyup.enter="addChecklistItem" />
+                  <BaseButton size="sm" variant="primary" @click="addChecklistItem">
+                    <Icon name="lucide:plus" class="size-4" />
+                  </BaseButton>
+                </div>
+
+                <!-- Item List -->
+                <div class="space-y-2">
+                  <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
+                    class="p-3 rounded-lg border bg-white dark:bg-muted-950 transition-all border-muted-200 dark:border-muted-800">
+                    <div class="flex items-start gap-3">
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                          <p class="text-xs font-semibold text-muted-800 dark:text-muted-100">{{ item.title }}</p>
+                          <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="scale-75">
+                            Obrigatório</BaseTag>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                          <BaseTag v-if="item.status === 'pending'" size="sm" color="muted">Pendente</BaseTag>
+                          <BaseTag v-else-if="item.status === 'uploaded'" size="sm" color="warning">Enviado</BaseTag>
+                          <BaseTag v-else-if="item.status === 'approved'" size="sm" color="success">Aprovado</BaseTag>
+                          <BaseTag v-else-if="item.status === 'rejected'" size="sm" color="danger">Rejeitado</BaseTag>
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <button @click="removeChecklistItem(idx)" class="p-1 text-muted-400 hover:text-danger-500">
+                          <Icon name="lucide:trash-2" class="size-3.5" />
+                        </button>
+                        <button @click="toggleItemRequired(idx)" class="p-1 text-muted-400"
+                          :class="item.isRequired ? 'text-danger-500' : 'hover:text-primary-500'">
+                          <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle'" class="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Actions for Uploaded -->
+                    <div v-if="item.status === 'uploaded' && item.attachment"
+                      class="mt-3 pt-3 border-t border-muted-100 dark:border-muted-800 flex items-center justify-between">
+                      <div class="flex items-center gap-2 text-[10px] text-muted-500 truncate max-w-[150px]">
+                        <Icon name="lucide:file" class="size-3" />
+                        <span class="truncate">{{ item.attachment.fileName }}</span>
+                      </div>
+                      <div class="flex gap-1">
+                        <BaseButton color="success" size="icon-sm" @click="updateItemStatus(item.id, 'approved')"
+                          title="Aprovar">
+                          <Icon name="lucide:check" class="size-3.5" />
+                        </BaseButton>
+                        <BaseButton color="danger" size="icon-sm" @click="updateItemStatus(item.id, 'rejected')"
+                          title="Rejeitar">
+                          <Icon name="lucide:x" class="size-3.5" />
+                        </BaseButton>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-if="checklistItems.length === 0"
+                    class="text-center py-6 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+                    <p class="text-[10px] text-muted-400 uppercase font-medium">Nenhum item definido</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Account Actions -->
             <div class="pt-10 text-center">
               <button @click="remove"
@@ -783,5 +968,92 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modal de Seleção de Checklist -->
+    <DialogRoot v-model:open="showChecklistModal">
+      <DialogPortal>
+        <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[100]" />
+        <DialogContent
+          class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col">
+
+          <div class="flex w-full items-center justify-between p-6 border-b border-muted-200 dark:border-muted-800">
+            <DialogTitle class="font-heading text-muted-900 text-lg font-medium dark:text-white">
+              Vincular ao Checklist
+            </DialogTitle>
+            <BaseButtonIcon @click="cancelChecklistUpload" rounded="full" variant="ghost">
+              <Icon name="solar:close-circle-linear" class="size-5" />
+            </BaseButtonIcon>
+          </div>
+
+          <div class="nui-slimscroll overflow-y-auto p-8 space-y-6">
+            <DialogDescription class="text-sm text-muted-500">
+              Este arquivo corresponde a algum documento do checklist? Selecione abaixo para vincular.
+            </DialogDescription>
+
+            <!-- Arquivo sendo enviado -->
+            <div class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700">
+              <div class="flex items-center gap-3">
+                <div class="size-12 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
+                  <Icon name="solar:file-bold-duotone" class="size-7" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <BaseText size="sm" weight="semibold" class="text-muted-900 dark:text-white truncate">
+                    {{ pendingFile?.name }}
+                  </BaseText>
+                  <BaseText size="xs" class="text-muted-500">
+                    {{ pendingFile ? (pendingFile.size / 1024).toFixed(2) : 0 }} KB
+                  </BaseText>
+                </div>
+              </div>
+            </div>
+
+            <!-- Seletor de item do checklist -->
+            <div class="space-y-3">
+              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">
+                Selecione o documento correspondente
+              </label>
+
+              <div class="space-y-2">
+                <!-- Itens pendentes do checklist -->
+                <button v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
+                  class="w-full text-left p-4 rounded-xl border transition-all"
+                  :class="selectedChecklistItemId === item.id
+                    ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500 shadow-sm shadow-primary-500/10'
+                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50 hover:bg-muted-50 dark:hover:bg-muted-900/40'" @click="selectedChecklistItemId = item.id">
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-full flex items-center justify-center transition-colors"
+                      :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
+                      <Icon name="solar:document-text-bold-duotone" class="size-4" />
+                    </div>
+                    <div class="flex-1">
+                      <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
+                        {{ item.title }}
+                      </BaseText>
+                      <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted"
+                        class="mt-1 scale-90 origin-left">
+                        Obrigatório
+                      </BaseTag>
+                    </div>
+                    <div v-if="selectedChecklistItemId === item.id"
+                      class="text-primary-500 animate-in zoom-in duration-200">
+                      <Icon name="solar:check-circle-bold" class="size-5" />
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+            <BaseButton @click="cancelChecklistUpload">Cancelar</BaseButton>
+            <BaseButton color="primary" rounded="lg" @click="confirmChecklistUpload">
+              <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" />
+              Enviar e Vincular
+            </BaseButton>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </FocusScope>
 </template>

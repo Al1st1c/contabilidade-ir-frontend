@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useAppState } from '~/composables/useAppState'
+import { useTenant } from '~/composables/useTenant'
 
 definePageMeta({
   title: 'My Projects',
@@ -19,7 +20,37 @@ const { useCustomFetch } = useApi()
 const { user } = useAuth()
 const { open } = usePanels()
 const { selectedEmployeeId } = useAppState() // Global state
+const { tenant, fetchTenant } = useTenant()
 import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs } from '#components'
+
+// Tenant computed properties for whitelabel
+const companyName = computed(() => tenant.value?.tradeName || tenant.value?.name || 'Seu Escritório')
+const companyLogo = computed(() => tenant.value?.logo)
+const companyLocation = computed(() => {
+  if (tenant.value?.city && tenant.value?.state) {
+    return `${tenant.value.city}, ${tenant.value.state}`
+  }
+  return null
+})
+const trialDaysLeft = computed(() => {
+  if (tenant.value?.plan === 'trial' && tenant.value?.trialEndsAt) {
+    const endDate = new Date(tenant.value.trialEndsAt)
+    const today = new Date()
+    const diffTime = endDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays > 0 ? diffDays : 0
+  }
+  return null
+})
+const planLabel = computed(() => {
+  const plan = tenant.value?.plan
+  if (plan === 'trial') return 'Período de Avaliação'
+  if (plan === 'starter') return 'Plano Starter'
+  if (plan === 'professional') return 'Plano Professional'
+  if (plan === 'enterprise') return 'Plano Enterprise'
+  return plan
+})
+
 // State
 const isLoading = ref(true)
 const stats = ref({
@@ -152,6 +183,10 @@ async function fetchTeam() {
 onMounted(() => {
   fetchDashboard()
   fetchTeam()
+  // Fetch tenant data for whitelabel if not already loaded
+  if (!tenant.value) {
+    fetchTenant()
+  }
 })
 
 function openDetails(declarationId: string) {
@@ -264,16 +299,18 @@ const acessorapido = computed(() => {
     {
       id: 1,
       name: 'Imposto de Renda',
-      description: 'Cadastrar um novo Imposto de Renda',
-      logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+      description: 'Cadastrar um novo IR',
+      icon: 'solar:document-text-bold-duotone',
+      iconColor: 'text-primary-500 bg-primary-500/10',
       url: '/imposto-de-renda',
     },
     {
       id: 3,
       name: 'Clientes',
-      description: 'Acessar lista de clientes',
-      logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-      url: '/imposto-de-renda',
+      description: 'Gestão de clientes',
+      icon: 'solar:users-group-rounded-bold-duotone',
+      iconColor: 'text-info-500 bg-info-500/10',
+      url: '/dashboard/clients',
     }
   ]
 
@@ -281,16 +318,18 @@ const acessorapido = computed(() => {
     base.push(
       {
         id: 2,
-        name: 'Whitelabel',
-        description: 'Configurar minha empresa',
-        logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
-        url: '/whitelabel',
+        name: 'Minha Empresa',
+        description: 'Personalizar marca e cores',
+        icon: 'solar:settings-minimalistic-bold-duotone',
+        iconColor: 'text-violet-500 bg-violet-500/10',
+        url: '/dashboard/settings',
       },
       {
         id: 4,
-        name: 'Funcionários',
-        description: 'Gerenciar usuários do sistema',
-        logo: 'https://gestorx-files.s3.us-east-1.amazonaws.com/tenants/71694926-2a4d-4e09-8d66-c2d9933e40a8/logo/1769039090118-ox3umt.webp',
+        name: 'Equipe',
+        description: 'Gerenciar funcionários',
+        icon: 'solar:user-plus-bold-duotone',
+        iconColor: 'text-success-500 bg-success-500/10',
         url: '/dashboard/settings/team',
       }
     )
@@ -402,17 +441,43 @@ function handleNextAction() {
       <!-- Grid column -->
       <div class="col-span-12">
         <!-- Header -->
-        <BaseCard rounded="md" class="py-2 px-6">
+        <BaseCard rounded="md" class="py-4 px-6 relative overflow-hidden">
+          <!-- Subtle brand accent line at top -->
+          <div
+            class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 via-primary-400 to-primary-500" />
+
           <div class="flex flex-col items-center md:flex-row justify-between">
             <div
               class="lg:landscape:flex-row lg:landscape:items-center flex flex-col items-center gap-4 text-center md:items-start md:text-start xl:landscape::flex-row xl:landscape::items-center">
-              <BaseAvatar src="/img/avatars/10.svg" size="xl"
-                badge-src="/img/icons/flags/united-states-of-america.svg" />
+              <!-- User Avatar -->
+              <div class="relative group">
+                <BaseAvatar :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="xl"
+                  class="ring-2 ring-primary-500/20 transition-all group-hover:ring-primary-500/40" />
+                <!-- Online indicator -->
+                <span
+                  class="absolute -bottom-0.5 -right-0.5 size-4 bg-success-500 border-2 border-white dark:border-muted-950 rounded-full" />
+              </div>
+
               <div class="text-center md:text-start">
+                <!-- Company Badge with Logo -->
+                <div class="mb-1 flex items-center gap-2 justify-center md:justify-start">
+                  <span
+                    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[10px] font-semibold uppercase tracking-wider">
+                    <!-- Show company logo if available, otherwise show building icon -->
+                    <img v-if="companyLogo" :src="companyLogo" :alt="companyName" class="size-4 rounded object-contain"
+                      @error="(e: any) => e.target.style.display = 'none'" />
+                    <Icon v-else name="solar:buildings-2-bold-duotone" class="size-3" />
+                    {{ companyName }}
+                  </span>
+                  <span v-if="companyLocation" class="text-[10px] text-muted-400 font-medium">
+                    📍 {{ companyLocation }}
+                  </span>
+                </div>
+
                 <BaseHeading as="h2" size="xl" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
                   <span v-if="!selectedEmployeeId">Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
                   <span v-else class="flex flex-col">
-                    <span class="text-xs text-primary-500  uppercase tracking-wider mb-1">Visualizando
+                    <span class="text-xs text-primary-500 uppercase tracking-wider mb-1">Visualizando
                       Perfil:</span>
                     <span>{{ selectedMemberName }}</span>
                   </span>
@@ -425,7 +490,7 @@ function handleNextAction() {
 
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                   <div
-                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px]  uppercase tracking-wider">
+                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-semibold uppercase tracking-wider">
                     <Icon name="solar:crown-minimalistic-bold-duotone" class="size-3" />
                     <span>{{ campaignProgress }}% da Campanha</span>
                   </div>
@@ -435,9 +500,9 @@ function handleNextAction() {
                   </span>
 
                   <div class="flex items-center gap-2 ps-3 border-s border-muted-200 dark:border-muted-800">
-                    <span class="text-[10px] uppercase  text-muted-400">Próxima Ação:</span>
+                    <span class="text-[10px] uppercase font-medium text-muted-400">Próxima Ação:</span>
                     <BaseButton variant="link" size="sm" :class="nextAction.color"
-                      class="p-0 h-auto  flex items-center gap-1" @click="handleNextAction">
+                      class="p-0 h-auto font-semibold flex items-center gap-1" @click="handleNextAction">
                       <Icon :name="nextAction.icon" class="size-3" />
                       {{ nextAction.text }}
                     </BaseButton>
@@ -446,12 +511,12 @@ function handleNextAction() {
               </div>
             </div>
 
-            <div class="w-full md:w-auto flex flex-col md:flex-row items-center gap-8 md:ms-auto">
+            <div class="w-full md:w-auto flex flex-col md:flex-row items-center gap-8 md:ms-auto mt-4 md:mt-0">
               <div class="text-center md:text-right">
                 <BaseHeading as="h3" size="3xl" lead="tight" class="text-muted-900 dark:text-white">
-                  <span>
+                  <span class="tabular-nums">
                     {{ stats.total }}
-                    <small class="text-base font-medium">IRs</small>
+                    <small class="text-base font-medium text-muted-400">IRs</small>
                   </span>
                 </BaseHeading>
                 <BaseParagraph>
@@ -595,44 +660,7 @@ function handleNextAction() {
               </div>
             </BaseCard>
           </div>
-          <!-- Project list widget -->
-          <BaseCard rounded="md" class="p-4 md:p-6">
-            <div class="mb-8 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Acesso Rápido</span>
-              </BaseHeading>
-            </div>
-            <div class="pb-2">
-              <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <TransitionGroup enter-active-class="transform-gpu" enter-from-class="opacity-0 -translate-x-full"
-                  enter-to-class="opacity-100 translate-x-0" leave-active-class="absolute transform-gpu"
-                  leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 -translate-x-full">
-                  <NuxtLink class="group block" v-for="item in acessorapido" :key="item.id" :to="item.url">
-                    <BaseCard rounded="sm" elevated-hover class="group-hover:border-primary-500! p-5">
-                      <div class="mb-1 flex gap-2">
-                        <BaseTooltip :content="item.name">
-                          <BaseAvatar :src="item.logo" size="sm" class="bg-muted-100 dark:bg-muted-700" />
-                        </BaseTooltip>
-                        <div>
-                          <BaseHeading tag="h5" size="sm" weight="medium" class="line-clamp-1">
-                            {{ item.name }}
-                          </BaseHeading>
-                          <BaseParagraph size="xs" class="text-muted-400">
-                            {{ item.description }}
-                          </BaseParagraph>
-                        </div>
-                      </div>
-                      <div>
-                        <BaseButton variant="link" class="text-primary-500 hover:text-primary-600">
-                          Acessar
-                        </BaseButton>
-                      </div>
-                    </BaseCard>
-                  </NuxtLink>
-                </TransitionGroup>
-              </div>
-            </div>
-          </BaseCard>
+
           <!-- Chart -->
           <BaseCard rounded="md" class="p-4 md:p-6">
             <div class="mb-6 flex items-center justify-between">
@@ -691,99 +719,277 @@ function handleNextAction() {
       <div class="lg:landscape:col-span-4 col-span-12 xl:landscape:col-span-4">
         <!-- Inner grid -->
         <div class="grid gap-4 lg:flex lg:flex-col">
-          <!-- Widget -->
-          <DemoActionText v-if="isViewingAdmin" title="Upgrade to Pro"
-            text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quid censes in Latino fore? Nam ante Aristippus, et ille melius."
-            label="Upgrade Now" to="#" rounded="md" />
-          <!-- Widget -->
-          <!-- Widget -->
-          <BaseCard class="p-4 md:p-6">
-            <!-- Title -->
-            <div class="mb-8 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Últimos IRs</span>
-              </BaseHeading>
-              <BaseText size="sm">
-                <BaseLink to="/dashboard/ir" class="not-hover:text-muted-400">
-                  Ver tudo
-                </BaseLink>
-              </BaseText>
-            </div>
+          <!-- Plan Status Widget (Trial or Premium) -->
+          <BaseCard v-if="isViewingAdmin && tenant" rounded="md"
+            class="p-5 relative overflow-hidden min-h-[125px] flex flex-col justify-center">
+            <!-- Decorative gradient orb -->
+            <div
+              class="absolute -top-12 -right-12 size-32 bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-full blur-2xl" />
 
-            <div class="mb-6 space-y-4">
-              <div v-for="item in recentDeclarations" :key="item.id"
-                class="flex items-center gap-3 p-2 rounded-xl hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors cursor-pointer group"
-                @click="openDetails(item.id)">
-                <BaseAvatar :src="item.client?.photo" :text="item.client?.name?.charAt(0)" size="sm"
-                  class="bg-primary-500/10 text-primary-500 shrink-0" />
-                <div class="flex-1 min-w-0">
-                  <BaseHeading as="h4" size="sm" lead="tight" class="text-muted-900 dark:text-white truncate">
-                    <span>{{ item.client?.name || 'Sem nome' }}</span>
-                  </BaseHeading>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[10px]  text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
-                      IR {{ item.taxYear }}
-                    </span>
-                    <span class="text-[10px] text-muted-400 font-medium truncate">
-                      • {{ item.column?.name || 'Sem etapa' }}
-                    </span>
+            <div class="relative">
+              <!-- Trial Warning -->
+              <template v-if="trialDaysLeft !== null">
+                <div class="flex items-center gap-3 mb-4">
+                  <div
+                    class="size-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <Icon name="solar:clock-circle-bold-duotone" class="size-5" />
+                  </div>
+                  <div>
+                    <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-900 dark:text-white">
+                      {{ planLabel }}
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-muted-400">
+                      <span v-if="trialDaysLeft > 0">{{ trialDaysLeft }} dias restantes</span>
+                      <span v-else class="text-danger-500 font-semibold">Período expirado!</span>
+                    </BaseParagraph>
                   </div>
                 </div>
-                <div class="ms-auto flex items-center">
-                  <Icon name="solar:alt-arrow-right-linear"
-                    class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
+
+                <!-- Progress bar for trial -->
+                <div class="mb-4">
+                  <div class="flex justify-between text-[10px] uppercase font-semibold text-muted-400 mb-1">
+                    <span>Período de teste</span>
+                    <span class="text-primary-500">{{ Math.max(0, trialDaysLeft) }}/14 dias</span>
+                  </div>
+                  <div class="h-2 bg-muted-100 dark:bg-muted-800 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-500 rounded-full"
+                      :style="{ width: `${Math.max(0, (trialDaysLeft / 14) * 100)}%` }" />
+                  </div>
                 </div>
+
+                <BaseButton to="/dashboard/settings" color="primary" size="sm" rounded="md" shadow class="w-full">
+                  <Icon name="solar:star-bold" class="size-4 me-2" />
+                  Escolher um Plano
+                </BaseButton>
+              </template>
+
+              <!-- Active Plan (Not Trial) -->
+              <template v-else-if="tenant?.plan">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/20">
+                    <Icon name="solar:verified-check-bold-duotone" class="size-5" />
+                  </div>
+                  <div>
+                    <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-900 dark:text-white">
+                      {{ planLabel }}
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-success-500 font-medium flex items-center gap-1">
+                      <Icon name="solar:check-circle-bold" class="size-3" />
+                      Plano ativo
+                    </BaseParagraph>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </BaseCard>
+
+          <!-- Widget -->
+          <!-- Project list widget -->
+          <BaseCard rounded="md" class="p-4 md:p-6">
+            <div class="mb-6 flex items-center justify-between">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
+                <span>Acesso Rápido</span>
+              </BaseHeading>
+            </div>
+            <div class="pb-2">
+              <div class="grid gap-2 grid-cols-1">
+                <TransitionGroup enter-active-class="transform-gpu" enter-from-class="opacity-0 -translate-x-full"
+                  enter-to-class="opacity-100 translate-x-0" leave-active-class="absolute transform-gpu"
+                  leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 -translate-x-full">
+                  <NuxtLink class="group block" v-for="item in acessorapido" :key="item.id" :to="item.url">
+                    <BaseCard rounded="sm" elevated-hover class="group-hover:border-primary-500! p-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="size-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                          :class="item.iconColor">
+                          <Icon :name="item.icon" class="size-5" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <BaseHeading tag="h5" size="sm" weight="medium" class="line-clamp-1">
+                            {{ item.name }}
+                          </BaseHeading>
+                          <BaseParagraph size="xs" class="text-muted-400">
+                            {{ item.description }}
+                          </BaseParagraph>
+                        </div>
+                        <Icon name="solar:arrow-right-linear"
+                          class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors" />
+                      </div>
+                    </BaseCard>
+                  </NuxtLink>
+                </TransitionGroup>
+              </div>
+            </div>
+          </BaseCard>
+
+          <!-- Widget: Últimos IRs -->
+          <BaseCard rounded="md" class="p-4 md:p-6">
+            <!-- Header -->
+            <div class="mb-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="size-9 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                  <Icon name="solar:document-text-bold-duotone" class="size-5" />
+                </div>
+                <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
+                  Últimos IRs
+                </BaseHeading>
+              </div>
+              <NuxtLink to="/imposto-de-renda"
+                class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
+                Ver tudo
+                <Icon name="solar:arrow-right-linear" class="size-3" />
+              </NuxtLink>
+            </div>
+
+            <!-- List -->
+            <div class="space-y-2">
+              <div v-for="item in recentDeclarations" :key="item.id" class="group cursor-pointer"
+                @click="openDetails(item.id)">
+                <BaseCard rounded="sm" elevated-hover class="p-3 group-hover:border-primary-500! transition-all">
+                  <div class="flex items-center gap-3">
+                    <!-- Avatar/Icon -->
+                    <div
+                      class="size-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-primary-500/5 flex items-center justify-center text-primary-500 shrink-0 transition-transform group-hover:scale-105">
+                      <span class="text-sm font-bold">{{ item.client?.name?.charAt(0) || '?' }}</span>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                      <BaseHeading as="h4" size="sm" weight="medium" class="truncate text-muted-900 dark:text-white">
+                        {{ item.client?.name || 'Sem nome' }}
+                      </BaseHeading>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span
+                          class="inline-flex items-center text-[10px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase">
+                          IR {{ item.taxYear }}
+                        </span>
+                        <span class="text-[10px] text-muted-400 font-medium truncate">
+                          {{ item.column?.name || 'Sem etapa' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Arrow -->
+                    <Icon name="solar:arrow-right-linear"
+                      class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors shrink-0" />
+                  </div>
+                </BaseCard>
               </div>
 
-              <!-- Empty State: Recent IRs -->
+              <!-- Empty State -->
               <div v-if="recentDeclarations.length === 0"
-                class="py-10 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-                <Icon name="solar:document-add-linear" class="size-10 mx-auto mb-3 text-muted-400 opacity-50" />
+                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
+                <div
+                  class="size-12 mx-auto mb-3 rounded-xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
+                  <Icon name="solar:document-add-linear" class="size-6 text-muted-400" />
+                </div>
                 <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum IR recente</BaseHeading>
                 <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
-                  Ainda não há atividades registradas para este filtro.
+                  Ainda não há atividades registradas.
                 </BaseParagraph>
               </div>
             </div>
           </BaseCard>
-          <!-- Widget -->
-          <BaseCard v-if="canViewAll" class="p-6">
-            <BaseHeading as="h3" size="md" class="mb-6">Produtividade da Equipe</BaseHeading>
 
-            <div v-if="teamProductivity.length > 0" class="mb-6">
+          <!-- Widget: Produtividade da Equipe -->
+          <BaseCard v-if="canViewAll" rounded="md" class="p-4 md:p-6">
+            <!-- Header -->
+            <div class="mb-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="size-9 rounded-xl bg-success-500/10 flex items-center justify-center text-success-500">
+                  <Icon name="solar:chart-2-bold-duotone" class="size-5" />
+                </div>
+                <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
+                  Produtividade
+                </BaseHeading>
+              </div>
+              <NuxtLink to="/dashboard/settings/team"
+                class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
+                Ver equipe
+                <Icon name="solar:arrow-right-linear" class="size-3" />
+              </NuxtLink>
+            </div>
+
+            <!-- Chart (if data exists) -->
+            <div v-if="teamProductivity.length > 0" class="mb-4">
               <AddonApexchart v-bind="productivityChart" />
             </div>
 
-            <div class="space-y-6">
+            <!-- Team Members List -->
+            <div class="space-y-2">
               <div v-for="member in teamProductivity" :key="member.id" class="group">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-3">
-                    <BaseAvatar :src="member.photo" :text="member.name.charAt(0)" size="xs" rounded="full" />
-                    <BaseParagraph size="sm" class="text-muted-800 dark:text-muted-100">{{ member.name }}
-                    </BaseParagraph>
+                <BaseCard rounded="sm" class="p-3 transition-all hover:shadow-sm">
+                  <div class="flex items-center gap-3 mb-2">
+                    <!-- Avatar -->
+                    <div
+                      class="size-10 rounded-xl bg-gradient-to-br from-success-500/20 to-success-500/5 flex items-center justify-center shrink-0 overflow-hidden">
+                      <BaseAvatar v-if="member.photo" :src="member.photo" size="sm" rounded="lg" />
+                      <span v-else class="text-sm font-bold text-success-500">
+                        {{ member.name?.charAt(0) || '?' }}
+                      </span>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                      <BaseHeading as="h4" size="sm" weight="medium" class="truncate text-muted-900 dark:text-white">
+                        {{ member.name }}
+                      </BaseHeading>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[10px] font-medium text-muted-400">
+                          IRs atribuídos
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Stats Badge -->
+                    <div class="text-right shrink-0">
+                      <div class="text-sm font-bold text-muted-900 dark:text-white tabular-nums">
+                        {{ member.completed }}<span class="text-muted-400 font-normal">/{{ member.count }}</span>
+                      </div>
+                      <div class="text-[10px] font-semibold"
+                        :class="member.count > 0 && member.completed === member.count ? 'text-success-500' : 'text-primary-500'">
+                        {{ member.count > 0 ? Math.round((member.completed / member.count) * 100) : 0 }}% concluído
+                      </div>
+                    </div>
                   </div>
-                  <BaseParagraph size="xs" class="text-primary-500 font-bold">
-                    {{ member.completed }}/{{ member.count }}
-                  </BaseParagraph>
-                </div>
-                <BaseProgress size="xs" variant="primary"
-                  :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
-                  class="group-hover:opacity-80 transition-opacity" />
+
+                  <!-- Progress Bar -->
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="member.count > 0 ? (member.completed / member.count) * 100 : 0"
+                    class="transition-all" />
+                </BaseCard>
               </div>
-            </div>
-            <!-- Empty State: Team -->
-            <div v-if="teamProductivity.length === 0"
-              class="py-10 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
-              <Icon name="solar:users-group-two-rounded-linear"
-                class="size-10 mx-auto mb-3 text-muted-400 opacity-50" />
-              <BaseHeading as="h4" size="sm" class="text-muted-500">Ninguém atribuído</BaseHeading>
-              <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
-                Não há funcionários vinculados a estas declarações.
-              </BaseParagraph>
+
+              <!-- Empty State -->
+              <div v-if="teamProductivity.length === 0"
+                class="py-8 text-center bg-muted-50 dark:bg-muted-900/40 rounded-xl border border-dashed border-muted-200 dark:border-muted-800">
+                <div
+                  class="size-12 mx-auto mb-3 rounded-xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
+                  <Icon name="solar:users-group-two-rounded-linear" class="size-6 text-muted-400" />
+                </div>
+                <BaseHeading as="h4" size="sm" class="text-muted-500">Nenhum membro</BaseHeading>
+                <BaseParagraph size="xs" class="text-muted-400 mt-1 max-w-[200px] mx-auto">
+                  Não há funcionários com IRs atribuídos.
+                </BaseParagraph>
+              </div>
             </div>
           </BaseCard>
 
         </div>
+      </div>
+    </div>
+
+    <!-- Whitelabel Footer - Company Branding -->
+    <div class="mt-8 pb-4 text-center">
+      <div class="flex items-center justify-center gap-2 text-[10px] text-muted-400">
+        <img v-if="companyLogo" :src="companyLogo" :alt="companyName"
+          class="h-4 object-contain opacity-40 grayscale hover:opacity-60 hover:grayscale-0 transition-all duration-300"
+          @error="(e: any) => e.target.style.display = 'none'" />
+        <span class="font-medium">{{ companyName }}</span>
+        <span class="text-muted-300 dark:text-muted-600">•</span>
+        <span>{{ new Date().getFullYear() }}</span>
       </div>
     </div>
   </div>

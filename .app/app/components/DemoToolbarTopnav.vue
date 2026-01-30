@@ -1,7 +1,55 @@
 <script setup lang="ts">
-import { useAuth } from '~/composables/useAuth'
+import { useAuth, useApi } from '~/composables/useAuth'
+import { PanelsPanelNotifications } from '#components'
 
 const { user, logout } = useAuth()
+const { useCustomFetch } = useApi()
+const { open } = usePanels()
+
+// Notifications count
+const notificationCount = ref(0)
+const hasCritical = ref(false)
+const lastSeenCount = ref(0) // Track what user has seen
+
+// Display count shows only NEW notifications (ones not seen yet)
+const displayCount = computed(() => {
+  const newCount = notificationCount.value - lastSeenCount.value
+  return newCount > 0 ? newCount : 0
+})
+
+async function fetchNotificationCount() {
+  try {
+    const year = new Date().getFullYear()
+    const response = await useCustomFetch<any>(`/declarations/dashboard-stats?taxYear=${year}`)
+
+    if (response?.data?.success) {
+      const alerts = response.data.data.alerts || {}
+      const total =
+        (alerts.errors?.length || 0) +
+        (alerts.nearDeadline?.length || 0) +
+        (alerts.waitingDocs?.length || 0) +
+        (alerts.stuckClients?.length || 0)
+
+      notificationCount.value = total
+      hasCritical.value = (alerts.errors?.length || 0) > 0
+    }
+  } catch (e) {
+    console.error('Error fetching notification count:', e)
+  }
+}
+
+onMounted(() => {
+  fetchNotificationCount()
+  // Refresh every 2 minutes
+  setInterval(fetchNotificationCount, 120000)
+})
+
+function openNotifications() {
+  // Mark current notifications as "seen"
+  lastSeenCount.value = notificationCount.value
+  open(PanelsPanelNotifications, {})
+}
+
 </script>
 
 <template>
@@ -9,6 +57,20 @@ const { user, logout } = useAuth()
     <div class="scale-[0.8]">
       <BaseThemeSwitch />
     </div>
+
+    <!-- Notifications Button -->
+    <button type="button"
+      class="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+      @click="openNotifications">
+      <Icon name="solar:bell-bold-duotone" class="size-5 text-muted-400" />
+
+      <!-- Badge -->
+      <span v-if="displayCount > 0"
+        class="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full"
+        :class="hasCritical ? 'bg-danger-500 animate-pulse' : 'bg-primary-500'">
+        {{ displayCount > 99 ? '99+' : displayCount }}
+      </span>
+    </button>
 
     <div class="group inline-flex items-center justify-center text-end">
       <DropdownMenuRoot>

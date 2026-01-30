@@ -31,7 +31,7 @@ const isMobileOpen = ref(false)
       <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 !z-[50] relative">
         <div class="flex items-center gap-3 flex-1">
           <NuxtLink to="/" class="flex items-center gap-3">
-            <TairoLogo class="size-8 text-primary-heavy dark:text-primary-light" />
+            <TairoLogo class="size-20 text-primary-heavy dark:text-primary-light" />
           </NuxtLink>
           <DemoWorkspaceDropdown class="ms-auto max-w-[170px] md:ms-0 me-4 md:me-0 md:max-w-[240px]" />
         </div>
@@ -60,15 +60,24 @@ const isMobileOpen = ref(false)
               </TairoMenuItem>
 
               <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard/drive'">
+                  <NuxtLink to="/dashboard/drive">
+                    Drive
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
+              <TairoMenuItem>
                 <TairoMenuTrigger>
                   <span>Clientes</span>
                   <Icon name="lucide:chevron-down"
                     class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
                 </TairoMenuTrigger>
                 <TairoMenuContent>
-                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col">
+                  <TairoMenuListItems class="m-0 list-none p-4 sm:w-[300px] sm:max-w-[300px] flex flex-col gap-2">
                     <TairoMenuLink as-child>
-                      <NuxtLink to="/dashboard/clients">
+                      <NuxtLink to="/dashboard/clients"
+                        class="flex flex-col gap-1 p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                         <BaseHeading size="sm" weight="medium"
                           class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
                           Listar Todos
@@ -79,7 +88,8 @@ const isMobileOpen = ref(false)
                       </NuxtLink>
                     </TairoMenuLink>
                     <TairoMenuLink as-child>
-                      <NuxtLink to="/dashboard/clients/create">
+                      <NuxtLink to="/dashboard/clients/create"
+                        class="flex flex-col gap-1 p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                         <BaseHeading size="sm" weight="medium"
                           class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
                           Cadastrar Cliente
@@ -92,7 +102,6 @@ const isMobileOpen = ref(false)
                   </TairoMenuListItems>
                 </TairoMenuContent>
               </TairoMenuItem>
-
 
               <TairoMenuItem>
                 <TairoMenuTrigger>
@@ -108,18 +117,19 @@ const isMobileOpen = ref(false)
                           <div class="flex flex-col justify-end h-full w-full bg-primary-950 rounded-xl p-4">
                             <div>
                               <TairoLogo class="size-10 text-white mb-3" />
-                              <BaseHeading class="text-white mb-2">
-                                {{ tenant?.name || 'CONTSTAR' }}
+                              <BaseHeading class="text-white mb-2 leading-tight">
+                                {{ tenant?.tradeName || tenant?.name || 'CONTSTAR' }}
                               </BaseHeading>
-                              <BaseParagraph size="xs" class="max-w-[260px] text-white">
-                                {{ tenant?.tradeName || 'Contabilidade e IR' }}
+                              <BaseParagraph size="xs" class="max-w-[260px] text-white/70">
+                                Configurações e Gestão
                               </BaseParagraph>
                             </div>
                           </div>
                         </div>
                         <div class="sm:col-span-3 flex flex-col gap-2">
                           <TairoMenuLink as-child>
-                            <NuxtLink to="/dashboard/settings">
+                            <NuxtLink to="/dashboard/settings"
+                              class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
                                 <div class="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center">
                                   <Icon name="lucide:palette" class="size-4 text-primary-500" />
@@ -137,7 +147,8 @@ const isMobileOpen = ref(false)
                             </NuxtLink>
                           </TairoMenuLink>
                           <TairoMenuLink as-child>
-                            <NuxtLink to="/dashboard/settings/account">
+                            <NuxtLink to="/dashboard/settings/account"
+                              class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
                                 <div class="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                                   <Icon name="lucide:building-2" class="size-4 text-emerald-500" />
@@ -155,7 +166,8 @@ const isMobileOpen = ref(false)
                             </NuxtLink>
                           </TairoMenuLink>
                           <TairoMenuLink as-child>
-                            <NuxtLink to="/dashboard/settings/team">
+                            <NuxtLink to="/dashboard/settings/team"
+                              class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
                                 <div class="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
                                   <Icon name="lucide:users" class="size-4 text-amber-500" />
@@ -179,8 +191,6 @@ const isMobileOpen = ref(false)
                 </TairoMenuContent>
               </TairoMenuItem>
 
-
-
               <TairoMenuIndicator />
             </TairoMenuList>
 
@@ -199,20 +209,58 @@ const isMobileOpen = ref(false)
     <TairoMobileDrawer v-model="isMobileOpen">
       <DemoWorkspaceDropdown class="my-4" />
 
-      <div v-for="i in 6" :key="i" class="space-y-3 mb-10">
-        <BaseHeading size="xl" weight="semibold">
-          Menu
+      <div class="space-y-6 mt-6 px-2">
+        <BaseHeading size="xs" weight="bold" class="text-muted-400 uppercase tracking-widest px-4">
+          Principal
         </BaseHeading>
-        <div>
-          <ul class="font-sans text-lg space-y-2">
-            <li v-for="item in 6" :key="item">
-              <NuxtLink to="#" class="text-muted-600 dark:text-muted-400 underline-offset-8"
-                exact-active-class="underline font-medium text-muted-900! dark:text-white!">
-                Amazing UI
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
+        <ul class="space-y-1">
+          <li>
+            <NuxtLink to="/dashboard"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              exact-active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:widget-3-bold-duotone" class="size-5" />
+              Dashboard
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/ir"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:calculator-minimalistic-bold-duotone" class="size-5" />
+              Imposto de Renda
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/drive"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:folder-with-files-bold-duotone" class="size-5" />
+              Drive
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/clients"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:users-group-rounded-bold-duotone" class="size-5" />
+              Clientes
+            </NuxtLink>
+          </li>
+        </ul>
+
+        <BaseHeading size="xs" weight="bold" class="text-muted-400 uppercase tracking-widest px-4 pt-4">
+          Configurações
+        </BaseHeading>
+        <ul class="space-y-1">
+          <li>
+            <NuxtLink to="/dashboard/settings"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:settings-bold-duotone" class="size-5" />
+              Minha Empresa
+            </NuxtLink>
+          </li>
+        </ul>
       </div>
     </TairoMobileDrawer>
   </TairoTopnavLayout>

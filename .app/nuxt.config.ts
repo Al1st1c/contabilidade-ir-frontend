@@ -113,7 +113,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'https://dolphin-app-945a9.ondigitalocean.app',
+      apiBase: process.env.API_BASE || 'http://localhost:8080',
       recaptcha: {
         siteKey: '6LeaWz4rAAAAABMpDVUnge1SNvB2OtQ7JSwpQJSS',
       },

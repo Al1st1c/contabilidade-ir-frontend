@@ -35,6 +35,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Load and apply tenant colors after app is mounted
   nuxtApp.hook('app:mounted', async () => {
+    // Skip if on public upload page
+    if (window.location.pathname.startsWith('/upload')) {
+      return
+    }
+
     try {
       const { data } = await useCustomFetch<{ success: boolean; data: TenantData }>('/tenant')
 
