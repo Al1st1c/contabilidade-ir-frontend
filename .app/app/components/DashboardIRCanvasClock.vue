@@ -306,12 +306,13 @@ const formatDate = (date: Date) => {
     month: '2-digit'
   })
 }
+const showDetails = ref(false)
 </script>
 
 <template>
-  <div class="relative group inline-block">
+  <div class="relative inline-block" @click="showDetails = !showDetails">
     <!-- Relógio Analógico -->
-    <div class="relative" :style="{ width: `${size}px`, height: `${size}px` }">
+    <div class="relative cursor-pointer" :style="{ width: `${size}px`, height: `${size}px` }">
       <canvas ref="canvasRef" :style="{ width: `${size}px`, height: `${size}px` }" class="block" />
 
       <!-- Informação Minimalista no Centro -->
@@ -346,9 +347,9 @@ const formatDate = (date: Date) => {
       </div>
     </div>
 
-    <!-- Tooltip com Detalhes (aparece no hover) -->
-    <div
-      class="absolute left-1/2 -translate-x-1/2 top-full mt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 ease-out z-50 pointer-events-none">
+    <!-- Tooltip com Detalhes (aparece no click) -->
+    <div v-if="showDetails"
+      class="absolute left-1/2 -translate-x-1/2 top-full mt-4 transition-all duration-200 ease-out z-[100] pointer-events-auto">
       <div
         class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 min-w-[280px]">
         <!-- Tempo Restante -->

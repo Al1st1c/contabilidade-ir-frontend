@@ -76,6 +76,8 @@ const dashboardAlerts = ref({
   errors: [] as any[],
 })
 
+const isClockZoomed = ref(false)
+
 // Trend Data
 const revenueTrend = ref<any[]>([])
 const trendLabels = ref<string[]>([])
@@ -392,6 +394,37 @@ const productivityChart = computed(() => ({
   }
 }))
 
+const activeAlertTab = ref('all')
+
+const irStartDate = ref("2026-03-01T08:00:00")
+const irEndDate = ref("2026-05-31T23:59:59")
+
+const isIrPeriodStarted = computed(() => {
+  return new Date() >= new Date(irStartDate.value)
+})
+
+const filteredAlerts = computed(() => {
+  const all = [
+    ...dashboardAlerts.value.errors.map(a => ({ ...a, type: 'error', icon: 'solar:danger-bold', iconColor: 'text-danger-500', iconBg: 'bg-danger-500/10', priority: 1, label: 'Erro' })),
+    ...dashboardAlerts.value.nearDeadline.map(a => ({ ...a, type: 'nearDeadline', icon: 'solar:clock-circle-bold', iconColor: 'text-warning-500', iconBg: 'bg-warning-500/10', priority: 2, label: 'Vencimento' })),
+    ...dashboardAlerts.value.waitingDocs.map(a => ({ ...a, type: 'waitingDocs', icon: 'solar:document-add-bold', iconColor: 'text-primary-500', iconBg: 'bg-primary-500/10', priority: 3, label: 'Documentos' })),
+    ...dashboardAlerts.value.stuckClients.map(a => ({ ...a, type: 'stuckClients', icon: 'solar:hourglass-line-linear', iconColor: 'text-muted-400', iconBg: 'bg-muted-500/10', priority: 4, label: 'Travado' })),
+  ]
+
+  if (activeAlertTab.value === 'all') return all
+  return all.filter(a => a.type === activeAlertTab.value)
+})
+
+const rookies = computed(() => {
+  if (teamMembers.value.length === 0) return []
+  return teamMembers.value.slice(0, 3).map(m => ({
+    name: m.name,
+    role: m.role?.name || 'Membro',
+    avatar: m.photo || `/img/avatars/${Math.floor(Math.random() * 20) + 1}.svg`,
+    stack: '/img/stacks/js.svg'
+  }))
+})
+
 function handleNextAction() {
   if (dashboardAlerts.value.errors.length > 0) {
     openDetails(dashboardAlerts.value.errors[0].id)
@@ -440,246 +473,276 @@ function handleNextAction() {
     <div v-else class="grid grid-cols-12 gap-4">
       <!-- Grid column -->
       <div class="col-span-12">
-        <!-- Header -->
-        <BaseCard rounded="md" class="py-4 px-6 relative overflow-hidden">
-          <!-- Subtle brand accent line at top -->
-          <div
-            class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 via-primary-400 to-primary-500" />
-
-          <div class="flex flex-col items-center md:flex-row justify-between">
-            <div
-              class="lg:landscape:flex-row lg:landscape:items-center flex flex-col items-center gap-4 text-center md:items-start md:text-start xl:landscape::flex-row xl:landscape::items-center">
-              <!-- User Avatar -->
-              <div class="relative group">
-                <BaseAvatar :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="xl"
-                  class="ring-2 ring-primary-500/20 transition-all group-hover:ring-primary-500/40" />
-                <!-- Online indicator -->
-                <span
-                  class="absolute -bottom-0.5 -right-0.5 size-4 bg-success-500 border-2 border-white dark:border-muted-950 rounded-full" />
-              </div>
-
-              <div class="text-center md:text-start">
-                <!-- Company Badge with Logo -->
-                <div class="mb-1 flex items-center gap-2 justify-center md:justify-start">
-                  <span
-                    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[10px] font-semibold uppercase tracking-wider">
-                    <!-- Show company logo if available, otherwise show building icon -->
-                    <img v-if="companyLogo" :src="companyLogo" :alt="companyName" class="size-4 rounded object-contain"
-                      @error="(e: any) => e.target.style.display = 'none'" />
-                    <Icon v-else name="solar:buildings-2-bold-duotone" class="size-3" />
-                    {{ companyName }}
-                  </span>
-                  <span v-if="companyLocation" class="text-[10px] text-muted-400 font-medium">
-                    📍 {{ companyLocation }}
-                  </span>
-                </div>
-
-                <BaseHeading as="h2" size="xl" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
-                  <span v-if="!selectedEmployeeId">Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
-                  <span v-else class="flex flex-col">
-                    <span class="text-xs text-primary-500 uppercase tracking-wider mb-1">Visualizando
-                      Perfil:</span>
-                    <span>{{ selectedMemberName }}</span>
-                  </span>
-                </BaseHeading>
-                <BaseParagraph>
-                  <span class="text-muted-600 dark:text-muted-400 font-medium">Campanha de IR {{ new
-                    Date().getFullYear() }} • <span class="capitalize">{{ new Intl.DateTimeFormat('pt-BR',
-                      { dateStyle: 'long' }).format(new Date()) }}</span></span>
-                </BaseParagraph>
-
-                <div class="mt-3 flex flex-wrap items-center gap-3">
-                  <div
-                    class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-semibold uppercase tracking-wider">
-                    <Icon name="solar:crown-minimalistic-bold-duotone" class="size-3" />
-                    <span>{{ campaignProgress }}% da Campanha</span>
+        <!-- Header Row -->
+        <div class="col-span-12">
+          <div class="grid grid-cols-12 gap-4">
+            <!-- Left: User Profile & Rookies & Job Feed (Col 7/8) -->
+            <div class="col-span-12 lg:col-span-7 2xl:col-span-8">
+              <div class="bg-primary-800 rounded-2xl px-6 py-8 h-full flex items-center">
+                <div class="flex w-full flex-col items-center gap-y-6 sm:flex-row">
+                  <!-- User Profile -->
+                  <div class="flex flex-1 flex-col gap-y-2 px-4 border-muted-700/50">
+                    <BaseAvatar :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="lg"
+                      class="border-primary-200/50 ring-primary-200/50 ring-offset-primary-600 mb-2 border ring-2 ring-offset-4" />
+                    <BaseHeading as="h2" size="2xl" weight="semibold" lead="none" class="text-white">
+                      <span>Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-primary-100 hidden sm:block">
+                      Sua campanha de IR {{ new Date().getFullYear() }} está a todo vapor.
+                    </BaseParagraph>
                   </div>
 
-                  <span v-if="gamificationMessage" class="text-xs text-muted-400 italic">
-                    {{ gamificationMessage }}
-                  </span>
+                  <!-- New Rookies (Team Members) -->
+                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-muted-700/50 sm:border-l">
+                    <BaseHeading as="h2" size="lg" weight="semibold" lead="tight" class="mb-1 text-white">
+                      <span>Sua Equipe</span>
+                    </BaseHeading>
+                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
+                      Acompanhe a produtividade dos seus colaboradores em tempo real.
+                    </BaseParagraph>
+                    <div class="mt-auto flex items-center gap-2">
+                      <div class="flex -space-x-2">
+                        <BaseAvatar v-for="rookie in rookies" :key="rookie.name" size="sm" rounded="full"
+                          :src="rookie.avatar" class="border-2 border-primary-800" />
+                      </div>
+                      <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team">
+                        <Icon name="lucide:plus" class="size-4" />
+                      </BaseButton>
+                    </div>
+                  </div>
 
-                  <div class="flex items-center gap-2 ps-3 border-s border-muted-200 dark:border-muted-800">
-                    <span class="text-[10px] uppercase font-medium text-muted-400">Próxima Ação:</span>
-                    <BaseButton variant="link" size="sm" :class="nextAction.color"
-                      class="p-0 h-auto font-semibold flex items-center gap-1" @click="handleNextAction">
-                      <Icon :name="nextAction.icon" class="size-3" />
-                      {{ nextAction.text }}
+                  <!-- Job Feed (New IR Action) -->
+                  <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-muted-700/50 sm:border-l">
+                    <BaseHeading as="h2" size="lg" weight="semibold" lead="tight" class="mb-1 text-white">
+                      <span>Novo Imposto de Renda</span>
+                    </BaseHeading>
+                    <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
+                      Cadastre um novo cliente ou declaração para iniciar o processo.
+                    </BaseParagraph>
+                    <div class="mt-auto">
+                      <BaseButton class="w-full" variant="default" to="/imposto-de-renda">
+                        <span>Cadastrar Agora</span>
+                      </BaseButton>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Standing Orders (Timer) (Col 5/4) -->
+            <div class="col-span-12 lg:col-span-5 2xl:col-span-4">
+              <BaseCard rounded="md" variant="none"
+                class="bg-primary-900 border-primary-900 h-full p-4 md:p-6 lg:p-10 relative">
+
+                <!-- Clip illustration without clipping the clock tooltip -->
+                <div class="absolute inset-0 overflow-hidden rounded-md pointer-events-none">
+                  <!-- Background Illustration (Repositioned to Left) -->
+                  <div class="absolute -left-12 -bottom-10 opacity-20 transform -rotate-12 z-0">
+                    <VectorIllustrationCalendar class="size-64 text-primary-400" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4 h-full items-center relative z-10">
+                  <!-- Text Area -->
+                  <div class="col-span-12 sm:col-span-6">
+                    <BaseHeading as="h3" size="xl" weight="semibold" class="text-white mb-2">
+                      {{ isIrPeriodStarted ? 'Tempo Restante' : 'Campanha IR' }}
+                    </BaseHeading>
+                    <BaseParagraph size="xs" class="text-primary-100 mb-6 leading-relaxed opacity-90">
+                      {{ isIrPeriodStarted
+                        ? 'Fique atento aos prazos! Acompanhe o tempo restante para a entrega das declarações de 2026.'
+                        : 'Prepare sua equipe! O período oficial de entrega das declarações do IR 2026 inicia em breve.'
+                      }}
+                    </BaseParagraph>
+                    <BaseButton size="sm" variant="default" class="w-fit" to="/imposto-de-renda">
+                      {{ isIrPeriodStarted ? 'Gerenciar IRs' : 'Ver Cronograma' }}
                     </BaseButton>
                   </div>
+
+                  <!-- Visual Area (Interactive Clock) -->
+                  <div class="col-span-12 sm:col-span-6 flex flex-col items-center justify-center min-h-[160px]">
+                    <div class="transition-all duration-300 cursor-pointer" :class="[
+                      isClockZoomed
+                        ? 'z-[100] relative drop-shadow-2xl'
+                        : 'scale-[0.8] sm:scale-90 lg:scale-100 z-10 relative'
+                    ]" @click="isClockZoomed = !isClockZoomed">
+                      <DashboardIRCanvasClock :start-date="irStartDate" :end-date="irEndDate" :size="140" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div class="w-full md:w-auto flex flex-col md:flex-row items-center gap-8 md:ms-auto mt-4 md:mt-0">
-              <div class="text-center md:text-right">
-                <BaseHeading as="h3" size="3xl" lead="tight" class="text-muted-900 dark:text-white">
-                  <span class="tabular-nums">
-                    {{ stats.total }}
-                    <small class="text-base font-medium text-muted-400">IRs</small>
-                  </span>
-                </BaseHeading>
-                <BaseParagraph>
-                  <span class="text-muted-600 dark:text-muted-400 text-xs font-medium uppercase tracking-wider">
-                    Total de Declarações
-                  </span>
-                </BaseParagraph>
-              </div>
-
-              <div class="shrink-0 -my-4">
-                <DashboardIRCanvasClock start-date="2026-01-01T08:00:00" end-date="2026-02-08T23:59:59" :size="180"
-                  :show-details="false" />
-              </div>
+              </BaseCard>
             </div>
           </div>
-        </BaseCard>
+        </div>
       </div>
       <!-- Grid column -->
       <div class="lg:landscape:col-span-8 col-span-12 xl:landscape:col-span-8">
         <!-- Inner grid -->
-        <!-- Error Alert (Pegando Fogo) -->
-        <Transition enter-active-class="duration-300 ease-out" enter-from-class="transform opacity-0 -translate-y-4"
-          enter-to-class="opacity-100 translate-y-0">
-          <div v-if="dashboardAlerts.errors.length > 0" class="mb-4">
-            <BaseCard rounded="md" class="p-4 border-l-4 border-danger-500 bg-danger-500/5 flex items-center gap-4">
-              <div
-                class="size-10 rounded-full bg-danger-500 text-white flex items-center justify-center shadow-lg shadow-danger-500/20 shrink-0">
-                <Icon name="solar:danger-bold" class="size-6" />
-              </div>
-              <div class="flex-1">
-                <BaseHeading as="h4" size="sm" weight="bold" class="text-danger-800 dark:text-danger-200">
-                  🚨 Existem {{ dashboardAlerts.errors.length }} retificações urgentes!
-                </BaseHeading>
-                <BaseParagraph size="xs" class="text-danger-600/80 dark:text-danger-400/80">
-                  Declarações com erros críticos que precisam de correção imediata para evitar malha fina.
-                </BaseParagraph>
-              </div>
-              <BaseButton color="danger" size="sm" rounded="md" @click="openDetails(dashboardAlerts.errors[0].id)">
-                Resolver agora
-              </BaseButton>
-            </BaseCard>
-          </div>
-        </Transition>
-
-        <div id="dashboard-alerts" class="flex flex-col gap-4">
-          <!-- Executive Summary: Resumo do Dia -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Alert 1: Pendências Documentais -->
-            <BaseCard rounded="md"
-              class="p-4 border-l-4 border-amber-400 relative overflow-hidden group hover:shadow-lg transition-shadow bg-amber-500/5 cursor-pointer"
-              @click="openWaitingDocs">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="size-9 rounded-xl bg-amber-400/10 flex items-center justify-center text-amber-500">
-                  <Icon name="solar:document-add-linear" class="size-5" />
-                </div>
-                <div>
-                  <BaseHeading as="h4" size="xs">Falta Documentos</BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-400">Críticos/Urgentes</BaseParagraph>
-                </div>
-                <div class="ms-auto text-end">
-                  <BaseTag rounded="full" color="warning" size="sm" weight="bold">
-                    {{ dashboardAlerts.waitingDocs.length }}
-                  </BaseTag>
-                  <div class="text-[10px] text-amber-600  mt-1 uppercase tracking-tighter">Cobrar Todos</div>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div v-for="c in dashboardAlerts.waitingDocs" :key="c.id" @click.stop="openDetails(c.id)"
-                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
-                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
-                  <Icon name="solar:arrow-right-up-linear"
-                    class="size-3 text-muted-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <BaseParagraph v-if="dashboardAlerts.waitingDocs.length === 0" size="xs"
-                  class="text-muted-400 italic py-2 text-center">
-                  Tudo sob controle 🎉
-                </BaseParagraph>
-              </div>
-            </BaseCard>
-
-            <!-- Alert 2: Próximos Vencimentos -->
-            <BaseCard rounded="md"
-              class="p-4 border-l-4 border-danger-500 relative overflow-hidden group hover:shadow-lg transition-shadow bg-danger-500/5">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="size-9 rounded-xl bg-danger-500/10 flex items-center justify-center text-danger-500">
-                  <Icon name="solar:alarm-linear" class="size-5" />
-                </div>
-                <div>
-                  <BaseHeading as="h4" size="xs">Próximos Vencimentos</BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-400">Janela de 5 dias</BaseParagraph>
-                </div>
-                <div class="ms-auto">
-                  <BaseTag rounded="full" color="danger" size="sm" weight="bold">
-                    {{ dashboardAlerts.nearDeadline.length }}
-                  </BaseTag>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div v-for="c in dashboardAlerts.nearDeadline" :key="c.id" @click="openDetails(c.id)"
-                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
-                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
-                  <span class="text-[10px] text-danger-500 ">HOJE</span>
-                </div>
-                <BaseParagraph v-if="dashboardAlerts.nearDeadline.length === 0" size="xs"
-                  class="text-muted-400 italic py-2 text-center">
-                  Nenhum IR vencendo nos próximos 5 dias
-                </BaseParagraph>
-              </div>
-            </BaseCard>
-
-            <!-- Alert 3: Clientes Travados -->
-            <BaseCard rounded="md"
-              class="p-4 border-l-4 relative overflow-hidden group hover:shadow-lg transition-all duration-300"
-              :class="dashboardAlerts.stuckClients.length > 0 ? 'border-danger-500 bg-danger-500/5' : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950'">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="size-9 rounded-xl flex items-center justify-center transition-colors"
-                  :class="dashboardAlerts.stuckClients.length > 0 ? 'bg-danger-500/10 text-danger-500' : 'bg-muted-100 dark:bg-muted-800 text-muted-400'">
-                  <Icon name="solar:hourglass-line-linear" class="size-5" />
-                </div>
-                <div>
-                  <BaseHeading as="h4" size="xs">Fluxo Travado</BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-400">> 7 dias sem ação</BaseParagraph>
-                </div>
-                <div class="ms-auto">
-                  <BaseTag rounded="full" :color="dashboardAlerts.stuckClients.length > 0 ? 'danger' : 'muted'"
-                    size="sm" weight="bold">
-                    {{ dashboardAlerts.stuckClients.length }}
-                  </BaseTag>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div v-for="c in dashboardAlerts.stuckClients" :key="c.id" @click="openDetails(c.id)"
-                  class="flex items-center justify-between text-xs p-2 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
-                  <span class="truncate font-medium text-muted-700 dark:text-muted-200">{{ c.client?.name }}</span>
-                  <span class="text-[10px] text-primary-400 font-medium">{{ c.column?.name }}</span>
-                </div>
-                <BaseParagraph v-if="dashboardAlerts.stuckClients.length === 0" size="xs"
-                  class="text-muted-400 italic py-2 text-center">
-                  Fluxo rodando perfeitamente
-                </BaseParagraph>
-              </div>
-            </BaseCard>
-          </div>
-
-          <!-- Chart -->
-          <BaseCard rounded="md" class="p-4 md:p-6">
-            <div class="mb-6 flex items-center justify-between">
-              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
-                <span>Distribuição das declarações por etapa do Kanban</span>
+        <!-- Alerts Feed Section -->
+        <div id="dashboard-alerts" class="mt-6 flex flex-col gap-4">
+          <!-- Feed Settings / Tabs -->
+          <div class="flex flex-col items-center justify-between gap-6 sm:flex-row mb-2">
+            <div>
+              <BaseHeading as="h3" size="lg" weight="medium" lead="tight" class="text-muted-900 dark:text-muted-100">
+                <span>Alertas de Campanha</span>
               </BaseHeading>
             </div>
+            <div class="flex gap-2 sm:justify-end">
+              <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'all' ? 'primary' : 'default'"
+                @click="activeAlertTab = 'all'">
+                Todos
+              </BaseButton>
+              <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'error' ? 'primary' : 'default'"
+                @click="activeAlertTab = 'error'">
+                Urgentes
+              </BaseButton>
+              <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'waitingDocs' ? 'primary' : 'default'"
+                @click="activeAlertTab = 'waitingDocs'">
+                Documentos
+              </BaseButton>
+              <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'stuckClients' ? 'primary' : 'default'"
+                @click="activeAlertTab = 'stuckClients'">
+                Travados
+              </BaseButton>
+            </div>
+          </div>
+
+          <!-- Feed Content -->
+          <div class="space-y-2 min-h-[200px]">
+            <TransitionGroup enter-active-class="transform-gpu duration-300 ease-out"
+              enter-from-class="opacity-0 -translate-x-4" enter-to-class="opacity-100 translate-x-0"
+              leave-active-class="absolute transform-gpu duration-200 ease-in" leave-from-class="opacity-100"
+              leave-to-class="opacity-0 translate-x-4">
+              <DemoFlexTableRow v-for="(alert, index) in filteredAlerts" :key="alert.id" rounded="sm"
+                class="hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors cursor-pointer"
+                @click="openDetails(alert.id)">
+                <template #start>
+                  <div class="flex items-center gap-3">
+                    <div
+                      :class="['size-10 rounded-xl flex items-center justify-center shrink-0', alert.iconBg, alert.iconColor]">
+                      <Icon :name="alert.icon" class="size-5" />
+                    </div>
+                    <div>
+                      <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
+                        {{ alert.client?.name }}
+                      </BaseHeading>
+                      <BaseParagraph size="xs" class="text-muted-400">
+                        {{ alert.column?.name || 'Etapa não definida' }}
+                      </BaseParagraph>
+                    </div>
+                  </div>
+                </template>
+                <template #end>
+                  <DemoFlexTableCell label="Prioridade" :hide-label="index > 0" class="w-full sm:w-24">
+                    <BaseTag
+                      :color="alert.type === 'error' ? 'danger' : alert.type === 'nearDeadline' ? 'warning' : 'muted'"
+                      rounded="full" size="sm">
+                      {{ alert.label }}
+                    </BaseTag>
+                  </DemoFlexTableCell>
+                  <DemoFlexTableCell label="Ação" :hide-label="index > 0">
+                    <BaseButton variant="link" size="sm" color="primary" class="p-0 h-auto font-medium">
+                      Resolver
+                    </BaseButton>
+                  </DemoFlexTableCell>
+                </template>
+              </DemoFlexTableRow>
+
+              <!-- Empty State -->
+              <div v-if="filteredAlerts.length === 0" key="empty"
+                class="py-12 flex flex-col items-center justify-center text-center">
+                <div
+                  class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400 mb-4">
+                  <Icon name="solar:check-circle-bold" class="size-8 text-success-500" />
+                </div>
+                <BaseHeading as="h4" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
+                  Tudo em ordem por aqui!
+                </BaseHeading>
+                <BaseParagraph size="sm" class="text-muted-500">
+                  Não existem alertas pendentes para esta categoria.
+                </BaseParagraph>
+              </div>
+            </TransitionGroup>
+          </div>
+
+          <!-- Pipeline Chart -->
+          <BaseCard rounded="md" class="p-4 md:p-5">
+            <div class="mb-4 flex items-center justify-between">
+              <BaseHeading as="h3" size="md" lead="tight" class="text-muted-900 dark:text-white">
+                <span>Etapas do Kanban</span>
+              </BaseHeading>
+            </div>
+
+            <!-- Clean Header Stats (Banking style) -->
+            <div class="border-muted-200 dark:border-muted-800 mb-6 flex justify-between border-b pb-4 gap-4">
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-1 uppercase tracking-wider">
+                  Total
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold">
+                  {{ stats.total }}
+                </BaseHeading>
+              </div>
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-primary-500 mb-1 uppercase tracking-wider">
+                  Pendentes
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold" class="text-primary-600">
+                  {{ stats.pending }}
+                </BaseHeading>
+              </div>
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-success-500 mb-1 uppercase tracking-wider">
+                  Concluídos
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold" class="text-success-600">
+                  {{ stats.completed }}
+                </BaseHeading>
+              </div>
+            </div>
+
             <LazyAddonApexcharts v-bind="pipelineChart" />
           </BaseCard>
-          <!-- Chart -->
-          <BaseCard rounded="md" class="p-4 md:p-6">
-            <div class="mb-6 flex items-center justify-between">
+          <!-- Revenue Chart -->
+          <BaseCard rounded="md" class="p-4 md:p-5">
+            <div class="mb-4 flex items-center justify-between">
               <BaseHeading as="h3" size="md" lead="tight" class="text-muted-800 dark:text-white">
-                <span>Progresso de recebimento vs honorários projetados</span>
+                <span>Honorários Projetados</span>
               </BaseHeading>
               <BaseButton rounded="full" size="icon-sm" variant="muted" @click="showRevenue = !showRevenue">
                 <Icon :name="showRevenue ? 'solar:eye-broken' : 'solar:eye-closed-broken'" class="size-4" />
               </BaseButton>
             </div>
+
+            <!-- Clean Header Stats (Banking style) -->
+            <div class="border-muted-200 dark:border-muted-800 mb-6 flex justify-between border-b pb-4 gap-4"
+              :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-1 uppercase tracking-wider">
+                  Total Esperado
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold">
+                  {{ showRevenue ? formatCurrency(stats.revenue) : 'R$ ••••••' }}
+                </BaseHeading>
+              </div>
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-success-500 mb-1 uppercase tracking-wider">
+                  Recebido
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold" class="text-success-600">
+                  {{ showRevenue ? formatCurrency(stats.received) : 'R$ ••••••' }}
+                </BaseHeading>
+              </div>
+              <div>
+                <BaseParagraph size="xs" weight="medium" class="text-danger-500 mb-1 uppercase tracking-wider">
+                  Em Atraso
+                </BaseParagraph>
+                <BaseHeading as="h5" size="md" weight="semibold" class="text-danger-600">
+                  {{ showRevenue ? formatCurrency(stats.overdue) : 'R$ ••••••' }}
+                </BaseHeading>
+              </div>
+            </div>
+
             <div class="transition-all duration-500">
               <LazyAddonApexcharts v-bind="revenueAreaChart" />
             </div>
