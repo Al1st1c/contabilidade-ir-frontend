@@ -45,6 +45,7 @@ const inviteData = ref<{
   email: string
   inviteLink: string
   expiresAt: string
+  emailSent?: boolean
 } | null>(null)
 
 // Validação
@@ -156,12 +157,16 @@ async function saveUser() {
         email: form.value.email,
         inviteLink: data.data?.inviteLink || '',
         expiresAt: data.data?.expiresAt || '',
+        emailSent: data.data?.emailSent || false,
       }
 
+      const emailSent = data.data?.emailSent
       toaster.add({
-        title: '✅ Convite enviado!',
-        description: `Um e-mail será enviado para ${form.value.email}`,
-        icon: 'lucide:mail',
+        title: emailSent ? '✅ Convite enviado!' : '⚠️ Convite criado',
+        description: emailSent
+          ? `Um e-mail foi enviado para ${form.value.email}`
+          : `Copie o link abaixo e envie para ${form.value.email}`,
+        icon: emailSent ? 'lucide:mail-check' : 'lucide:mail-warning',
         duration: 5000,
       })
 
@@ -260,14 +265,20 @@ onMounted(() => {
       <div v-if="inviteSent && inviteData" class="space-y-6">
         <!-- Ícone de sucesso -->
         <div class="flex flex-col items-center justify-center py-8">
-          <div class="bg-success-100 dark:bg-success-900/30 mb-4 flex size-20 items-center justify-center rounded-full">
-            <Icon name="lucide:mail-check" class="text-success-500 size-10" />
+          <div :class="inviteData.emailSent
+            ? 'bg-success-100 dark:bg-success-900/30'
+            : 'bg-warning-100 dark:bg-warning-900/30'"
+            class="mb-4 flex size-20 items-center justify-center rounded-full">
+            <Icon :name="inviteData.emailSent ? 'lucide:mail-check' : 'lucide:mail-warning'"
+              :class="inviteData.emailSent ? 'text-success-500' : 'text-warning-500'" class="size-10" />
           </div>
           <BaseHeading as="h4" size="lg" weight="semibold" class="text-center">
-            Convite enviado!
+            {{ inviteData.emailSent ? 'Convite enviado!' : 'Convite criado!' }}
           </BaseHeading>
           <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mt-2 text-center">
-            {{ inviteData.name }} receberá um e-mail com instruções para ativar sua conta.
+            {{ inviteData.emailSent
+              ? `${inviteData.name} receberá um e-mail com instruções para ativar sua conta.`
+              : `Copie o link abaixo e envie para ${inviteData.name}.` }}
           </BaseParagraph>
         </div>
 
@@ -289,10 +300,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Link de convite (opcional - caso e-mail falhe) -->
+        <!-- Link de convite -->
         <div v-if="inviteData.inviteLink" class="space-y-2">
           <label class="text-muted-500 dark:text-muted-400 text-sm">
-            Caso o e-mail não chegue, copie o link abaixo:
+            {{ inviteData.emailSent ? 'Caso o e-mail não chegue, copie o link abaixo:' : 'Link de convite:' }}
           </label>
           <div class="flex gap-2">
             <BaseInput :model-value="inviteData.inviteLink" readonly class="flex-1" :classes="{ input: 'text-xs' }" />

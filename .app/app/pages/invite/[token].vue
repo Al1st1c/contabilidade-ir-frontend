@@ -50,6 +50,34 @@ const isPasswordValid = computed(() =>
   passwordValidation.value.matches
 )
 
+// Shades para as cores do whitelabel
+const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'] as const
+
+// Aplicar cores do whitelabel dinamicamente
+function applyWhitelabelColors(primaryColor: string | null, secondaryColor: string | null) {
+  if (!process.client) return
+
+  const root = document.documentElement
+  const primary = primaryColor || 'amber'
+  const secondary = secondaryColor || 'zinc'
+
+  // Aplicar primary color shades
+  for (const shade of shades) {
+    root.style.setProperty(
+      `--color-primary-${shade}`,
+      `var(--color-${primary}-${shade})`
+    )
+  }
+
+  // Aplicar muted (secondary) color shades
+  for (const shade of shades) {
+    root.style.setProperty(
+      `--color-muted-${shade}`,
+      `var(--color-${secondary}-${shade})`
+    )
+  }
+}
+
 // Validar token ao carregar
 async function validateToken() {
   loading.value = true
@@ -63,6 +91,16 @@ async function validateToken() {
     if (data.success) {
       inviteData.value = data.data
       form.value.phone = data.data.user.phone || ''
+
+      // Aplicar whitelabel do tenant ANTES de mostrar o conteúdo
+      applyWhitelabelColors(
+        data.data.tenant?.primaryColor,
+        data.data.tenant?.secondaryColor
+      )
+
+      // Pequeno delay para garantir que as cores foram aplicadas
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       step.value = 'welcome'
     } else {
       errorType.value = data.error || 'UNKNOWN'
@@ -151,15 +189,12 @@ onMounted(() => {
         <!-- Whitelabel: Logo do Tenant -->
         <div v-if="inviteData?.tenant?.logo" class="flex flex-col items-center">
           <img :src="inviteData.tenant.logo" :alt="inviteData.tenant.name" class="max-h-48 max-w-md object-contain" />
-          <BaseHeading as="h2" size="3xl" weight="bold" class="text-muted-800 dark:text-muted-100 mt-8 text-center">
-            {{ inviteData.tenant.tradeName || inviteData.tenant.name }}
-          </BaseHeading>
         </div>
         <!-- Fallback logo -->
-        <div v-else class="flex flex-col items-center">
+        <!-- <div v-else class="flex flex-col items-center">
           <img src="/img/logo.png" alt="Sistema" class="max-h-40 object-contain dark:hidden" />
           <img src="/img/logo.png" alt="Sistema" class="hidden max-h-40 object-contain dark:block" />
-        </div>
+        </div> -->
       </div>
     </div>
 
