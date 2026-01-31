@@ -8,9 +8,11 @@ definePageMeta({
 const { useCustomFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
+const toaster = useNuiToasts()
 
 const slug = computed(() => route.params.slug as string)
 const pending = ref(false)
+const resendingInvite = ref(false)
 const member = ref<any>(null)
 
 // Fetch member details
@@ -38,6 +40,7 @@ async function fetchMember() {
             apiRole: found.role, // Keep original role object for permissions
           },
           isActive: found.isActive,
+          status: found.status || 'ACTIVE', // PENDING_INVITE, ACTIVE, INACTIVE
           createdAt: found.createdAt,
           lastLoginAt: found.lastLoginAt,
           assignedDeclarations: found.assignedDeclarations,
@@ -247,6 +250,52 @@ function editMember() {
   router.push(`/dashboard/settings/team-edit/${member.value?.id}`)
 }
 
+// Resend invite
+async function resendInvite() {
+  if (!member.value?.id) return
+
+  resendingInvite.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/tenant/members/${member.value.id}/resend-invite`, {
+      method: 'POST'
+    })
+
+    if (data?.success) {
+      toaster.add({
+        title: 'Convite reenviado!',
+        description: `Um novo link foi gerado para ${member.value.email}`,
+        icon: 'lucide:mail',
+        duration: 5000,
+      })
+
+      // Show invite link if available
+      if (data.data?.inviteLink) {
+        try {
+          await navigator.clipboard.writeText(data.data.inviteLink)
+          toaster.add({
+            title: 'Link copiado!',
+            description: 'O link de convite foi copiado para a área de transferência.',
+            icon: 'lucide:clipboard-check',
+            duration: 3000,
+          })
+        } catch (e) {
+          console.log('Link:', data.data.inviteLink)
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('Erro ao reenviar convite:', error)
+    toaster.add({
+      title: 'Erro',
+      description: error.data?.message || 'Não foi possível reenviar o convite',
+      icon: 'lucide:alert-triangle',
+      duration: 5000,
+    })
+  } finally {
+    resendingInvite.value = false
+  }
+}
+
 // Fetch on mount and route change
 onMounted(() => {
   fetchMember()
@@ -268,6 +317,27 @@ watch(slug, () => {
 
     <!-- Member Details -->
     <BaseCard v-else-if="member" rounded="lg">
+      <!-- Pending Invite Alert -->
+      <div v-if="member.status === 'PENDING_INVITE'"
+        class="bg-warning-50 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800/50 p-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <Icon name="lucide:clock" class="text-warning-500 size-5" />
+          <div>
+            <BaseText size="sm" weight="medium" class="text-warning-700 dark:text-warning-300">
+              Convite pendente
+            </BaseText>
+            <BaseText size="xs" class="text-warning-600 dark:text-warning-400">
+              Este membro ainda não ativou sua conta.
+            </BaseText>
+          </div>
+        </div>
+        <BaseButton size="sm" variant="muted" @click="resendInvite" :loading="resendingInvite"
+          :disabled="resendingInvite">
+          <Icon v-if="!resendingInvite" name="lucide:send" class="size-4 mr-1" />
+          {{ resendingInvite ? 'Enviando...' : 'Reenviar Convite' }}
+        </BaseButton>
+      </div>
+
       <!-- Header -->
       <div class="border-muted-200 dark:border-muted-800 flex flex-col sm:flex-row gap-4 border-b p-6 sm:p-8">
         <BaseAvatar :src="member.picture" :text="member.name?.charAt(0) || 'U'" size="xl" rounded="lg" />
@@ -284,10 +354,16 @@ watch(slug, () => {
                 <BaseTag rounded="lg" :color="member.role.value === 'master' ? 'primary' : 'muted'" size="sm">
                   {{ member.role.label }}
                 </BaseTag>
-                <BaseTag v-if="member.position" rounded="lg" color="info" variant="pastel" size="sm">
+                <BaseTag v-if="member.position" rounded="lg" variant="primary" size="sm">
                   {{ member.position }}
                 </BaseTag>
-                <BaseTag rounded="lg" :color="member.isActive ? 'success' : 'danger'" variant="pastel" size="sm">
+                <!-- Status Badge -->
+                <BaseTag v-if="member.status === 'PENDING_INVITE'" rounded="lg" color="warning" size="sm">
+                  Pendente
+                </BaseTag>
+                <BaseTag v-else rounded="lg"
+                  :class="member.isActive ? 'bg-success-500 text-white' : 'bg-red-500 text-white'" variant="none"
+                  size="sm">
                   {{ member.isActive ? 'Ativo' : 'Inativo' }}
                 </BaseTag>
               </div>

@@ -31,13 +31,21 @@ const form = ref({
   document: '',
   phone: '',
   email: '',
-  password: '',
   roleId: 'placeholder'
 })
 
 const loading = ref(false)
 const roles = ref<Role[]>([])
 const loadingRoles = ref(false)
+
+// Estado de sucesso (após enviar convite)
+const inviteSent = ref(false)
+const inviteData = ref<{
+  name: string
+  email: string
+  inviteLink: string
+  expiresAt: string
+} | null>(null)
 
 // Validação
 const errors = ref<Record<string, string>>({})
@@ -46,11 +54,11 @@ const errors = ref<Record<string, string>>({})
 async function fetchRoles() {
   loadingRoles.value = true
   try {
-    const { data } = await useCustomFetch<any>('/users/team-roles', {
+    const { data } = await useCustomFetch<any>('/tenant/roles', {
       method: 'GET'
     })
-    
-    if (data.success) {
+
+    if (data?.success && data?.data) {
       roles.value = data.data
     }
   } catch (error) {
@@ -69,35 +77,25 @@ async function fetchRoles() {
 // Validar formulário
 function validateForm(): boolean {
   errors.value = {}
-  
+
   if (!form.value.name.trim()) {
     errors.value.name = 'Nome é obrigatório'
   }
-  
-  if (!form.value.document.trim()) {
-    errors.value.document = 'Documento é obrigatório'
-  }
-  
+
   if (!form.value.phone.trim()) {
     errors.value.phone = 'Telefone é obrigatório'
   }
-  
+
   if (!form.value.email.trim()) {
     errors.value.email = 'Email é obrigatório'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
     errors.value.email = 'Email deve ter um formato válido'
   }
-  
-  if (!form.value.password.trim()) {
-    errors.value.password = 'Senha é obrigatória'
-  } else if (form.value.password.length < 6) {
-    errors.value.password = 'Senha deve ter pelo menos 6 caracteres'
-  }
-  
+
   if (!form.value.roleId || form.value.roleId === 'placeholder') {
     errors.value.roleId = 'Cargo é obrigatório'
   }
-  
+
   return Object.keys(errors.value).length === 0
 }
 
@@ -133,53 +131,56 @@ watch(() => form.value.phone, (newValue) => {
   }
 })
 
-// Salvar usuário
+// Salvar usuário (enviar convite)
 async function saveUser() {
   if (!validateForm()) return
-  
+
   loading.value = true
-  
+
   try {
-    const { data } = await useCustomFetch<any>('/users/team', {
+    const { data } = await useCustomFetch<any>('/tenant/members/invite', {
       method: 'POST',
-      body: form.value
-    })
-    
-    if (data.success) {
-      toaster.add({
-        title: 'Sucesso',
-        description: 'Usuário da equipe criado com sucesso!',
-        icon: 'lucide:check-circle',
-        duration: 3000,
-      })
-      
-      // Resetar formulário
-      form.value = {
-        name: '',
-        document: '',
-        phone: '',
-        email: '',
-        password: '',
-        roleId: 'placeholder'
+      body: {
+        name: form.value.name,
+        email: form.value.email,
+        phone: form.value.phone.replace(/\D/g, ''),
+        roleId: form.value.roleId,
       }
-      
+    })
+
+    if (data?.success) {
+      // Mostrar tela de sucesso com link de convite
+      inviteSent.value = true
+      inviteData.value = {
+        name: form.value.name,
+        email: form.value.email,
+        inviteLink: data.data?.inviteLink || '',
+        expiresAt: data.data?.expiresAt || '',
+      }
+
+      toaster.add({
+        title: '✅ Convite enviado!',
+        description: `Um e-mail será enviado para ${form.value.email}`,
+        icon: 'lucide:mail',
+        duration: 5000,
+      })
+
       // Chamar callback de sucesso se fornecido
       if (props.onSuccess) {
         props.onSuccess()
       }
-      
-      // Fechar painel
-      emits('close')
     }
   } catch (error: any) {
     console.error('Erro ao criar usuário:', error)
-    
-    let errorMessage = 'Erro ao criar usuário da equipe'
-    
+
+    let errorMessage = 'Erro ao convidar membro'
+
     if (error.response?.data?.message) {
       errorMessage = error.response.data.message
+    } else if (error.data?.message) {
+      errorMessage = error.data.message
     }
-    
+
     toaster.add({
       title: 'Erro',
       description: errorMessage,
@@ -191,6 +192,48 @@ async function saveUser() {
   }
 }
 
+// Copiar link para clipboard
+async function copyInviteLink() {
+  if (!inviteData.value?.inviteLink) return
+
+  try {
+    await navigator.clipboard.writeText(inviteData.value.inviteLink)
+    toaster.add({
+      title: 'Link copiado!',
+      description: 'O link foi copiado para a área de transferência.',
+      icon: 'lucide:clipboard-check',
+      duration: 3000,
+    })
+  } catch (error) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Não foi possível copiar o link.',
+      icon: 'lucide:clipboard-x',
+      duration: 3000,
+    })
+  }
+}
+
+// Convidar outro membro
+function inviteAnother() {
+  inviteSent.value = false
+  inviteData.value = null
+  form.value = {
+    name: '',
+    document: '',
+    phone: '',
+    email: '',
+    roleId: 'placeholder'
+  }
+}
+
+// Fechar painel
+function closePanel() {
+  inviteSent.value = false
+  inviteData.value = null
+  emits('close')
+}
+
 // Buscar roles ao montar o componente
 onMounted(() => {
   fetchRoles()
@@ -198,116 +241,127 @@ onMounted(() => {
 </script>
 
 <template>
-  <FocusScope
-    class="border-muted-200 dark:border-muted-700 dark:bg-muted-800 border-l bg-white"
-    trapped
-    loop
-  >
-    <div
-      class="border-muted-200 dark:border-muted-700 flex h-20 w-full items-center justify-between border-b px-6"
-    >
-      <BaseHeading
-        as="h3"
-        size="xs"
-        weight="semibold"
-        class="text-muted-500 dark:text-muted-100 uppercase"
-      >
-        Adicionar Usuário da Equipe
+  <FocusScope class="border-muted-200 dark:border-muted-700 dark:bg-muted-800 border-l bg-white" trapped loop>
+    <div class="border-muted-200 dark:border-muted-700 flex h-20 w-full items-center justify-between border-b px-6">
+      <BaseHeading as="h3" size="xs" weight="semibold" class="text-muted-500 dark:text-muted-100 uppercase">
+        {{ inviteSent ? 'Convite Enviado' : 'Convidar Membro' }}
       </BaseHeading>
 
       <!-- Close button -->
-      <button
-        type="button"
+      <button type="button"
         class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
-        @click="() => emits('close')"
-      >
+        @click="closePanel">
         <Icon name="lucide:arrow-right" class="size-4" />
       </button>
     </div>
 
-    <div
-      class="nui-slimscroll relative h-[calc(100dvh_-_80px)] w-full overflow-y-auto p-6"
-    >
-      <form @submit.prevent="saveUser" class="space-y-6">
+    <div class="nui-slimscroll relative h-[calc(100dvh_-_80px)] w-full overflow-y-auto p-6">
+      <!-- Estado de Sucesso -->
+      <div v-if="inviteSent && inviteData" class="space-y-6">
+        <!-- Ícone de sucesso -->
+        <div class="flex flex-col items-center justify-center py-8">
+          <div class="bg-success-100 dark:bg-success-900/30 mb-4 flex size-20 items-center justify-center rounded-full">
+            <Icon name="lucide:mail-check" class="text-success-500 size-10" />
+          </div>
+          <BaseHeading as="h4" size="lg" weight="semibold" class="text-center">
+            Convite enviado!
+          </BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mt-2 text-center">
+            {{ inviteData.name }} receberá um e-mail com instruções para ativar sua conta.
+          </BaseParagraph>
+        </div>
+
+        <!-- Dados do convite -->
+        <div class="bg-muted-50 dark:bg-muted-900/50 space-y-4 rounded-xl p-4">
+          <div>
+            <label class="text-muted-400 text-xs font-medium uppercase">Nome</label>
+            <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData.name }}</p>
+          </div>
+          <div>
+            <label class="text-muted-400 text-xs font-medium uppercase">Email</label>
+            <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData.email }}</p>
+          </div>
+          <div>
+            <label class="text-muted-400 text-xs font-medium uppercase">Validade do Convite</label>
+            <p class="text-muted-800 dark:text-muted-100 font-medium">
+              {{ inviteData.expiresAt ? new Date(inviteData.expiresAt).toLocaleString('pt-BR') : '48 horas' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Link de convite (opcional - caso e-mail falhe) -->
+        <div v-if="inviteData.inviteLink" class="space-y-2">
+          <label class="text-muted-500 dark:text-muted-400 text-sm">
+            Caso o e-mail não chegue, copie o link abaixo:
+          </label>
+          <div class="flex gap-2">
+            <BaseInput :model-value="inviteData.inviteLink" readonly class="flex-1" :classes="{ input: 'text-xs' }" />
+            <BaseButton variant="muted" size="sm" @click="copyInviteLink">
+              <Icon name="lucide:copy" class="size-4" />
+            </BaseButton>
+          </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="flex items-center gap-3 pt-4">
+          <BaseButton type="button" variant="muted" class="w-full" @click="closePanel">
+            Fechar
+          </BaseButton>
+          <BaseButton type="button" variant="primary" class="w-full" @click="inviteAnother">
+            <Icon name="lucide:user-plus" class="mr-2 size-4" />
+            Convidar Outro
+          </BaseButton>
+        </div>
+      </div>
+
+      <!-- Formulário -->
+      <form v-else @submit.prevent="saveUser" class="space-y-6">
+        <!-- Info box -->
+        <div
+          class="bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50 flex items-start gap-3 rounded-lg border p-4">
+          <Icon name="lucide:info" class="text-info-500 mt-0.5 size-5 shrink-0" />
+          <div class="text-sm">
+            <p class="text-info-700 dark:text-info-300 font-medium">Como funciona?</p>
+            <p class="text-info-600 dark:text-info-400 mt-1">
+              O membro receberá um e-mail com um link para ativar sua conta e criar sua própria senha.
+            </p>
+          </div>
+        </div>
+
         <!-- Nome -->
-        <BaseField label="Nome *" :error="errors.name">
-          <BaseInput
-            v-model="form.name"
-            placeholder="Nome completo"
-            :disabled="loading"
-            :classes="{
-              input: errors.name ? 'border-red-500' : ''
-            }"
-          />
-        </BaseField>
-
-        <!-- Documento -->
-        <BaseField label="CPF *" :error="errors.document">
-          <BaseInput
-            v-model="form.document"
-            placeholder="000.000.000-00"
-            maxlength="14"
-            :disabled="loading"
-            :classes="{
-              input: errors.document ? 'border-red-500' : ''
-            }"
-          />
-        </BaseField>
-
-        <!-- Telefone -->
-        <BaseField label="Telefone *" :error="errors.phone">
-          <BaseInput
-            v-model="form.phone"
-            placeholder="(00) 00000-0000"
-            maxlength="15"
-            :disabled="loading"
-            :classes="{
-              input: errors.phone ? 'border-red-500' : ''
-            }"
-          />
+        <BaseField label="Nome completo *" :error="errors.name">
+          <BaseInput v-model="form.name" placeholder="Nome do funcionário" :disabled="loading" :classes="{
+            input: errors.name ? 'border-red-500' : ''
+          }" />
         </BaseField>
 
         <!-- Email -->
         <BaseField label="Email *" :error="errors.email">
-          <BaseInput
-            v-model="form.email"
-            type="email"
-            placeholder="usuario@exemplo.com"
-            :disabled="loading"
-            :classes="{
-              input: errors.email ? 'border-red-500' : ''
-            }"
-          />
+          <BaseInput v-model="form.email" type="email" placeholder="email@exemplo.com" :disabled="loading" :classes="{
+            input: errors.email ? 'border-red-500' : ''
+          }" />
         </BaseField>
 
-        <!-- Senha -->
-        <BaseField label="Senha *" :error="errors.password">
-          <BaseInput
-            v-model="form.password"
-            type="password"
-            placeholder="Mínimo 6 caracteres"
-            :disabled="loading"
-            :classes="{
-              input: errors.password ? 'border-red-500' : ''
-            }"
-          />
+        <!-- Telefone -->
+        <BaseField label="Telefone *" :error="errors.phone">
+          <BaseInput v-model="form.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="loading" :classes="{
+            input: errors.phone ? 'border-red-500' : ''
+          }" />
+        </BaseField>
+
+        <!-- CPF (opcional) -->
+        <BaseField label="CPF (opcional)" :error="errors.document">
+          <BaseInput v-model="form.document" placeholder="000.000.000-00" maxlength="14" :disabled="loading" />
         </BaseField>
 
         <!-- Cargo -->
         <BaseField label="Cargo *" :error="errors.roleId">
-          <BaseSelect
-            v-model="form.roleId"
-            :disabled="loading || loadingRoles"
-            :class="errors.roleId ? 'border-red-500' : ''"
-          >
+          <BaseSelect v-model="form.roleId" :disabled="loading || loadingRoles"
+            :class="errors.roleId ? 'border-red-500' : ''">
             <BaseSelectItem value="placeholder" disabled>
               {{ loadingRoles ? 'Carregando...' : 'Selecione um cargo' }}
             </BaseSelectItem>
-            <BaseSelectItem
-              v-for="role in roles"
-              :key="role.id"
-              :value="role.id"
-            >
+            <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">
               {{ role.name }}
             </BaseSelectItem>
           </BaseSelect>
@@ -315,23 +369,12 @@ onMounted(() => {
 
         <!-- Botões -->
         <div class="flex items-center gap-3 pt-4">
-          <BaseButton
-            type="button"
-            variant="muted"
-            class="w-full"
-            :disabled="loading"
-            @click="emits('close')"
-          >
+          <BaseButton type="button" variant="muted" class="w-full" :disabled="loading" @click="closePanel">
             Cancelar
           </BaseButton>
-          <BaseButton
-            type="submit"
-            variant="primary"
-            class="w-full"
-            :loading="loading"
-            :disabled="loading"
-          >
-            {{ loading ? 'Criando...' : 'Criar Usuário' }}
+          <BaseButton type="submit" variant="primary" class="w-full" :loading="loading" :disabled="loading">
+            <Icon v-if="!loading" name="lucide:send" class="mr-2 size-4" />
+            {{ loading ? 'Enviando...' : 'Enviar Convite' }}
           </BaseButton>
         </div>
       </form>

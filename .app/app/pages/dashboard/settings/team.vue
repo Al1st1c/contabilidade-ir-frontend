@@ -65,6 +65,7 @@ async function fetchMembers() {
           },
           position: member.role?.description, // Use role description as position for now
           isActive: member.isActive,
+          status: member.status || 'ACTIVE', // PENDING_INVITE, ACTIVE, INACTIVE
           createdAt: member.createdAt,
           lastLoginAt: member.lastLoginAt,
           assignedDeclarations: member.assignedDeclarations,
@@ -178,7 +179,13 @@ function openAddMemberPanel() {
               <NuxtLink :to="`/dashboard/settings/team/${member.slug}`"
                 class="hover:bg-muted-200/80 dark:hover:bg-muted-800/60 flex items-center gap-3 rounded-xl p-3 transition-colors"
                 :class="{ 'bg-muted-200/80 dark:bg-muted-800/60': currentMember?.id === member.id }">
-                <BaseAvatar :src="member.picture" :text="member.name?.charAt(0) || 'U'" size="sm" />
+                <div class="relative">
+                  <BaseAvatar :src="member.picture" :text="member.name?.charAt(0) || 'U'" size="sm" />
+                  <!-- Pending invite indicator -->
+                  <span v-if="member.status === 'PENDING_INVITE'"
+                    class="absolute -top-1 -right-1 size-3 bg-warning-500 rounded-full border-2 border-white dark:border-muted-800"
+                    title="Convite pendente" />
+                </div>
                 <div class="flex-1 min-w-0">
                   <BaseHeading weight="medium" size="sm" lead="tight"
                     class="line-clamp-1 text-muted-800 dark:text-muted-100">
@@ -188,7 +195,10 @@ function openAddMemberPanel() {
                     {{ member.email }}
                   </BaseParagraph>
                 </div>
-                <div class="ms-auto hidden sm:block">
+                <div class="ms-auto hidden sm:flex items-center gap-2">
+                  <BaseTag v-if="member.status === 'PENDING_INVITE'" rounded="lg" size="sm" color="warning">
+                    Pendente
+                  </BaseTag>
                   <BaseTag rounded="lg" size="sm" :color="member.role.value === 'master' ? 'primary' : 'muted'">
                     {{ member.role.label }}
                   </BaseTag>

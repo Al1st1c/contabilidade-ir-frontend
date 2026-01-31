@@ -35,8 +35,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Load and apply tenant colors after app is mounted
   nuxtApp.hook('app:mounted', async () => {
-    // Skip if on public upload page
-    if (window.location.pathname.startsWith('/upload')) {
+    // Skip if on public pages that don't require auth
+    const publicPaths = ['/upload', '/invite', '/auth']
+    if (publicPaths.some(path => window.location.pathname.startsWith(path))) {
       return
     }
 
