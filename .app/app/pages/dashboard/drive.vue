@@ -351,7 +351,7 @@ watch(searchTerms, () => {
             <!-- Sub grid -->
             <div class="grid grid-cols-12 gap-3 md:gap-4">
               <!-- Stats Tiles - Full width on mobile, half on desktop -->
-              <div class="col-span-12 lg:col-span-6">
+              <div class="col-span-12 lg:col-span-4">
                 <div class="flex flex-col gap-3 md:gap-4">
                   <!-- Tile grid -->
                   <div class="grid grid-cols-3 gap-2 md:gap-4">
@@ -447,7 +447,7 @@ watch(searchTerms, () => {
                 </div>
               </div>
               <!-- Sub column - File List -->
-              <div class="col-span-12 lg:col-span-6">
+              <div class="col-span-12 lg:col-span-8">
                 <!-- Widget -->
                 <BaseCard class="p-3 md:p-6" rounded="lg">
                   <div v-if="!isLoading && filesData.length === 0">
