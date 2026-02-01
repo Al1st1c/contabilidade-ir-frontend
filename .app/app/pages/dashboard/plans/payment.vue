@@ -21,6 +21,7 @@ const customConfig = ref({
   employees: 5,
   sms_monthly: 100,
   storage_gb: 5,
+  tax_declarations_yearly: 50,
 })
 
 const calculateCustomPrice = () => {
@@ -39,6 +40,11 @@ const calculateCustomPrice = () => {
   // R$ 5,00 por GB extra (acima de 5GB)
   if (customConfig.value.storage_gb > 5) {
     total += (customConfig.value.storage_gb - 5) * 500
+  }
+
+  // R$ 2,00 por IR extra (acima de 50 IRs)
+  if (customConfig.value.tax_declarations_yearly > 50) {
+    total += (customConfig.value.tax_declarations_yearly - 50) * 200
   }
 
   return total
@@ -60,6 +66,7 @@ const toggleResourceCustomizer = () => {
   if (showResourceCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
     customConfig.value.sms_monthly = selectedPlan.value.limits?.sms_monthly || 100
     customConfig.value.storage_gb = (selectedPlan.value.limits?.storage_mb || 1024) / 1024
+    customConfig.value.tax_declarations_yearly = selectedPlan.value.limits?.tax_declarations_yearly || 50
   }
 }
 
@@ -82,7 +89,7 @@ const selectedPlan = computed(() => {
         employees: customConfig.value.employees,
         storage_mb: customConfig.value.storage_gb * 1024,
         sms_monthly: customConfig.value.sms_monthly,
-        tax_declarations_yearly: 1000 // Fixo para personalizado ou ajustável futuramente
+        tax_declarations_yearly: customConfig.value.tax_declarations_yearly
       },
       features: ['Suporte Prioritário', 'Relatórios Automáticos', 'Multi-usuários', 'Gestão Customizada']
     }
@@ -153,6 +160,15 @@ const currentCyclePrice = computed(() => {
   return 0
 })
 
+const couponCode = ref('')
+const applyCoupon = () => {
+  if (couponCode.value.toUpperCase() === 'TAX10') {
+    alert('Cupom TAX10 aplicado! 10% de desconto ativado.')
+  } else {
+    alert('Cupom inválido.')
+  }
+}
+
 const currentCycleLabel = computed(() => {
   switch (billingCycles.value) {
     case 'monthly': return 'mês'
@@ -170,7 +186,8 @@ const handlePayment = async () => {
     const params: any = {
       planSlug: customRadio.value,
       billingPeriod: billingCycles.value.toUpperCase(),
-      paymentMethod: paymentMethod.value
+      paymentMethod: paymentMethod.value,
+      coupon: couponCode.value
     }
 
     if (customRadio.value === 'custom') {
@@ -251,392 +268,379 @@ const formatCurrency = (value: number) => {
       </BaseCard>
     </div>
 
-    <form v-else action="" method="POST" class="w-full" @submit.prevent="handlePayment">
+    <form v-else @submit.prevent="handlePayment" class="mx-auto max-w-7xl">
       <!-- Header -->
-      <div class="mb-8 flex flex-col justify-between md:flex-row md:items-center">
-        <div class="flex max-w-[425px] flex-col items-center gap-4 text-center md:flex-row md:text-start lg:max-w-full">
-          <div>
-            <BaseHeading as="h2" size="xl" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
-              <span>Gerenciar plano</span>
-            </BaseHeading>
-            <BaseParagraph size="sm">
-              <span class="text-muted-600 dark:text-muted-400">
-                Gerencie sua assinatura e informações de faturamento
-              </span>
-            </BaseParagraph>
-          </div>
-        </div>
-        <div class="mt-4 flex items-center justify-center gap-2 md:mt-0 md:justify-start">
-          <BaseButton type="submit" variant="primary" :loading="isSubmitting">
-            <span>Ativar por</span>
-            <span class="font-semibold ml-1">{{ formatCurrency(currentCyclePrice) }}</span>
-          </BaseButton>
+      <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <NuxtLink to="/dashboard/plans"
+            class="text-primary-500 hover:opacity-75 transition-opacity flex items-center gap-2 mb-2 font-medium">
+            <Icon name="solar:alt-arrow-left-linear" class="size-4" />
+            Voltar para Planos
+          </NuxtLink>
+          <BaseHeading as="h1" size="2xl" weight="bold" class="text-muted-800 dark:text-white">
+            Finalizar Assinatura
+          </BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+            Confirme os detalhes do seu plano e ative sua conta.
+          </BaseParagraph>
         </div>
       </div>
 
-      <!-- plans -->
-      <div class="mb-4 grid gap-4 md:grid-cols-2">
-        <BaseRadioGroup v-model="customRadio" class="grid grid-cols-2 gap-4">
-          <TairoRadioCard value="free"
-            class="data-[state=checked]:ring-success-500! data-[state=checked]:border-success-500!">
-            <template #indicator>
-              <div
-                class="flex size-7 items-center justify-center rounded-full text-success-500 group-data-[state=unchecked]:opacity-0">
-                <Icon name="solar:check-circle-bold-duotone" class="size-6" />
+      <div class="grid grid-cols-12 gap-8">
+        <!-- Coluna Esquerda: Configuração -->
+        <div class="col-span-12 lg:col-span-7 space-y-6">
+          <!-- Seleção de Planos (Compacta) -->
+          <BaseRadioGroup v-model="customRadio" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <TairoRadioCard value="free" class="data-[state=checked]:ring-primary-500!">
+              <template #indicator>
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500" />
+              </template>
+              <div class="p-2 text-center">
+                <BaseText size="xs" weight="bold">Gratuito</BaseText>
               </div>
-            </template>
-            <TairoLogo class="mx-auto mb-2 size-9 group-data-[state=checked]:text-success-500" />
-            <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-white">
-              Gratuito
-            </BaseHeading>
-            <BaseText size="xs" lead="tight" class="text-muted-400">
-              Ideal para quem está começando agora
-            </BaseText>
-          </TairoRadioCard>
-
-          <TairoRadioCard value="basic"
-            class="data-[state=checked]:ring-yellow-400! data-[state=checked]:border-yellow-400!">
-            <template #indicator>
-              <div
-                class="flex size-7 items-center justify-center rounded-full text-yellow-500 group-data-[state=unchecked]:opacity-0">
-                <Icon name="solar:check-circle-bold-duotone" class="size-6" />
+            </TairoRadioCard>
+            <TairoRadioCard value="basic" class="data-[state=checked]:ring-yellow-400!">
+              <template #indicator>
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-yellow-500" />
+              </template>
+              <div class="p-2 text-center">
+                <BaseText size="xs" weight="bold">Básico</BaseText>
               </div>
-            </template>
-            <TairoLogo class="mx-auto mb-2 size-9 group-data-[state=checked]:text-yellow-400" />
-            <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-white">
-              Básico
-            </BaseHeading>
-            <BaseText size="xs" lead="tight" class="text-muted-400">
-              Escritórios individuais e autônomos
-            </BaseText>
-          </TairoRadioCard>
-
-          <TairoRadioCard value="pro"
-            class="data-[state=checked]:ring-indigo-500! data-[state=checked]:border-indigo-500! relative overflow-hidden">
-            <div
-              class="absolute -right-6 top-3 rotate-45 bg-indigo-500 px-8 py-1 text-[10px] font-bold text-white shadow-lg">
-              Mais Comum
-            </div>
-            <template #indicator>
+            </TairoRadioCard>
+            <TairoRadioCard value="pro" class="data-[state=checked]:ring-indigo-500! relative overflow-hidden">
               <div
-                class="flex size-7 items-center justify-center rounded-full text-indigo-500 group-data-[state=unchecked]:opacity-0">
-                <Icon name="solar:check-circle-bold-duotone" class="size-6" />
+                class="absolute -right-6 top-2 rotate-45 bg-indigo-500 px-6 py-0.5 text-[8px] font-bold text-white uppercase">
+                TOP
               </div>
-            </template>
-            <TairoLogo class="mx-auto mb-2 size-9 group-data-[state=checked]:text-indigo-500" />
-            <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-white">
-              Profissional
-            </BaseHeading>
-            <BaseText size="xs" lead="tight" class="text-muted-400">
-              Para times em pleno crescimento
-            </BaseText>
-          </TairoRadioCard>
-
-          <TairoRadioCard value="enterprise"
-            class="data-[state=checked]:ring-primary-500! data-[state=checked]:border-primary-500!">
-            <template #indicator>
-              <div
-                class="flex size-7 items-center justify-center rounded-full text-primary-500 group-data-[state=unchecked]:opacity-0">
-                <Icon name="solar:check-circle-bold-duotone" class="size-6" />
+              <template #indicator>
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-indigo-500" />
+              </template>
+              <div class="p-2 text-center">
+                <BaseText size="xs" weight="bold">Profissional</BaseText>
               </div>
-            </template>
-            <TairoLogo class="mx-auto mb-2 size-9 group-data-[state=checked]:text-primary-500" />
-            <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-white">
-              Enterprise
-            </BaseHeading>
-            <BaseText size="xs" lead="tight" class="text-muted-400">
-              Solução completa para grandes operações
-            </BaseText>
-          </TairoRadioCard>
-
-          <TairoRadioCard v-if="customRadio === 'custom'" value="custom"
-            class="data-[state=checked]:ring-purple-500! data-[state=checked]:border-purple-500!">
-            <template #indicator>
-              <div
-                class="flex size-7 items-center justify-center rounded-full text-purple-500 group-data-[state=unchecked]:opacity-0">
-                <Icon name="solar:check-circle-bold-duotone" class="size-6" />
+            </TairoRadioCard>
+            <TairoRadioCard value="enterprise" class="data-[state=checked]:ring-primary-500!">
+              <template #indicator>
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500" />
+              </template>
+              <div class="p-2 text-center">
+                <BaseText size="xs" weight="bold">Empresa</BaseText>
               </div>
-            </template>
-            <TairoLogo class="mx-auto mb-2 size-9 group-data-[state=checked]:text-purple-500" />
-            <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-800 dark:text-white">
-              Personalizado
-            </BaseHeading>
-            <BaseText size="xs" lead="tight" class="text-muted-400">
-              Plano com limites flexíveis sob medida
-            </BaseText>
-          </TairoRadioCard>
-        </BaseRadioGroup>
+            </TairoRadioCard>
+          </BaseRadioGroup>
 
-        <div>
-          <BaseCard rounded="md" class="flex h-full flex-col p-4 md:p-6 shadow-xl shadow-muted-200/50 dark:shadow-none">
-            <div class="flex gap-12">
-              <TairoLogo class="size-12 shrink-0" :class="planColor" />
+          <!-- Detalhes do Plano Selecionado (Igual estava antes) -->
+          <BaseCard rounded="md" class="p-6 ">
+            <div class="flex items-center gap-6 mb-6">
+              <TairoLogo class="size-16 shrink-0" :class="planColor" />
               <div>
-                <BaseText size="xl" lead="tight" weight="semibold">
-                  {{ formatCurrency(
-                    billingCycles === 'monthly' ? (selectedPlan?.pricing?.monthly || 0) :
-                      billingCycles === 'quarterly' ? (selectedPlan?.pricing?.quarterly || 0) :
-                        billingCycles === 'semiannual' ? (selectedPlan?.pricing?.semiannual || 0) :
-                          (selectedPlan?.pricing?.annual || 0)
-                  ) }}
-                  <span class="text-sm text-muted-400 font-normal">/ {{
-                    billingCycles === 'monthly' ? 'mês' :
-                      billingCycles === 'quarterly' ? 'trimestre' :
-                        billingCycles === 'semiannual' ? 'semestre' : 'ano'
-                  }}</span>
-                </BaseText>
-                <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                <div class="flex items-baseline gap-2">
+                  <BaseHeading as="h3" size="xl" weight="bold" class="text-muted-800 dark:text-white">
+                    {{ formatCurrency(currentCyclePrice) }}
+                  </BaseHeading>
+                  <BaseText size="sm" class="text-muted-400">/ {{ currentCycleLabel }}</BaseText>
+                </div>
+                <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mt-1">
                   {{ selectedPlan?.description }}
                 </BaseParagraph>
               </div>
             </div>
-            <div class="my-8">
-              <BaseParagraph size="sm" lead="tight" class="text-muted-500 dark:text-muted-400">
-                A Contabilidade IR oferece funcionalidades incríveis que se adaptam perfeitamente ao seu escritório,
-                garantindo agilidade e segurança no processamento de suas declarações.
-              </BaseParagraph>
-            </div>
-            <div class="grid grid-cols-2 gap-4 font-sans text-xs">
-              <div>
-                <ul class="space-y-2">
-                  <li v-if="selectedPlan?.limits?.storage_mb" class="flex items-center gap-2" :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">
-                      {{ selectedPlan.limits.storage_mb >= 1024 ? Math.round(selectedPlan.limits.storage_mb / 1024) +
-                        'GB' :
-                        selectedPlan.limits.storage_mb + 'MB' }} de Drive
-                    </span>
-                  </li>
-                  <li v-if="selectedPlan?.limits?.employees" class="flex items-center gap-2" :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">{{ selectedPlan.limits.employees }} Usuários Liberados</span>
-                  </li>
-                  <li v-if="selectedPlan?.limits?.sms_monthly" class="flex items-center gap-2" :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">{{ selectedPlan.limits.sms_monthly }} SMS Inicial/mês</span>
-                  </li>
-                </ul>
+
+            <div class="grid grid-cols-2 gap-y-3 gap-x-8 pt-6 border-t border-muted-100 dark:border-muted-800">
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
+                  {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? Math.round((selectedPlan.limits.storage_mb || 0)
+                    / 1024) +
+                    'GB' : (selectedPlan?.limits?.storage_mb || 0) + 'MB' }} de Drive
+                </BaseText>
               </div>
-              <div>
-                <ul class="space-y-2">
-                  <li v-if="selectedPlan?.features?.includes('KANBAN')" class="flex items-center gap-2"
-                    :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">Gestão Kanban</span>
-                  </li>
-                  <li class="flex items-center gap-2" :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">Suporte prioritário</span>
-                  </li>
-                  <li class="flex items-center gap-2" :class="planColor">
-                    <Icon name="lucide:check" class="size-3 text-current shrink-0" />
-                    <span class="text-muted-400">Backups automáticos</span>
-                  </li>
-                </ul>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">{{ selectedPlan?.limits?.employees || 0
+                  }} Usuários
+                  inclusos</BaseText>
+              </div>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
+                  {{ selectedPlan?.limits?.tax_declarations_yearly || 0 }} Declarações/ano
+                </BaseText>
+              </div>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">{{ selectedPlan?.limits?.sms_monthly || 0
+                  }} SMS
+                  /mês</BaseText>
+              </div>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">Gestão Kanban</BaseText>
+              </div>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">Suporte prioritário</BaseText>
+              </div>
+              <div class="flex items-center gap-2" :class="planColor">
+                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">Backups diários</BaseText>
               </div>
             </div>
           </BaseCard>
-        </div>
-      </div>
 
-      <!-- Controls -->
-      <div class="grid grid-cols-12 gap-4">
-        <div class="col-span-12 sm:col-span-6 lg:col-span-7">
-          <div class="flex flex-col gap-4">
-            <!-- Usuários -->
-            <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
-              :class="{ 'ring-1 ring-primary-500 border-primary-500': showUserCustomizer }">
-              <div class="mb-4 flex items-center justify-between">
-                <BaseHeading as="h4" size="sm" weight="medium">
-                  Equipe e Usuários
-                </BaseHeading>
-                <div>
-                  <BaseText size="xs" lead="tight" class="text-muted-400">
-                    {{ selectedPlan?.limits?.employees || 0 }} usuários inclusos
-                  </BaseText>
+          <!-- Usuários -->
+          <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
+            :class="{ 'ring-1 ring-primary-500 border-primary-500': showUserCustomizer }">
+            <div class="mb-4 flex items-center justify-between">
+              <BaseHeading as="h4" size="sm" weight="medium">Equipe e Usuários</BaseHeading>
+              <BaseTag rounded="full" color="muted" size="sm">{{ selectedPlan?.limits?.employees || 0 }} inclusos
+              </BaseTag>
+            </div>
+            <BaseParagraph size="xs" class="text-muted-500 mb-6">
+              Colaboradores que podem acessar a plataforma simultaneamente.
+            </BaseParagraph>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <BaseAvatar src="/img/custom/user-slot.png" size="sm" />
+                <BaseAvatar src="/img/custom/user-slot.png" size="sm"
+                  v-if="(selectedPlan?.limits?.employees || 0) > 1" />
+                <div v-if="(selectedPlan?.limits?.employees || 0) > 2" class="text-muted-400 text-xs font-medium ml-2">
+                  +{{ (selectedPlan?.limits?.employees || 0) - 2 }} extras
                 </div>
               </div>
-              <BaseParagraph size="xs" class="text-muted-500 mb-4">
-                Colaboradores do seu escritório que podem acessar a plataforma simultaneamente.
-              </BaseParagraph>
-              <div class="flex items-center gap-2 lg:justify-between">
-                <div class="flex items-center gap-2">
-                  <BaseTooltip content="Usuário 1">
-                    <BaseAvatar src="/img/custom/user-slot.png" size="sm" />
-                  </BaseTooltip>
-                  <BaseTooltip v-if="selectedPlan?.limits?.employees && selectedPlan.limits.employees > 1"
-                    content="Usuário 2">
-                    <BaseAvatar src="/img/custom/user-slot.png" size="sm" />
-                  </BaseTooltip>
-                  <BaseTooltip v-if="selectedPlan?.limits?.employees && selectedPlan.limits.employees > 2"
-                    content="Usuário 3">
-                    <BaseAvatar size="sm" src="/img/custom/user-slot.png" />
-                  </BaseTooltip>
-                  <div v-if="selectedPlan?.limits?.employees && selectedPlan.limits.employees > 3"
-                    class="text-muted-400 text-xs font-medium ml-2">
-                    +{{ selectedPlan.limits.employees - 3 }} extras
+              <BaseButton type="button" size="sm" variant="muted" @click="toggleUserCustomizer" class="h-8">
+                <Icon name="solar:pen-2-linear" class="size-3 mr-1" />
+                Ajustar
+              </BaseButton>
+            </div>
+            <div v-if="showUserCustomizer"
+              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 animate-in fade-in slide-in-from-top-2">
+              <BaseText size="xs" class="text-muted-500 mb-2">Quantidade de Usuários</BaseText>
+              <BaseInput v-model="customConfig.employees" type="number" min="1" label="Quantidade de Usuários"
+                @update:model-value="convertToCustom" />
+            </div>
+          </BaseCard>
+
+          <!-- Personalização (Drive/SMS) -->
+          <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
+            :class="{ 'ring-1 ring-primary-500 border-primary-500': showResourceCustomizer }">
+            <div class="mb-4 flex items-center justify-between">
+              <BaseHeading as="h4" size="sm" weight="medium">Personalização</BaseHeading>
+              <div class="flex gap-2">
+                <BaseTag rounded="full" color="muted" size="sm">{{ Math.round((selectedPlan?.limits?.storage_mb || 0) /
+                  1024) }}GB</BaseTag>
+                <BaseTag rounded="full" color="muted" size="sm">{{ selectedPlan?.limits?.sms_monthly || 0 }} SMS
+                </BaseTag>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex gap-4">
+                <BaseAvatar src="/img/custom/drive-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
+                <BaseAvatar src="/img/custom/sms-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
+                <BaseAvatar src="/img/illustrations/onboarding/pricing-1.svg" size="sm"
+                  class="bg-muted-100 dark:bg-muted-800 p-1" />
+              </div>
+              <BaseButton type="button" size="sm" variant="muted" @click="toggleResourceCustomizer" class="h-8">
+                <Icon name="solar:pen-2-linear" class="size-3 mr-1" />
+                Personalizar
+              </BaseButton>
+            </div>
+            <div v-if="showResourceCustomizer"
+              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div class="grid grid-cols-2 gap-4">
+                <BaseText size="xs" class="text-muted-500 mb-2">Espaço DRIVE (GB)</BaseText>
+                <BaseInput v-model="customConfig.storage_gb" type="number" min="1" label="Espaço DRIVE (GB)"
+                  @update:model-value="convertToCustom" />
+                <BaseText size="xs" class="text-muted-500 mb-2">Qtd. SMS</BaseText>
+                <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS"
+                  @update:model-value="convertToCustom" />
+                <BaseText size="xs" class="text-muted-500 mb-2">Declarações IR/ano</BaseText>
+                <BaseInput v-model="customConfig.tax_declarations_yearly" type="number" step="10" min="1"
+                  label="Declarações IR/ano" @update:model-value="convertToCustom" />
+              </div>
+            </div>
+          </BaseCard>
+
+          <!-- Pagamento Seguro (Novo) -->
+          <BaseCard rounded="md"
+            class="p-8 bg-muted-50/50 dark:bg-muted-900/50 border-dashed border-2 border-muted-200 dark:border-muted-800 flex flex-col items-center justify-center text-center">
+            <div class="mb-4 p-4 bg-white dark:bg-muted-800 rounded-2xl shadow-sm">
+              <Icon name="solar:shield-check-bold-duotone" class="size-16 text-success-500" />
+            </div>
+            <BaseHeading as="h4" size="lg" weight="bold" class="mb-2">Pagamento 100% Seguro</BaseHeading>
+            <BaseParagraph size="xs" class="text-muted-500 max-w-sm mx-auto">
+              Seus dados estão protegidos por criptografia de ponta a ponta. Utilizamos os mesmos padrões de segurança
+              dos
+              maiores bancos brasileiros.
+            </BaseParagraph>
+            <div
+              class="flex items-center gap-4 mt-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
+              <img src="/img/custom/pix-logo.png" class="h-6" alt="PIX" />
+              <Icon name="logos:visa" class="h-4" />
+              <Icon name="logos:mastercard" class="h-6" />
+              <Icon name="solar:lock-bold-duotone" class="size-5 text-muted-400" />
+            </div>
+          </BaseCard>
+        </div>
+
+        <div class="col-span-12 lg:col-span-5">
+          <div class="sticky top-6 space-y-4">
+            <BaseCard rounded="md"
+              class="p-6 shadow-xl shadow-muted-200/50 dark:shadow-none border-t-4 border-t-primary-500">
+              <BaseHeading as="h3" size="lg" weight="bold" class="mb-6 flex items-center justify-between">
+                Resumo do Pedido
+                <Icon name="solar:bill-list-bold-duotone" class="size-6 text-primary-500" />
+              </BaseHeading>
+
+              <!-- Opções de Cobrança (Integradas no resumo) -->
+              <div class="space-y-6 mb-8 pb-8 border-b border-muted-100 dark:border-muted-800">
+                <div class="space-y-4">
+                  <div>
+                    <BaseHeading as="h4" size="xs" weight="semibold"
+                      class="mb-3 uppercase tracking-wider text-muted-500 text-center">Ciclo de Cobrança</BaseHeading>
+                    <BaseRadioGroup v-model="billingCycles" class="grid grid-cols-2 gap-2">
+                      <TairoRadioCard value="monthly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                        <BaseText size="xs" weight="bold">Mensal</BaseText>
+                      </TairoRadioCard>
+                      <TairoRadioCard value="annual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                        <BaseText size="xs" weight="bold">Anual</BaseText>
+                      </TairoRadioCard>
+                    </BaseRadioGroup>
+                  </div>
+
+                  <div>
+                    <BaseHeading as="h4" size="xs" weight="semibold"
+                      class="mb-3 uppercase tracking-wider text-muted-500 text-center">Forma de Pagamento</BaseHeading>
+                    <BaseRadioGroup v-model="paymentMethod" class="grid grid-cols-2 gap-2">
+                      <TairoRadioCard value="CREDIT_CARD"
+                        class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!">
+                        <Icon name="solar:card-2-bold-duotone"
+                          class="size-6 text-muted-400 group-data-[state=checked]:text-primary-500" />
+                        <BaseText size="xs" weight="bold">Cartão</BaseText>
+                      </TairoRadioCard>
+                      <TairoRadioCard value="PIX"
+                        class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-success-500! relative overflow-hidden">
+                        <div
+                          class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[8px] font-bold text-white uppercase">
+                          5% OFF</div>
+                        <img src="/img/custom/pix-logo.png"
+                          class="h-6 object-contain grayscale group-data-[state=checked]:grayscale-0" alt="PIX" />
+                        <BaseText size="xs" weight="bold">PIX</BaseText>
+                      </TairoRadioCard>
+                    </BaseRadioGroup>
                   </div>
                 </div>
-                <div>
-                  <BaseTooltip :content="showUserCustomizer ? 'Fechar' : 'Personalizar'">
-                    <button type="button" @click="toggleUserCustomizer"
-                      class="flex items-center justify-center border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 text-muted-400 dark:text-muted-600 size-10 rounded-full border-2 border-dashed transition-all duration-300 hover:border-solid"
-                      :class="{ 'border-primary-500 border-solid text-primary-500': showUserCustomizer }">
-                      <Icon :name="showUserCustomizer ? 'solar:close-circle-linear' : 'solar:pen-2-linear'"
-                        class="size-4" />
-                    </button>
-                  </BaseTooltip>
+              </div>
+
+              <!-- Itens do Plano -->
+              <div class="space-y-4 mb-8">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <BaseText weight="semibold" class="text-muted-800 dark:text-white">{{ selectedPlan?.name }}
+                    </BaseText>
+                    <BaseParagraph size="xs" class="text-muted-400">Assinatura {{ currentCycleLabel }}</BaseParagraph>
+                  </div>
+                  <BaseText weight="bold">{{ formatCurrency(currentCyclePrice) }}</BaseText>
+                </div>
+
+                <div class="pt-4 border-t border-muted-100 dark:border-muted-800 space-y-3 font-sans text-xs">
+                  <div class="flex items-center justify-between text-muted-500">
+                    <span class="flex items-center gap-2">
+                      <Icon name="solar:users-group-rounded-linear" class="size-4" />
+                      Usuários ativos
+                    </span>
+                    <span class="font-medium text-muted-800 dark:text-white">{{ selectedPlan?.limits?.employees
+                      }}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-muted-500">
+                    <span class="flex items-center gap-2">
+                      <Icon name="solar:database-linear" class="size-4" />
+                      Armazenamento Drive
+                    </span>
+                    <span class="font-medium text-muted-800 dark:text-white">{{
+                      Math.round((selectedPlan?.limits?.storage_mb || 0) / 1024) }} GB</span>
+                  </div>
+                  <div class="flex items-center justify-between text-muted-500">
+                    <span class="flex items-center gap-2">
+                      <Icon name="solar:document-bold-duotone" class="size-4" />
+                      Franquia de IR
+                    </span>
+                    <span class="font-medium text-muted-800 dark:text-white">{{
+                      selectedPlan?.limits?.tax_declarations_yearly ||
+                      0 }} /ano</span>
+                  </div>
+                  <div class="flex items-center justify-between text-muted-500">
+                    <span class="flex items-center gap-2">
+                      <Icon name="solar:letter-bold-duotone" class="size-4" />
+                      Franquia de SMS
+                    </span>
+                    <span class="font-medium text-muted-800 dark:text-white">{{ selectedPlan?.limits?.sms_monthly || 0
+                      }}
+                      /mês</span>
+                  </div>
                 </div>
               </div>
-              <div v-if="showUserCustomizer" class="mt-4 pt-4 border-t border-muted-200 dark:border-muted-800">
-                <BaseParagraph size="xs" class="text-muted-500 mb-4">
-                  Quantidade de Usuários
+
+              <!-- Cupom de Desconto -->
+              <div class="mb-8 pt-6 border-t border-muted-100 dark:border-muted-800">
+                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-2 uppercase tracking-wider">Possui um
+                  cupom?</BaseParagraph>
+                <div class="flex gap-2">
+                  <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10" />
+                  <BaseButton variant="muted" class="h-10 px-4" @click="applyCoupon">Aplicar</BaseButton>
+                </div>
+              </div>
+
+              <!-- Totais -->
+              <div class="space-y-2 bg-muted-50 dark:bg-muted-900 p-4 rounded-lg">
+                <div class="flex justify-between text-sm">
+                  <span class="text-muted-500 font-sans">Subtotal</span>
+                  <span class="text-muted-800 dark:text-white font-medium">{{ formatCurrency(currentCyclePrice)
+                    }}</span>
+                </div>
+                <div v-if="paymentMethod === 'PIX'" class="flex justify-between text-sm text-success-500">
+                  <span class="font-sans italic">Desconto PIX (5%)</span>
+                  <span class="font-medium">- {{ formatCurrency(currentCyclePrice * 0.05) }}</span>
+                </div>
+                <div
+                  class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2">
+                  <BaseText size="lg" weight="bold" class="text-muted-800 dark:text-white">Total</BaseText>
+                  <BaseText size="2xl" weight="bold" class="text-primary-500">
+                    {{ formatCurrency(paymentMethod === 'PIX' ? currentCyclePrice * 0.95 : currentCyclePrice) }}
+                  </BaseText>
+                </div>
+                <BaseParagraph size="xs" class="text-muted-400 text-right font-sans">
+                  Cobrança única via {{ paymentMethod === 'CREDIT_CARD' ? 'Cartão' : paymentMethod }}
                 </BaseParagraph>
-                <BaseInput v-model="customConfig.employees" type="number" min="1"
-                  @update:model-value="convertToCustom" />
               </div>
-            </BaseCard>
 
-            <!-- Personalização de Recursos -->
-            <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
-              :class="{ 'ring-1 ring-primary-500 border-primary-500': showResourceCustomizer }">
-              <div class="mb-4 flex items-center justify-between">
-                <BaseHeading as="h4" size="sm" weight="medium">
-                  Personalização
-                </BaseHeading>
-                <div class="flex flex-col items-end">
-                  <BaseText size="xs" lead="tight" class="text-muted-400">
-                    + {{ selectedPlan?.limits?.storage_mb && selectedPlan.limits.storage_mb >= 1024 ?
-                      Math.round(selectedPlan.limits.storage_mb / 1024) + 'GB' : selectedPlan?.limits?.storage_mb + 'MB'
-                    }}
-                    Drive
-                  </BaseText>
-                  <BaseText size="xs" lead="tight" class="text-muted-400">
-                    + {{ selectedPlan?.limits?.sms_monthly || 0 }} SMS
-                  </BaseText>
-                </div>
-              </div>
-              <BaseParagraph size="xs" class="text-muted-500 mb-4">
-                Adicione mais recursos conforme a necessidade de faturamento e comunicação do seu escritório.
+              <!-- Botão Final -->
+              <BaseButton type="submit" variant="primary" color="primary"
+                class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold" :loading="isSubmitting">
+                Finalizar Assinatura
+              </BaseButton>
+              <BaseParagraph size="xs" class="text-muted-400 text-center mt-4">
+                Ao confirmar, você concorda com nossos <NuxtLink class="underline">Termos de Uso</NuxtLink>.
               </BaseParagraph>
-              <div class="flex items-center justify-between">
-                <div class="flex gap-4">
-                  <BaseAvatar src="/img/custom/drive-resource.png" class="size-10" alt="Drive" />
-                  <BaseAvatar src="/img/custom/sms-resource.png" class="size-10" alt="SMS" />
-                </div>
-                <BaseTooltip :content="showResourceCustomizer ? 'Fechar' : 'Personalizar'">
-                  <button type="button" @click="toggleResourceCustomizer"
-                    class="flex items-center justify-center border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 text-muted-400 dark:text-muted-600 size-10 rounded-full border-2 border-dashed transition-all duration-300 hover:border-solid"
-                    :class="{ 'border-primary-500 border-solid text-primary-500': showResourceCustomizer }">
-                    <Icon :name="showResourceCustomizer ? 'solar:close-circle-linear' : 'solar:pen-2-linear'"
-                      class="size-4" />
-                  </button>
-                </BaseTooltip>
-              </div>
-              <div v-if="showResourceCustomizer"
-                class="mt-4 pt-4 border-t border-muted-200 dark:border-muted-800 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                  <BaseParagraph size="xs" class="text-muted-500 mb-4">
-                    Espaço DRIVE (GB)
-                  </BaseParagraph>
-                  <BaseInput v-model="customConfig.storage_gb" type="number" min="1"
-                    @update:model-value="convertToCustom" />
-                  <BaseParagraph size="xs" class="text-muted-500 mb-4">
-                    Qtd. SMS
-                  </BaseParagraph>
-                  <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100"
-                    @update:model-value="convertToCustom" />
-                </div>
-              </div>
             </BaseCard>
 
-            <BaseCard rounded="md" class="p-4 md:p-6">
-              <div class="mb-8 flex items-center justify-between">
-                <BaseHeading as="h4" size="sm" weight="semibold">
-                  Forma de Pagamento
-                </BaseHeading>
+            <!-- Help Card -->
+            <BaseCard rounded="md" class="p-4 bg-primary-500/5 border-primary-500/10 border flex items-center gap-4">
+              <div class="size-10 rounded-full bg-primary-500/10 flex items-center justify-center shrink-0">
+                <Icon name="solar:question-square-bold-duotone" class="size-6 text-primary-500" />
               </div>
-              <BaseRadioGroup v-model="paymentMethod" class="flex items-center gap-6">
-                <BaseRadio label="Cartão de Crédito" value="CREDIT_CARD" />
-                <div class="flex items-center gap-2">
-                  <BaseRadio label="PIX" value="PIX" />
-                  <img src="/img/custom/pix-logo.png" class="size-5 object-contain" alt="PIX" />
-                  <BaseTag color="success" flavor="outline" rounded="full" size="sm"
-                    class="h-5 px-2 text-[10px] font-bold uppercase tracking-wider">
-                    -5% OFF
-                  </BaseTag>
-                </div>
-                <BaseRadio label="Boleto" value="BOLETO" />
-              </BaseRadioGroup>
-            </BaseCard>
-
-            <BaseCard rounded="md" class="p-4 md:p-6">
-              <div class="mb-8 flex items-center justify-between">
-                <BaseHeading as="h4" size="sm" weight="semibold">
-                  Ciclo de faturamento
-                </BaseHeading>
+              <div>
+                <BaseText size="xs" weight="bold">Dúvidas com o pagamento?</BaseText>
+                <BaseParagraph size="xs" class="text-muted-500">Chame nosso suporte no WhatsApp.</BaseParagraph>
               </div>
-              <BaseRadioGroup v-model="billingCycles" class="flex items-center gap-6">
-                <BaseRadio label="Mensal" value="monthly" />
-                <BaseRadio label="Trimestral" value="quarterly" />
-                <BaseRadio label="Semestral" value="semiannual" />
-                <BaseRadio label="Anual" value="annual" />
-              </BaseRadioGroup>
             </BaseCard>
           </div>
         </div>
-
-        <div class="col-span-12 sm:col-span-6 lg:col-span-5">
-          <BaseCard rounded="md" class="p-4 md:p-6 h-full flex flex-col">
-            <div class="mb-4">
-              <BaseHeading as="h4" size="sm" weight="semibold">
-                Informações de pagamento
-              </BaseHeading>
-            </div>
-
-            <div :class="{ 'opacity-20 grayscale pointer-events-none select-none': paymentMethod !== 'CREDIT_CARD' }"
-              class="transition-all duration-300">
-              <DemoCreditCardReal :name="cardInfo.name || 'NOME NO CARTÃO'"
-                :number="cardInfo.number || '0000 0000 0000 0000'" :expiry-month="cardInfo.expiryMonth || '01'"
-                :expiry-year="cardInfo.expiryYear || '25'" :cvc="cardInfo.cvc || '123'" />
-              <div class="mt-5 space-y-4">
-                <BaseInput v-model="cardInfo.name" label="Nome no cartão" placeholder="Ex: João da Silva"
-                  :disabled="paymentMethod !== 'CREDIT_CARD'" />
-                <BaseInput v-model="cardInfo.number" label="Número do cartão" placeholder="0000 0000 0000 0000"
-                  :disabled="paymentMethod !== 'CREDIT_CARD'" />
-                <div class="grid grid-cols-3 gap-4">
-                  <BaseInput v-model="cardInfo.expiryMonth" label="MM" placeholder="01"
-                    :disabled="paymentMethod !== 'CREDIT_CARD'" />
-                  <BaseInput v-model="cardInfo.expiryYear" label="AA" placeholder="25"
-                    :disabled="paymentMethod !== 'CREDIT_CARD'" />
-                  <BaseInput v-model="cardInfo.cvc" label="CVC" placeholder="123"
-                    :disabled="paymentMethod !== 'CREDIT_CARD'" />
-                </div>
-              </div>
-            </div>
-
-            <div v-if="paymentMethod === 'PIX'"
-              class="mt-8 p-4 bg-muted-100 dark:bg-muted-800 rounded-lg text-center border-2 border-dashed border-muted-200 dark:border-muted-700">
-              <Icon name="simple-icons:pix" class="size-10 text-[#32BCAD] mx-auto mb-2" />
-              <BaseText size="xs" weight="medium">Liberação Instantânea via PIX</BaseText>
-            </div>
-            <div v-if="paymentMethod === 'BOLETO'"
-              class="mt-8 p-4 bg-muted-100 dark:bg-muted-800 rounded-lg text-center border-2 border-dashed border-muted-200 dark:border-muted-700">
-              <Icon name="solar:barcode-bold-duotone" class="size-10 text-orange-500 mx-auto mb-2" />
-              <BaseText size="xs" weight="medium">Vencimento em 3 dias úteis</BaseText>
-            </div>
-          </BaseCard>
-        </div>
       </div>
-
-      <TairoFormSave>
-        <BaseButton type="submit" variant="primary" class="w-full h-12 shadow-xl shadow-primary-500/20"
-          :loading="isSubmitting">
-          <span>Finalizar assinatura por</span>
-          <span class="font-bold ml-1">{{ formatCurrency(currentCyclePrice) }}</span>
-          <span class="ml-1 opacity-70">/ {{ currentCycleLabel }}</span>
-        </BaseButton>
-      </TairoFormSave>
     </form>
   </div>
 </template>
