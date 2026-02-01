@@ -170,8 +170,24 @@ const form = ref({
   internalNotes: '',
   assignedToId: 'unassigned',
   govPassword: '',
+  tags: [] as string[],
 })
 const showGovPassword = ref(false)
+const newTag = ref('')
+
+function addTag() {
+  const tag = newTag.value.trim()
+  if (tag && !form.value.tags.includes(tag)) {
+    form.value.tags.push(tag)
+    save()
+  }
+  newTag.value = ''
+}
+
+function removeTag(tag: string) {
+  form.value.tags = form.value.tags.filter(t => t !== tag)
+  save()
+}
 
 const filteredAttachments = computed(() => {
   if (!declaration.value?.attachments) return []
@@ -272,6 +288,7 @@ async function fetchDeclaration() {
         internalNotes: result.internalNotes || '',
         assignedToId: result.assignedTo?.id || 'unassigned',
         govPassword: result.govPassword || '',
+        tags: result.tags || [],
       }
 
       // Check for latest collection link
@@ -890,6 +907,28 @@ onMounted(() => {
                     <Icon :name="p.icon" class="size-3" :class="p.color" />
                     {{ p.label }}
                   </button>
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Tags</label>
+                <div class="flex flex-wrap gap-1.5 mb-2">
+                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted"
+                    class="group relative py-1 px-2 pr-6">
+                    {{ tag }}
+                    <button @click="removeTag(tag)"
+                      class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all">
+                      <Icon name="lucide:x" class="size-3" />
+                    </button>
+                  </BaseTag>
+                </div>
+                <div class="flex gap-2">
+                  <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1"
+                    @keyup.enter="addTag" />
+                  <BaseButton size="sm" variant="muted" @click="addTag">
+                    <Icon name="lucide:plus" class="size-4" />
+                  </BaseButton>
                 </div>
               </div>
 
