@@ -247,7 +247,7 @@ onMounted(() => {
 
         <!-- Actions -->
         <div class="flex gap-2">
-          <BaseButton color="primary" rounded="md" class="flex-1" @click="downloadFile(selectedFile)">
+          <BaseButton variant="primary" rounded="md" class="flex-1" @click="downloadFile(selectedFile)">
             <Icon name="solar:download-minimalistic-bold-duotone" class="size-4 mr-2" />
             Baixar Arquivo
           </BaseButton>

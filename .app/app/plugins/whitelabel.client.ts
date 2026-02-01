@@ -33,30 +33,18 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
 
-  // Load and apply tenant colors after app is mounted
-  nuxtApp.hook('app:mounted', async () => {
-    // Skip if on public pages that don't require auth
-    const publicPaths = ['/upload', '/invite', '/auth']
-    if (publicPaths.some(path => window.location.pathname.startsWith(path))) {
-      return
-    }
+  // Load settings from cookie
+  const settings = useCookie<any>('whitelabel-settings')
 
-    try {
-      const { data } = await useCustomFetch<{ success: boolean; data: TenantData }>('/tenant')
+  // Apply whitelabel colors on startup if cached
+  if (settings.value?.primaryColor && settings.value?.secondaryColor) {
+    applyWhitelabelColors(settings.value.primaryColor, settings.value.secondaryColor)
+  } else {
+    // Apply defaults if no cache
+    applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
+  }
 
-      if (data?.success && data?.data) {
-        const primaryColor = data.data.primaryColor || defaultPrimaryColor
-        const secondaryColor = data.data.secondaryColor || defaultSecondaryColor
-
-        applyWhitelabelColors(primaryColor, secondaryColor)
-      } else {
-        // Apply defaults if no tenant data
-        applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
-      }
-    } catch (error) {
-      console.error('Failed to load tenant whitelabel settings:', error)
-      // Apply defaults on error
-      applyWhitelabelColors(defaultPrimaryColor, defaultSecondaryColor)
-    }
-  })
+  // We no longer need to fetch /tenant here on every mount because 
+  // useTenant.ts handles it when needed and updates the cache.
+  // This prevents double fetching and ensures colors are applied early.
 })

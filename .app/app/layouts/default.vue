@@ -186,6 +186,25 @@ const isMobileOpen = ref(false)
                               </div>
                             </NuxtLink>
                           </TairoMenuLink>
+                          <TairoMenuLink as-child>
+                            <NuxtLink to="/dashboard/settings/checklist"
+                              class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                              <div class="flex items-center gap-3">
+                                <div class="size-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                                  <Icon name="lucide:clipboard-check" class="size-4 text-rose-500" />
+                                </div>
+                                <div>
+                                  <BaseHeading size="sm" weight="medium"
+                                    class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                                    Checklist
+                                  </BaseHeading>
+                                  <BaseParagraph size="xs" class="text-muted-500">
+                                    Template de documentos
+                                  </BaseParagraph>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </TairoMenuLink>
                         </div>
                       </div>
                     </li>
@@ -260,6 +279,14 @@ const isMobileOpen = ref(false)
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
               <Icon name="solar:settings-bold-duotone" class="size-5" />
               Minha Empresa
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/settings/checklist"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:clipboard-check-bold-duotone" class="size-5" />
+              Checklist Padrão
             </NuxtLink>
           </li>
         </ul>

@@ -9,13 +9,10 @@ const { open } = usePanels()
 // Notifications count
 const notificationCount = ref(0)
 const hasCritical = ref(false)
-const lastSeenCount = ref(0) // Track what user has seen
+const { dismissedIds } = useNotifications()
 
-// Display count shows only NEW notifications (ones not seen yet)
-const displayCount = computed(() => {
-  const newCount = notificationCount.value - lastSeenCount.value
-  return newCount > 0 ? newCount : 0
-})
+// Display count shows only NEW notifications (ones not dismissed)
+const displayCount = computed(() => notificationCount.value)
 
 async function fetchNotificationCount() {
   try {
@@ -24,14 +21,23 @@ async function fetchNotificationCount() {
 
     if (response?.data?.success) {
       const alerts = response.data.data.alerts || {}
+
+      // Helper to count non-dismissed items
+      const countNew = (items: any[] | undefined, type: string) => {
+        if (!items) return 0
+        return items.filter(item => !dismissedIds.value.includes(`${item.id}-${type}`)).length
+      }
+
       const total =
-        (alerts.errors?.length || 0) +
-        (alerts.nearDeadline?.length || 0) +
-        (alerts.waitingDocs?.length || 0) +
-        (alerts.stuckClients?.length || 0)
+        countNew(alerts.errors, 'error') +
+        countNew(alerts.nearDeadline, 'deadline') +
+        countNew(alerts.waitingDocs, 'docs') +
+        countNew(alerts.checklistCompleted, 'completed') +
+        countNew(alerts.finalReview, 'review') +
+        countNew(alerts.stuckClients, 'stuck')
 
       notificationCount.value = total
-      hasCritical.value = (alerts.errors?.length || 0) > 0
+      hasCritical.value = countNew(alerts.errors, 'error') > 0
     }
   } catch (e) {
     console.error('Error fetching notification count:', e)
@@ -45,8 +51,6 @@ onMounted(() => {
 })
 
 function openNotifications() {
-  // Mark current notifications as "seen"
-  lastSeenCount.value = notificationCount.value
   open(PanelsPanelNotifications, {})
 }
 

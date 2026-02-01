@@ -2,13 +2,6 @@
 import { useTenant } from '~/composables/useTenant'
 const { tenant, fetchTenant } = useTenant()
 
-// Fetch tenant data on mount if not already available
-onMounted(() => {
-  if (!tenant.value) {
-    fetchTenant()
-  }
-})
-
 const logoUrl = computed(() => {
   return tenant.value?.logo || '/img/logo.png'
 })

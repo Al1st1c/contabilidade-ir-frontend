@@ -115,7 +115,7 @@ onMounted(() => {
       <BaseHeading as="h2" size="xl" weight="bold" class="mb-2 text-muted-800 dark:text-white">Link Indisponível
       </BaseHeading>
       <p class="text-muted-500 text-center max-w-sm mb-6">{{ error }}</p>
-      <BaseButton color="primary" @click="fetchData">Tentar Novamente</BaseButton>
+      <BaseButton variant="primary" @click="fetchData">Tentar Novamente</BaseButton>
     </div>
 
     <!-- Dashboard Layout (Mini App) -->
@@ -224,7 +224,7 @@ onMounted(() => {
                     @change="e => handleFileUpload(e, item.id)" />
 
                   <template v-if="item.status === 'pending' || item.status === 'rejected'">
-                    <BaseButton color="primary" size="sm" @click="triggerUpload(item.id)"
+                    <BaseButton variant="primary" size="sm" @click="triggerUpload(item.id)"
                       :loading="isUploading === item.id">
                       <Icon name="solar:upload-minimalistic-linear" class="size-4 mr-2" />
                       Enviar Arquivo

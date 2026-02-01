@@ -119,6 +119,13 @@ async function saveSettings() {
       body: form.value
     })
     if (data.success || data) {
+      // Update global tenant state with new settings
+      if (tenant.value) {
+        tenant.value = {
+          ...tenant.value,
+          ...form.value
+        }
+      }
       applyColors(form.value.primaryColor, form.value.secondaryColor)
       toaster.add({ title: 'Sucesso', description: 'Visual atualizado!', icon: 'solar:check-circle-linear' })
     }
@@ -230,7 +237,7 @@ onMounted(fetchTenant)
                 <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
                   Preview em Tempo Real</BaseHeading>
                 <div class="flex flex-wrap items-center gap-6">
-                  <BaseButton color="primary" class="shadow-lg shadow-primary-500/20">Botão Principal</BaseButton>
+                  <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20">Botão Principal</BaseButton>
                   <BaseButton variant="muted">Botão Neutro</BaseButton>
                   <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
                     Status Badge</BaseTag>
@@ -247,7 +254,7 @@ onMounted(fetchTenant)
 
       <!-- Action Footer -->
       <div class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
-        <BaseButton color="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12" @click="saveSettings">
+        <BaseButton variant="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12" @click="saveSettings">
           Publicar Alterações
         </BaseButton>
       </div>

@@ -557,7 +557,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                  }}</p>
+                    }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -639,7 +639,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                      }}</span>
+                        }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
@@ -1044,7 +1044,7 @@ onMounted(() => {
           <div
             class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
             <BaseButton @click="cancelChecklistUpload">Cancelar</BaseButton>
-            <BaseButton color="primary" rounded="lg" @click="confirmChecklistUpload">
+            <BaseButton variant="primary" rounded="lg" @click="confirmChecklistUpload">
               <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" />
               Enviar e Vincular
             </BaseButton>

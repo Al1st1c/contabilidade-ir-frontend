@@ -8,6 +8,7 @@ const route = useRoute()
 const currentSection = computed(() => {
   if (route.path.includes('/dashboard/settings/account')) return 'account'
   if (route.path.includes('/dashboard/settings/team')) return 'team'
+  if (route.path.includes('/dashboard/settings/checklist')) return 'checklist'
   return 'whitelabel'
 })
 
@@ -23,6 +24,10 @@ const sectionTitles: Record<string, { title: string; description: string }> = {
   team: {
     title: 'Equipe',
     description: 'Gerencie os membros do seu escritório'
+  },
+  checklist: {
+    title: 'Checklist',
+    description: 'Gerencie os checklists do seu escritório'
   }
 }
 
@@ -30,6 +35,7 @@ const tabs = [
   { id: 'whitelabel', label: 'Whitelabel', icon: 'lucide:palette', to: '/dashboard/settings' },
   { id: 'account', label: 'Empresa', icon: 'lucide:building-2', to: '/dashboard/settings/account' },
   { id: 'team', label: 'Equipe', icon: 'lucide:users', to: '/dashboard/settings/team' },
+  { id: 'checklist', label: 'Checklist', icon: 'lucide:list-checks', to: '/dashboard/settings/checklist' },
 ]
 </script>
 
