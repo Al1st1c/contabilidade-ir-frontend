@@ -6,7 +6,7 @@ definePageMeta({
   layout: 'empty',
 })
 
-const { plans, loading, error, fetchPlans, selectFreePlan } = useSubscription()
+const { plans, currentSubscription, loading, error, fetchPlans, fetchMySubscription, selectFreePlan } = useSubscription()
 const pricingMode = ref('free') // Default to free now
 const isCustom = ref(false)
 
@@ -23,8 +23,15 @@ const customPrice = computed(() => {
   return base + storageCost + smsCost
 })
 
-onMounted(() => {
-  fetchPlans()
+onMounted(async () => {
+  await Promise.all([
+    fetchPlans(),
+    fetchMySubscription()
+  ])
+
+  if (currentSubscription.value) {
+    pricingMode.value = currentSubscription.value.plan.slug
+  }
 })
 
 const selectPlan = (slug: string) => {
@@ -131,9 +138,13 @@ const getPlanPrice = (plan: any) => {
               <BaseRadioGroup v-model="pricingMode" class="mx-auto mb-10 grid max-w-6xl gap-6 sm:grid-cols-3">
                 <TairoRadioCard v-for="plan in filteredPlans" :key="plan.id" rounded="md" :value="plan.slug"
                   @click="selectPlan(plan.slug)" class="group transition-all duration-300 relative overflow-hidden">
-                  <div v-if="plan.slug === 'pro'"
+                  <div v-if="plan.slug === 'pro' && currentSubscription?.plan.slug !== 'pro'"
                     class="absolute -right-6 top-3 rotate-45 bg-indigo-500 px-8 py-1 text-[10px] font-bold text-white shadow-lg z-10 font-sans">
                     Mais Comum
+                  </div>
+                  <div v-if="currentSubscription?.plan.slug === plan.slug"
+                    class="absolute -right-6 top-3 rotate-45 bg-success-500 px-8 py-1 text-[10px] font-bold text-white shadow-lg z-10 font-sans">
+                    Plano Atual
                   </div>
                   <template #indicator>
                     <Icon name="solar:check-circle-bold-duotone"
@@ -193,7 +204,7 @@ const getPlanPrice = (plan: any) => {
               <div class="mx-auto flex flex-col items-center pt-4">
                 <BaseButton rounded="lg" class="h-12 w-64 text-lg font-bold shadow-xl shadow-primary-500/20"
                   variant="primary" @click="handleConfirm">
-                  Confirmar Escolha
+                  {{ pricingMode === currentSubscription?.plan.slug ? 'Manter Plano Atual' : 'Migrar para este Plano' }}
                 </BaseButton>
                 <NuxtLink to="/dashboard/plans/payment?plan=custom"
                   class="text-muted-400 hover:text-primary-500 mt-6 text-sm font-medium underline-offset-4 transition-colors duration-300 hover:underline">

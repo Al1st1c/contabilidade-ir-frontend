@@ -7,7 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
-const { plans, loading: plansLoading, fetchPlans, subscribe, validateCoupon } = useSubscription()
+const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon } = useSubscription()
 
 // Integração de estado com o layout original
 const customRadio = ref((route.query.plan as string) || 'enterprise')
@@ -143,6 +143,7 @@ onMounted(async () => {
   if (!plans.value.length) {
     await fetchPlans()
   }
+  await fetchMySubscription()
   // Sincronizar ciclo de faturamento se vier da query ou default
   if (route.query.billing) {
     billingCycles.value = (route.query.billing as string).toLowerCase()
@@ -173,7 +174,7 @@ const applyCoupon = async () => {
     appliedCoupon.value = result.data
   } else {
     appliedCoupon.value = null
-    couponError.value = result.error
+    couponError.value = result.error || 'Erro ao validar cupom'
   }
 }
 
@@ -360,7 +361,11 @@ const formatCurrency = (value: number) => {
           </BaseRadioGroup>
 
           <!-- Detalhes do Plano Selecionado (Igual estava antes) -->
-          <BaseCard rounded="md" class="p-6 ">
+          <BaseCard rounded="md" class="p-6 relative overflow-hidden">
+            <div v-if="currentSubscription?.plan.slug === selectedPlan?.slug"
+              class="absolute -right-10 top-5 rotate-45 bg-success-500 px-12 py-1 text-[10px] font-bold text-white shadow-lg z-10 font-sans">
+              Seu Plano Atual
+            </div>
             <div class="flex items-center gap-6 mb-6">
               <TairoLogo class="size-16 shrink-0" :class="planColor" />
               <div>
