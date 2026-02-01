@@ -9,6 +9,8 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'saved'])
 
 const { useCustomFetch } = useApi()
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 const toaster = useNuiToasts()
 const { open } = usePanels()
 // No import needed for auto-imported components, or use direct import if needed
@@ -28,6 +30,81 @@ const activeSidebarTab = ref('details')
 const checklistItems = ref<any[]>([])
 const isSavingChecklist = ref(false)
 const newChecklistTitle = ref('')
+const showPreviewModal = ref(false)
+const previewItem = ref<any>(null)
+const signedPreviewUrl = ref('')
+const isPreviewLoading = ref(false)
+
+async function openPreview(item: any) {
+  if (!item?.attachment?.previewUrl) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Documento sem URL de visualização',
+      icon: 'ph:warning-circle-fill'
+    })
+    return
+  }
+
+  previewItem.value = item
+  showPreviewModal.value = true
+  signedPreviewUrl.value = ''
+  isPreviewLoading.value = true
+
+  try {
+    // Obter token de forma robusta
+    const auth = useAuth()
+    let authToken: string | null = auth.token.value
+
+    // Fallback para cookie direto se useAuth falar
+    if (!authToken) {
+      authToken = useCookie<string>('auth_token').value
+    }
+
+    if (!authToken) {
+      throw new Error('Sessão expirada ou token não encontrado. Por favor, recarregue a página.')
+    }
+
+    const { data } = await useCustomFetch<any>(item.attachment.previewUrl, {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    })
+
+    if (data?.url) {
+      signedPreviewUrl.value = data.url
+    } else {
+      throw new Error('URL de pré-visualização não retornada')
+    }
+  } catch (error: any) {
+    console.error('Erro ao buscar URL de preview:', error)
+    toaster.add({
+      title: 'Erro de Visualização',
+      description: error.message || 'Não foi possível carregar o documento',
+      icon: 'ph:warning-circle-fill'
+    })
+  } finally {
+    isPreviewLoading.value = false
+  }
+}
+
+async function handleDownload(item: any) {
+  try {
+    const auth = useAuth()
+    let authToken = auth.token.value || useCookie<string>('auth_token').value
+
+    if (!authToken) throw new Error('Sessão expirada')
+
+    const { data } = await useCustomFetch<any>(item.previewUrl || item.attachment?.previewUrl, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    })
+
+    if (data?.url) {
+      window.open(data.url, '_blank')
+    }
+  } catch (error) {
+    console.error('Erro ao baixar:', error)
+  }
+}
 
 const smsTemplates = [
   {
@@ -91,8 +168,10 @@ const form = ref({
   dueDate: '',
   description: '',
   internalNotes: '',
-  assignedToId: '',
+  assignedToId: 'unassigned',
+  govPassword: '',
 })
+const showGovPassword = ref(false)
 
 // Team members for assignee dropdown
 const teamMembers = ref<any[]>([])
@@ -186,6 +265,7 @@ async function fetchDeclaration() {
         description: result.description || '',
         internalNotes: result.internalNotes || '',
         assignedToId: result.assignedTo?.id || 'unassigned',
+        govPassword: result.govPassword || '',
       }
 
       // Check for latest collection link
@@ -557,7 +637,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                    }}</p>
+                  }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -600,9 +680,18 @@ onMounted(() => {
                     <p class="text-xs font-medium truncate" :title="att.fileName">{{ att.fileName }}</p>
                     <p class="text-[10px] text-muted-400 capitalize">{{ att.category }}</p>
                   </div>
-                  <button class="opacity-0 group-hover:opacity-100 p-1 text-primary-500">
-                    <Icon name="lucide:download" class="size-4" />
-                  </button>
+                  <div class="flex gap-1 shrink-0">
+                    <button @click.stop="openPreview({ attachment: att, title: 'Anexo' })"
+                      class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-700 text-primary-500 transition-colors"
+                      title="Pré-visualizar">
+                      <Icon name="solar:eye-bold-duotone" class="size-4" />
+                    </button>
+                    <button @click.stop="handleDownload(att)"
+                      class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-700 text-muted-400 hover:text-primary-500 transition-colors"
+                      title="Download">
+                      <Icon name="lucide:download" class="size-4" />
+                    </button>
+                  </div>
                 </div>
               </BaseCard>
             </div>
@@ -639,7 +728,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                        }}</span>
+                      }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
@@ -744,6 +833,20 @@ onMounted(() => {
               <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
                 <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo de Entrega</label>
                 <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
+              </div>
+
+              <!-- Gov Password -->
+              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Senha GOV.br</label>
+                <div class="relative group">
+                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm"
+                    rounded="md" placeholder="Sua senha gov" class="pr-10" @blur="save" />
+                  <button type="button" @click="showGovPassword = !showGovPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors">
+                    <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
+                      class="size-4" />
+                  </button>
+                </div>
               </div>
 
               <!-- Declaration Type -->
@@ -933,7 +1036,11 @@ onMounted(() => {
                         <Icon name="lucide:file" class="size-3" />
                         <span class="truncate">{{ item.attachment.fileName }}</span>
                       </div>
-                      <div class="flex gap-1">
+                      <div class="flex gap-1 shrink-0">
+                        <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)"
+                          title="Pré-visualizar">
+                          <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                        </BaseButton>
                         <BaseButton color="success" size="icon-sm" @click="updateItemStatus(item.id, 'approved')"
                           title="Aprovar">
                           <Icon name="lucide:check" class="size-3.5" />
@@ -1047,6 +1154,97 @@ onMounted(() => {
             <BaseButton variant="primary" rounded="lg" @click="confirmChecklistUpload">
               <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" />
               Enviar e Vincular
+            </BaseButton>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+    <!-- Modal de Pré-visualização de Documento -->
+    <DialogRoot v-model:open="showPreviewModal">
+      <DialogPortal>
+        <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[110]" />
+        <DialogContent
+          class="fixed starting:opacity-0 starting:top-[45%] top-[50%] start-[50%] max-h-[95vh] w-[95vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-xl overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 shadow-2xl focus:outline-none z-[111] transition-discrete transition-all duration-300 ease-out flex flex-col">
+
+          <div
+            class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
+            <div class="flex items-center gap-3">
+              <div class="size-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
+                <Icon name="solar:file-bold-duotone" class="size-6" />
+              </div>
+              <div class="min-w-0">
+                <DialogTitle class="text-sm font-semibold text-muted-900 dark:text-white truncate">
+                  {{ previewItem?.attachment?.fileName || 'Visualizar Documento' }}
+                </DialogTitle>
+                <BaseText size="xs" class="text-muted-500">{{ previewItem?.title }}</BaseText>
+              </div>
+            </div>
+            <BaseButtonIcon @click="showPreviewModal = false" rounded="full" variant="ghost">
+              <Icon name="solar:close-circle-linear" class="size-6" />
+            </BaseButtonIcon>
+          </div>
+
+          <div
+            class="flex-1 overflow-auto bg-muted-100 dark:bg-muted-900 flex items-center justify-center p-4 min-h-[60vh]">
+            <!-- Loading State -->
+            <div v-if="isPreviewLoading" class="text-center py-20">
+              <Icon name="svg-spinners:ring-resize" class="size-12 text-primary-500 mb-4" />
+              <BaseParagraph size="sm" class="text-muted-500">Buscando documento...</BaseParagraph>
+            </div>
+
+            <template v-else-if="signedPreviewUrl">
+              <!-- PDF Viewer -->
+              <template v-if="previewItem?.attachment?.mimeType === 'application/pdf'">
+                <iframe :src="signedPreviewUrl"
+                  class="w-full h-full min-h-[75vh] rounded-lg border border-muted-200 dark:border-muted-800"></iframe>
+              </template>
+
+              <!-- Image Viewer -->
+              <template v-else-if="previewItem?.attachment?.mimeType?.startsWith('image/')">
+                <img :src="signedPreviewUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                  alt="Documento" />
+              </template>
+
+              <!-- Generic/Download -->
+              <template v-else>
+                <div class="text-center p-12">
+                  <div
+                    class="size-20 mx-auto mb-4 rounded-3xl bg-muted-200 dark:bg-muted-800 flex items-center justify-center">
+                    <Icon name="solar:document-bold-duotone" class="size-10 text-muted-400" />
+                  </div>
+                  <BaseHeading as="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-2">
+                    Pré-visualização indisponível
+                  </BaseHeading>
+                  <BaseParagraph size="sm" class="text-muted-500 mb-6">
+                    Este tipo de arquivo ({{ previewItem?.attachment?.mimeType }}) não pode ser visualizado no
+                    navegador.
+                  </BaseParagraph>
+                  <BaseButton as="a" :href="signedPreviewUrl" target="_blank" variant="primary">
+                    <Icon name="solar:download-bold" class="size-4 mr-2" />
+                    Abrir Arquivo / Baixar
+                  </BaseButton>
+                </div>
+              </template>
+            </template>
+
+            <!-- Error State -->
+            <div v-else class="text-center py-20">
+              <Icon name="solar:danger-bold" class="size-12 text-danger-500 mb-4" />
+              <BaseParagraph size="sm" class="text-muted-500">Falha ao carregar o documento.</BaseParagraph>
+              <BaseButton size="sm" variant="muted" class="mt-4" @click="openPreview(previewItem)">Tentar novamente
+              </BaseButton>
+            </div>
+          </div>
+
+          <div
+            class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+            <BaseButton color="danger" @click="updateItemStatus(previewItem.id, 'rejected'); showPreviewModal = false">
+              <Icon name="lucide:x" class="size-4 mr-2" />
+              Rejeitar
+            </BaseButton>
+            <BaseButton color="success" @click="updateItemStatus(previewItem.id, 'approved'); showPreviewModal = false">
+              <Icon name="lucide:check" class="size-4 mr-2" />
+              Aprovar Documento
             </BaseButton>
           </div>
         </DialogContent>
