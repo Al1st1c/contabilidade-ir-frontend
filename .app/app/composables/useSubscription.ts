@@ -170,6 +170,25 @@ export function useSubscription() {
     }
   }
 
+  const validateCoupon = async (code: string, amount?: number) => {
+    loading.value = true
+    error.value = null
+    try {
+      const query = amount ? `?code=${code}&amount=${amount}` : `?code=${code}`
+      const { data } = await useCustomFetch<any>(`/subscriptions/coupons/validate${query}`)
+      return { success: true, data }
+    } catch (err: any) {
+      if (err.statusCode === 404 || err.status === 404 || err.message?.includes('404')) {
+        error.value = 'Cupom não encontrado ou inválido'
+      } else {
+        error.value = err.data?.message || err.message || 'Erro ao validar cupom'
+      }
+      return { success: false, error: error.value }
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     plans,
     currentSubscription,
@@ -182,6 +201,7 @@ export function useSubscription() {
     selectFreePlan,
     getPaymentStatus,
     getPrepaidBalance,
-    purchaseCredits
+    purchaseCredits,
+    validateCoupon
   }
 }

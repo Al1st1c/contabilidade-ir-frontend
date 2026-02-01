@@ -7,7 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
-const { plans, loading: plansLoading, fetchPlans, subscribe } = useSubscription()
+const { plans, loading: plansLoading, fetchPlans, subscribe, validateCoupon } = useSubscription()
 
 // Integração de estado com o layout original
 const customRadio = ref((route.query.plan as string) || 'enterprise')
@@ -161,13 +161,39 @@ const currentCyclePrice = computed(() => {
 })
 
 const couponCode = ref('')
-const applyCoupon = () => {
-  if (couponCode.value.toUpperCase() === 'TAX10') {
-    alert('Cupom TAX10 aplicado! 10% de desconto ativado.')
+const appliedCoupon = ref<any>(null)
+const couponError = ref('')
+
+const applyCoupon = async () => {
+  if (!couponCode.value) return
+  couponError.value = ''
+
+  const result = await validateCoupon(couponCode.value, currentCyclePrice.value)
+  if (result.success) {
+    appliedCoupon.value = result.data
   } else {
-    alert('Cupom inválido.')
+    appliedCoupon.value = null
+    couponError.value = result.error
   }
 }
+
+const discountAmount = computed(() => {
+  if (!appliedCoupon.value) return 0
+
+  if (appliedCoupon.value.discountType === 'PERCENTAGE') {
+    return Math.round((currentCyclePrice.value * appliedCoupon.value.discountValue) / 100)
+  } else {
+    return appliedCoupon.value.discountValue
+  }
+})
+
+const finalTotal = computed(() => {
+  let total = currentCyclePrice.value - discountAmount.value
+  if (paymentMethod.value === 'PIX') {
+    total = total * 0.95
+  }
+  return Math.max(0, total)
+})
 
 const currentCycleLabel = computed(() => {
   switch (billingCycles.value) {
@@ -187,7 +213,7 @@ const handlePayment = async () => {
       planSlug: customRadio.value,
       billingPeriod: billingCycles.value.toUpperCase(),
       paymentMethod: paymentMethod.value,
-      coupon: couponCode.value
+      couponCode: appliedCoupon.value?.code || undefined
     }
 
     if (customRadio.value === 'custom') {
@@ -506,6 +532,12 @@ const formatCurrency = (value: number) => {
                       <TairoRadioCard value="monthly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
                         <BaseText size="xs" weight="bold">Mensal</BaseText>
                       </TairoRadioCard>
+                      <TairoRadioCard value="quarterly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                        <BaseText size="xs" weight="bold">Trimestral</BaseText>
+                      </TairoRadioCard>
+                      <TairoRadioCard value="semiannual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                        <BaseText size="xs" weight="bold">Semestral</BaseText>
+                      </TairoRadioCard>
                       <TairoRadioCard value="annual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
                         <BaseText size="xs" weight="bold">Anual</BaseText>
                       </TairoRadioCard>
@@ -590,9 +622,16 @@ const formatCurrency = (value: number) => {
                 <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-2 uppercase tracking-wider">Possui um
                   cupom?</BaseParagraph>
                 <div class="flex gap-2">
-                  <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10" />
-                  <BaseButton variant="muted" class="h-10 px-4" @click="applyCoupon">Aplicar</BaseButton>
+                  <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10"
+                    :disabled="!!appliedCoupon" />
+                  <BaseButton v-if="!appliedCoupon" variant="muted" class="h-10 px-4" @click="applyCoupon"
+                    :loading="plansLoading">Aplicar</BaseButton>
+                  <BaseButton v-else variant="muted" color="danger" class="h-10 px-4"
+                    @click="appliedCoupon = null; couponCode = ''">Remover</BaseButton>
                 </div>
+                <BaseText v-if="couponError" color="danger" size="xs" class="mt-1 block">{{ couponError }}</BaseText>
+                <BaseText v-if="appliedCoupon" color="success" size="xs" class="mt-1 block">Cupom aplicado com sucesso!
+                </BaseText>
               </div>
 
               <!-- Totais -->
@@ -602,15 +641,19 @@ const formatCurrency = (value: number) => {
                   <span class="text-muted-800 dark:text-white font-medium">{{ formatCurrency(currentCyclePrice)
                     }}</span>
                 </div>
+                <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
+                  <span class="font-sans italic">Cupom ({{ appliedCoupon.code }})</span>
+                  <span class="font-medium">- {{ formatCurrency(discountAmount) }}</span>
+                </div>
                 <div v-if="paymentMethod === 'PIX'" class="flex justify-between text-sm text-success-500">
                   <span class="font-sans italic">Desconto PIX (5%)</span>
-                  <span class="font-medium">- {{ formatCurrency(currentCyclePrice * 0.05) }}</span>
+                  <span class="font-medium">- {{ formatCurrency((currentCyclePrice - discountAmount) * 0.05) }}</span>
                 </div>
                 <div
                   class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2">
                   <BaseText size="lg" weight="bold" class="text-muted-800 dark:text-white">Total</BaseText>
                   <BaseText size="2xl" weight="bold" class="text-primary-500">
-                    {{ formatCurrency(paymentMethod === 'PIX' ? currentCyclePrice * 0.95 : currentCyclePrice) }}
+                    {{ formatCurrency(finalTotal) }}
                   </BaseText>
                 </div>
                 <BaseParagraph size="xs" class="text-muted-400 text-right font-sans">
