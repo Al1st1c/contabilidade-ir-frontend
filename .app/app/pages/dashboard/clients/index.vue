@@ -123,9 +123,7 @@ function formatCpf(cpf: string): string {
       </template>
 
       <div>
-        <div v-if="pending" class="flex items-center justify-center py-20">
-          <BaseSpinner size="lg" class="text-primary-500" />
-        </div>
+        <AppPageLoading v-if="pending" message="Carregando clientes..." />
 
         <div v-else-if="data?.data.length === 0">
           <BasePlaceholderPage title="Nenhum cliente encontrado"
@@ -231,7 +229,7 @@ function formatCpf(cpf: string): string {
               <TairoTableCell spaced>
                 <div class="flex items-center gap-2">
                   <span class="font-semibold text-sm text-muted-800 dark:text-muted-100">{{ item.declarationsCount
-                    }}</span>
+                  }}</span>
                   <span class="text-xs text-muted-500">enviadas</span>
                 </div>
               </TairoTableCell>

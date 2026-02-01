@@ -529,12 +529,9 @@ onMounted(() => {
     <!-- Content -->
     <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
       <!-- Loading State -->
-      <div v-if="isLoading" class="w-full p-8 space-y-6">
-        <BasePlaceload class="h-24 w-full rounded-xl" />
-        <div class="grid grid-cols-3 gap-6">
-          <BasePlaceload class="h-96 w-full col-span-2 rounded-xl" />
-          <BasePlaceload class="h-96 w-full rounded-xl" />
-        </div>
+      <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[400px]">
+        <BaseLoader class="mb-4 size-10 text-primary-500" />
+        <BaseParagraph size="sm" class="text-muted-500">Carregando detalhes do IR...</BaseParagraph>
       </div>
 
       <div v-else-if="declaration" class="w-full flex flex-col md:flex-row h-full">
@@ -560,7 +557,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                    }}</p>
+                  }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -642,7 +639,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                        }}</span>
+                      }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>

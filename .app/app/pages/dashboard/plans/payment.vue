@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const toaster = useNuiToasts()
 const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon } = useSubscription()
 
 // Integração de estado com o layout original
@@ -77,6 +78,7 @@ const selectedPlan = computed(() => {
   if (customRadio.value === 'custom') {
     const monthlyPrice = calculateCustomPrice()
     return {
+      slug: 'custom',
       name: 'Personalizado',
       description: 'Configuração sob medida para seu escritório.',
       pricing: {
@@ -136,10 +138,13 @@ const cardInfo = ref({
   cvc: '',
 })
 
+const isInitialLoading = ref(true)
 const isSubmitting = ref(false)
+const isCouponLoading = ref(false)
 const paymentResult = ref<any>(null)
 
 onMounted(async () => {
+  isInitialLoading.value = true
   if (!plans.value.length) {
     await fetchPlans()
   }
@@ -148,6 +153,7 @@ onMounted(async () => {
   if (route.query.billing) {
     billingCycles.value = (route.query.billing as string).toLowerCase()
   }
+  isInitialLoading.value = false
 })
 
 const currentCyclePrice = computed(() => {
@@ -168,6 +174,7 @@ const couponError = ref('')
 const applyCoupon = async () => {
   if (!couponCode.value) return
   couponError.value = ''
+  isCouponLoading.value = true
 
   const result = await validateCoupon(couponCode.value, currentCyclePrice.value)
   if (result.success) {
@@ -176,6 +183,7 @@ const applyCoupon = async () => {
     appliedCoupon.value = null
     couponError.value = result.error || 'Erro ao validar cupom'
   }
+  isCouponLoading.value = false
 }
 
 const discountAmount = computed(() => {
@@ -230,7 +238,11 @@ const handlePayment = async () => {
     if (result.success) {
       paymentResult.value = result.data
     } else {
-      alert(result.error)
+      toaster.add({
+        title: 'Erro no Pagamento',
+        description: result.error || 'Erro ao processar pagamento',
+        icon: 'solar:danger-triangle-bold-duotone',
+      })
     }
   } finally {
     isSubmitting.value = false
@@ -248,52 +260,8 @@ const formatCurrency = (value: number) => {
 
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20">
-    <!-- Overlay de Carregamento -->
-    <div v-if="plansLoading" class="flex flex-col items-center justify-center py-20">
-      <BaseLoader class="mb-4 size-10 text-primary-500" />
-      <BaseText>Carregando detalhes do plano...</BaseText>
-    </div>
-
-    <!-- Tela de Resultado -->
-    <div v-else-if="paymentResult" class="max-w-2xl mx-auto py-10">
-      <BaseCard rounded="md" class="p-8 text-center">
-        <div v-if="paymentMethod === 'PIX'">
-          <div class="flex justify-center mb-6">
-            <div class="p-4 bg-white rounded-xl shadow-inner border border-muted-200 dark:border-muted-800">
-              <img
-                :src="paymentResult.paymentData?.pixQrCode || 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=MOCK_PIX_PAYMENT'"
-                class="size-48">
-            </div>
-          </div>
-          <BaseHeading size="xl" weight="bold">Aguardando Pagamento PIX</BaseHeading>
-          <BaseParagraph class="mb-6 text-muted-500">
-            Escaneie o código acima ou copie a chave abaixo para pagar no seu banco.
-          </BaseParagraph>
-          <div class="flex items-center gap-2 p-3 bg-muted-100 dark:bg-muted-800 rounded-lg my-6">
-            <code class="text-xs break-all flex-1 text-left">{{ paymentResult.paymentData?.pixCopyPaste }}</code>
-            <BaseButton size="sm" @click="copyToClipboard(paymentResult.paymentData?.pixCopyPaste)">Copiar</BaseButton>
-          </div>
-        </div>
-        <div v-else-if="paymentMethod === 'BOLETO'">
-          <Icon name="solar:bill-list-bold-duotone" class="size-20 text-primary-500 mx-auto mb-4" />
-          <BaseHeading size="xl" weight="bold">Boleto Gerado!</BaseHeading>
-          <BaseParagraph class="mb-6 text-muted-500 text-sm">
-            Seu boleto foi gerado e está pronto para pagamento.
-          </BaseParagraph>
-          <BaseButton :to="paymentResult.paymentData?.boletoUrl" target="_blank" variant="primary"
-            class="w-full mt-6 h-12">Visualizar Boleto</BaseButton>
-        </div>
-        <div v-else>
-          <Icon name="solar:verified-check-bold-duotone" class="size-20 text-success-500 mx-auto mb-4" />
-          <BaseHeading size="xl" weight="bold">Pagamento Confirmado!</BaseHeading>
-          <BaseParagraph class="mb-6 text-muted-500 text-sm">
-            Sua assinatura do plano {{ selectedPlan?.name }} foi ativada com sucesso.
-          </BaseParagraph>
-          <BaseButton to="/dashboard" variant="primary" class="w-full mt-6 h-12">Ir para Dashboard</BaseButton>
-        </div>
-        <BaseButton @click="paymentResult = null" variant="ghost" class="mt-4">Voltar</BaseButton>
-      </BaseCard>
-    </div>
+    <!-- Overlay de Carregamento Inicial -->
+    <AppPageLoading v-if="isInitialLoading" min-height="60vh" message="Preparando seu checkout seguro..." />
 
     <form v-else @submit.prevent="handlePayment" class="mx-auto max-w-7xl">
       <!-- Header -->
@@ -527,151 +495,237 @@ const formatCurrency = (value: number) => {
                 <Icon name="solar:bill-list-bold-duotone" class="size-6 text-primary-500" />
               </BaseHeading>
 
-              <!-- Opções de Cobrança (Integradas no resumo) -->
-              <div class="space-y-6 mb-8 pb-8 border-b border-muted-100 dark:border-muted-800">
-                <div class="space-y-4">
-                  <div>
-                    <BaseHeading as="h4" size="xs" weight="semibold"
-                      class="mb-3 uppercase tracking-wider text-muted-500 text-center">Ciclo de Cobrança</BaseHeading>
-                    <BaseRadioGroup v-model="billingCycles" class="grid grid-cols-2 gap-2">
-                      <TairoRadioCard value="monthly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
-                        <BaseText size="xs" weight="bold">Mensal</BaseText>
-                      </TairoRadioCard>
-                      <TairoRadioCard value="quarterly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
-                        <BaseText size="xs" weight="bold">Trimestral</BaseText>
-                      </TairoRadioCard>
-                      <TairoRadioCard value="semiannual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
-                        <BaseText size="xs" weight="bold">Semestral</BaseText>
-                      </TairoRadioCard>
-                      <TairoRadioCard value="annual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
-                        <BaseText size="xs" weight="bold">Anual</BaseText>
-                      </TairoRadioCard>
-                    </BaseRadioGroup>
-                  </div>
+              <template v-if="!paymentResult">
+                <!-- Opções de Cobrança (Integradas no resumo) -->
+                <div class="space-y-6 mb-8 pb-8 border-b border-muted-100 dark:border-muted-800">
+                  <div class="space-y-4">
+                    <div>
+                      <BaseHeading as="h4" size="xs" weight="semibold"
+                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]">
+                        Ciclo de Cobrança</BaseHeading>
+                      <BaseRadioGroup v-model="billingCycles" class="grid grid-cols-2 gap-2">
+                        <TairoRadioCard value="monthly" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          <BaseText size="xs" weight="bold" class="font-sans">Mensal</BaseText>
+                        </TairoRadioCard>
+                        <TairoRadioCard value="quarterly"
+                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          <BaseText size="xs" weight="bold" class="font-sans">Trimestral</BaseText>
+                        </TairoRadioCard>
+                        <TairoRadioCard value="semiannual"
+                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          <BaseText size="xs" weight="bold" class="font-sans">Semestral</BaseText>
+                        </TairoRadioCard>
+                        <TairoRadioCard value="annual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          <BaseText size="xs" weight="bold" class="font-sans">Anual</BaseText>
+                        </TairoRadioCard>
+                      </BaseRadioGroup>
+                    </div>
 
-                  <div>
-                    <BaseHeading as="h4" size="xs" weight="semibold"
-                      class="mb-3 uppercase tracking-wider text-muted-500 text-center">Forma de Pagamento</BaseHeading>
-                    <BaseRadioGroup v-model="paymentMethod" class="grid grid-cols-2 gap-2">
-                      <TairoRadioCard value="CREDIT_CARD"
-                        class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!">
-                        <Icon name="solar:card-2-bold-duotone"
-                          class="size-6 text-muted-400 group-data-[state=checked]:text-primary-500" />
-                        <BaseText size="xs" weight="bold">Cartão</BaseText>
-                      </TairoRadioCard>
-                      <TairoRadioCard value="PIX"
-                        class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-success-500! relative overflow-hidden">
-                        <div
-                          class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[8px] font-bold text-white uppercase">
-                          5% OFF</div>
-                        <img src="/img/custom/pix-logo.png"
-                          class="h-6 object-contain grayscale group-data-[state=checked]:grayscale-0" alt="PIX" />
-                        <BaseText size="xs" weight="bold">PIX</BaseText>
-                      </TairoRadioCard>
-                    </BaseRadioGroup>
+                    <div>
+                      <BaseHeading as="h4" size="xs" weight="semibold"
+                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]">
+                        Forma de Pagamento</BaseHeading>
+                      <BaseRadioGroup v-model="paymentMethod" class="grid grid-cols-2 gap-2">
+                        <TairoRadioCard value="CREDIT_CARD"
+                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!">
+                          <Icon name="solar:card-2-bold-duotone"
+                            class="size-6 text-muted-400 group-data-[state=checked]:text-primary-500" />
+                          <BaseText size="xs" weight="bold" class="font-sans">Cartão</BaseText>
+                        </TairoRadioCard>
+                        <TairoRadioCard value="PIX"
+                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-success-500! relative overflow-hidden">
+                          <div
+                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[8px] font-bold text-white uppercase">
+                            5% OFF</div>
+                          <img src="/img/custom/pix-logo.png"
+                            class="h-6 object-contain grayscale group-data-[state=checked]:grayscale-0" alt="PIX" />
+                          <BaseText size="xs" weight="bold" class="font-sans">PIX</BaseText>
+                        </TairoRadioCard>
+                      </BaseRadioGroup>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Itens do Plano -->
-              <div class="space-y-4 mb-8">
-                <div class="flex justify-between items-start">
-                  <div>
-                    <BaseText weight="semibold" class="text-muted-800 dark:text-white">{{ selectedPlan?.name }}
-                    </BaseText>
-                    <BaseParagraph size="xs" class="text-muted-400">Assinatura {{ currentCycleLabel }}</BaseParagraph>
+                <!-- Itens do Plano -->
+                <div class="space-y-4 mb-8">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <BaseText weight="semibold" class="text-muted-800 dark:text-white font-sans">{{
+                        selectedPlan?.name }}
+                      </BaseText>
+                      <BaseParagraph size="xs" class="text-muted-400 font-sans">Assinatura {{ currentCycleLabel
+                      }}</BaseParagraph>
+                    </div>
+                    <BaseText weight="bold" class="font-sans">{{ formatCurrency(currentCyclePrice) }}</BaseText>
                   </div>
-                  <BaseText weight="bold">{{ formatCurrency(currentCyclePrice) }}</BaseText>
-                </div>
 
-                <div class="pt-4 border-t border-muted-100 dark:border-muted-800 space-y-3 font-sans text-xs">
-                  <div class="flex items-center justify-between text-muted-500">
-                    <span class="flex items-center gap-2">
-                      <Icon name="solar:users-group-rounded-linear" class="size-4" />
-                      Usuários ativos
-                    </span>
-                    <span class="font-medium text-muted-800 dark:text-white">{{ selectedPlan?.limits?.employees
+                  <div class="pt-4 border-t border-muted-100 dark:border-muted-800 space-y-3 font-sans text-xs">
+                    <div class="flex items-center justify-between text-muted-500">
+                      <span class="flex items-center gap-2">
+                        <Icon name="solar:users-group-rounded-linear" class="size-4" />
+                        Usuários ativos
+                      </span>
+                      <span class="font-medium text-muted-800 dark:text-white">{{
+                        selectedPlan?.limits?.employees
                       }}</span>
-                  </div>
-                  <div class="flex items-center justify-between text-muted-500">
-                    <span class="flex items-center gap-2">
-                      <Icon name="solar:database-linear" class="size-4" />
-                      Armazenamento Drive
-                    </span>
-                    <span class="font-medium text-muted-800 dark:text-white">{{
-                      Math.round((selectedPlan?.limits?.storage_mb || 0) / 1024) }} GB</span>
-                  </div>
-                  <div class="flex items-center justify-between text-muted-500">
-                    <span class="flex items-center gap-2">
-                      <Icon name="solar:document-bold-duotone" class="size-4" />
-                      Franquia de IR
-                    </span>
-                    <span class="font-medium text-muted-800 dark:text-white">{{
-                      selectedPlan?.limits?.tax_declarations_yearly ||
-                      0 }} /ano</span>
-                  </div>
-                  <div class="flex items-center justify-between text-muted-500">
-                    <span class="flex items-center gap-2">
-                      <Icon name="solar:letter-bold-duotone" class="size-4" />
-                      Franquia de SMS
-                    </span>
-                    <span class="font-medium text-muted-800 dark:text-white">{{ selectedPlan?.limits?.sms_monthly || 0
+                    </div>
+                    <div class="flex items-center justify-between text-muted-500">
+                      <span class="flex items-center gap-2">
+                        <Icon name="solar:database-linear" class="size-4" />
+                        Armazenamento Drive
+                      </span>
+                      <span class="font-medium text-muted-800 dark:text-white">{{
+                        Math.round((selectedPlan?.limits?.storage_mb || 0) / 1024) }} GB</span>
+                    </div>
+                    <div class="flex items-center justify-between text-muted-500">
+                      <span class="flex items-center gap-2">
+                        <Icon name="solar:document-bold-duotone" class="size-4" />
+                        Franquia de IR
+                      </span>
+                      <span class="font-medium text-muted-800 dark:text-white">{{
+                        selectedPlan?.limits?.tax_declarations_yearly ||
+                        0 }} /ano</span>
+                    </div>
+                    <div class="flex items-center justify-between text-muted-500">
+                      <span class="flex items-center gap-2">
+                        <Icon name="solar:letter-bold-duotone" class="size-4" />
+                        Franquia de SMS
+                      </span>
+                      <span class="font-medium text-muted-800 dark:text-white">{{
+                        selectedPlan?.limits?.sms_monthly || 0
                       }}
-                      /mês</span>
+                        /mês</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Cupom de Desconto -->
-              <div class="mb-8 pt-6 border-t border-muted-100 dark:border-muted-800">
-                <BaseParagraph size="xs" weight="medium" class="text-muted-500 mb-2 uppercase tracking-wider">Possui um
-                  cupom?</BaseParagraph>
-                <div class="flex gap-2">
-                  <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10"
-                    :disabled="!!appliedCoupon" />
-                  <BaseButton v-if="!appliedCoupon" variant="muted" class="h-10 px-4" @click="applyCoupon"
-                    :loading="plansLoading">Aplicar</BaseButton>
-                  <BaseButton v-else variant="muted" color="danger" class="h-10 px-4"
-                    @click="appliedCoupon = null; couponCode = ''">Remover</BaseButton>
-                </div>
-                <BaseText v-if="couponError" color="danger" size="xs" class="mt-1 block">{{ couponError }}</BaseText>
-                <BaseText v-if="appliedCoupon" color="success" size="xs" class="mt-1 block">Cupom aplicado com sucesso!
-                </BaseText>
-              </div>
-
-              <!-- Totais -->
-              <div class="space-y-2 bg-muted-50 dark:bg-muted-900 p-4 rounded-lg">
-                <div class="flex justify-between text-sm">
-                  <span class="text-muted-500 font-sans">Subtotal</span>
-                  <span class="text-muted-800 dark:text-white font-medium">{{ formatCurrency(currentCyclePrice)
-                    }}</span>
-                </div>
-                <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
-                  <span class="font-sans italic">Cupom ({{ appliedCoupon.code }})</span>
-                  <span class="font-medium">- {{ formatCurrency(discountAmount) }}</span>
-                </div>
-                <div v-if="paymentMethod === 'PIX'" class="flex justify-between text-sm text-success-500">
-                  <span class="font-sans italic">Desconto PIX (5%)</span>
-                  <span class="font-medium">- {{ formatCurrency((currentCyclePrice - discountAmount) * 0.05) }}</span>
-                </div>
-                <div
-                  class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2">
-                  <BaseText size="lg" weight="bold" class="text-muted-800 dark:text-white">Total</BaseText>
-                  <BaseText size="2xl" weight="bold" class="text-primary-500">
-                    {{ formatCurrency(finalTotal) }}
+                <!-- Cupom de Desconto -->
+                <div class="mb-8 pt-6 border-t border-muted-100 dark:border-muted-800">
+                  <BaseParagraph size="xs" weight="medium"
+                    class="text-muted-500 mb-2 uppercase tracking-wider font-sans">Possui um
+                    cupom?</BaseParagraph>
+                  <div class="flex gap-2">
+                    <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10"
+                      :disabled="!!appliedCoupon" />
+                    <BaseButton v-if="!appliedCoupon" variant="muted" class="h-10 px-4" @click="applyCoupon"
+                      :loading="isCouponLoading">Aplicar</BaseButton>
+                    <BaseButton v-else variant="muted" color="danger" class="h-10 px-4"
+                      @click="appliedCoupon = null; couponCode = ''">Remover</BaseButton>
+                  </div>
+                  <BaseText v-if="couponError" color="danger" size="xs" class="mt-1 block font-sans text-[10px]">{{
+                    couponError }}</BaseText>
+                  <BaseText v-if="appliedCoupon" color="success" size="xs" class="mt-1 block font-sans text-[10px]">
+                    Cupom aplicado com sucesso!
                   </BaseText>
                 </div>
-                <BaseParagraph size="xs" class="text-muted-400 text-right font-sans">
-                  Cobrança única via {{ paymentMethod === 'CREDIT_CARD' ? 'Cartão' : paymentMethod }}
-                </BaseParagraph>
+
+                <!-- Totais -->
+                <div class="space-y-2 bg-muted-50 dark:bg-muted-900 p-4 rounded-lg">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-muted-500 font-sans">Subtotal</span>
+                    <span class="text-muted-800 dark:text-white font-medium font-sans">{{
+                      formatCurrency(currentCyclePrice)
+                    }}</span>
+                  </div>
+                  <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
+                    <span class="font-sans italic">Cupom ({{ appliedCoupon.code }})</span>
+                    <span class="font-medium font-sans">- {{ formatCurrency(discountAmount) }}</span>
+                  </div>
+                  <div v-if="paymentMethod === 'PIX'" class="flex justify-between text-sm text-success-500">
+                    <span class="font-sans italic">Desconto PIX (5%)</span>
+                    <span class="font-medium font-sans">- {{ formatCurrency((currentCyclePrice - discountAmount)
+                      * 0.05) }}</span>
+                  </div>
+                  <div
+                    class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2">
+                    <BaseText size="lg" weight="bold" class="text-muted-800 dark:text-white font-sans">Total
+                    </BaseText>
+                    <BaseText size="2xl" weight="bold" class="text-primary-500 font-sans">
+                      {{ formatCurrency(finalTotal) }}
+                    </BaseText>
+                  </div>
+                  <BaseParagraph size="xs" class="text-muted-400 text-right font-sans italic opacity-70">
+                    Cobrança única via {{ paymentMethod === 'CREDIT_CARD' ? 'Cartão' : paymentMethod }}
+                  </BaseParagraph>
+                </div>
+
+                <!-- Botão Final (Sempre desabilitado se já pagou) -->
+                <BaseButton
+                  v-if="!paymentResult || (paymentMethod !== 'PIX' && paymentMethod !== 'BOLETO' && paymentResult.status !== 'PAID')"
+                  type="submit" variant="primary" color="primary"
+                  class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans"
+                  :loading="isSubmitting">
+                  Finalizar Assinatura
+                </BaseButton>
+              </template>
+
+              <!-- Área de Resultado (Integrada no lugar do cartão de totais quando houver resultado) -->
+              <div v-if="paymentResult" class="mt-8 space-y-6 animate-in fade-in slide-in-from-top-4">
+
+                <!-- Caso PIX -->
+                <div v-if="paymentMethod === 'PIX'"
+                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center">
+                  <BaseHeading as="h4" size="md" weight="bold" class="mb-4 text-success-600 font-sans">
+                    Aguardando
+                    Pagamento PIX
+                  </BaseHeading>
+
+                  <div class="flex justify-center mb-6 p-4 bg-white rounded-lg shadow-inner border border-muted-200">
+                    <img :src="paymentResult.paymentData?.qr_code_url || '/img/custom/pix-logo.png'"
+                      class="size-48 object-contain" alt="QR Code PIX" />
+                  </div>
+
+                  <BaseParagraph size="xs" class="text-muted-500 mb-4 font-sans leading-relaxed">
+                    Escaneie o código acima com o app do seu banco ou copie a chave abaixo.
+                  </BaseParagraph>
+
+                  <div class="flex gap-2 mb-4">
+                    <BaseInput :model-value="paymentResult.paymentData?.qr_code" readonly
+                      class="flex-1 text-[10px] h-10 font-mono" />
+                    <BaseButton color="success" class="h-10 px-4"
+                      @click="copyToClipboard(paymentResult.paymentData?.qr_code)">
+                      <Icon name="solar:copy-bold-duotone" class="size-4" />
+                    </BaseButton>
+                  </div>
+
+                  <div class="flex items-center justify-center gap-2 text-success-600">
+                    <BaseLoader class="size-4" />
+                    <BaseText size="xs" weight="medium" class="font-sans">Aguardando confirmação...</BaseText>
+                  </div>
+                </div>
+
+                <!-- Caso Boleto -->
+                <div v-else-if="paymentMethod === 'BOLETO'"
+                  class="p-6 bg-primary-500/5 border-2 border-dashed border-primary-500/20 rounded-xl text-center">
+                  <Icon name="solar:bill-list-bold-duotone" class="size-12 text-primary-500 mx-auto mb-2" />
+                  <BaseHeading as="h4" size="md" weight="bold" class="mb-2 font-sans">Boleto pronto!
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500 mb-6 font-sans">
+                    Uma cópia foi enviada ao seu e-mail.
+                  </BaseParagraph>
+                  <BaseButton :to="paymentResult.paymentData?.pdf_url" target="_blank" variant="primary" class="w-full">
+                    Visualizar Boleto
+                  </BaseButton>
+                </div>
+
+                <!-- Caso Confirmado (Cartão) -->
+                <div v-else-if="paymentResult.status === 'PAID' || paymentMethod === 'CREDIT_CARD'"
+                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center">
+                  <Icon name="solar:verified-check-bold-duotone" class="size-16 text-success-500 mx-auto mb-2" />
+                  <BaseHeading as="h4" size="md" weight="bold" class="mb-2 text-success-600 font-sans">
+                    Assinatura Ativa!
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500 mb-6 font-sans">
+                    Seja bem-vindo ao plano {{ selectedPlan?.name }}.
+                  </BaseParagraph>
+                  <BaseButton to="/dashboard" variant="primary" color="success" class="w-full">
+                    Ir para Dashboard
+                  </BaseButton>
+                </div>
+
               </div>
 
-              <!-- Botão Final -->
-              <BaseButton type="submit" variant="primary" color="primary"
-                class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold" :loading="isSubmitting">
-                Finalizar Assinatura
-              </BaseButton>
-              <BaseParagraph size="xs" class="text-muted-400 text-center mt-4">
+              <BaseParagraph v-if="!paymentResult" size="xs" class="text-muted-400 text-center mt-4">
                 Ao confirmar, você concorda com nossos <NuxtLink class="underline">Termos de Uso</NuxtLink>.
               </BaseParagraph>
             </BaseCard>

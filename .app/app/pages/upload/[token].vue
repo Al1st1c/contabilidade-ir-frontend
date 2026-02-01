@@ -102,18 +102,9 @@ onMounted(() => {
   <div class="px-4 md:px-6 lg:px-8 py-6 min-h-screen bg-muted-100 dark:bg-muted-900 font-sans">
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="grid grid-cols-12 gap-6 animate-pulse">
-      <div class="col-span-12">
-        <BasePlaceload class="h-32 w-full rounded-md" />
-      </div>
-      <div class="col-span-12 lg:col-span-8 space-y-6">
-        <BasePlaceload class="h-64 w-full rounded-md" />
-        <BasePlaceload class="h-48 w-full rounded-md" />
-      </div>
-      <div class="col-span-12 lg:col-span-4 space-y-6">
-        <BasePlaceload class="h-48 w-full rounded-md" />
-        <BasePlaceload class="h-48 w-full rounded-md" />
-      </div>
+    <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-[60vh]">
+      <BaseLoader class="mb-4 size-12 text-primary-500" />
+      <BaseParagraph class="text-muted-500 font-medium">Carregando seus documentos...</BaseParagraph>
     </div>
 
     <!-- Error State -->

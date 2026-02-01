@@ -466,13 +466,26 @@ const filteredAlerts = computed(() => {
 })
 
 const rookies = computed(() => {
-  if (teamMembers.value.length === 0) return []
-  return teamMembers.value.slice(0, 3).map(m => ({
-    name: m.name,
-    role: m.role?.name || 'Membro',
-    avatar: m.photo || `/img/avatars/${Math.floor(Math.random() * 20) + 1}.svg`,
+  // Always include the current user (connected admin)
+  const currentUser = {
+    name: user.value?.name,
+    role: user.value?.role?.name || 'Admin',
+    avatar: user.value?.photo,
     stack: '/img/stacks/js.svg'
-  }))
+  }
+
+  // Get other members, filtering out the current user to avoid duplicates
+  const others = teamMembers.value
+    .filter(m => m.id !== user.value?.id)
+    .slice(0, 2) // Take up to 2 others to fill 3 slots total
+    .map(m => ({
+      name: m.name,
+      role: m.role?.name || 'Membro',
+      avatar: m.photo || `/img/avatars/${Math.floor(Math.random() * 20) + 1}.svg`,
+      stack: '/img/stacks/js.svg'
+    }))
+
+  return [currentUser, ...others]
 })
 
 function handleNextAction() {
@@ -515,25 +528,8 @@ const filteredMembers = computed(() => {
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20">
     <!-- Loading State (Skeleton) -->
-    <div v-if="isLoading" class="grid grid-cols-12 gap-4 animate-pulse">
-      <div class="col-span-12">
-        <BasePlaceload class="h-32 w-full rounded-2xl" />
-      </div>
-      <div class="col-span-12 lg:col-span-8 space-y-4">
-        <div class="grid grid-cols-3 gap-4">
-          <BasePlaceload class="h-32 w-full rounded-2xl" />
-          <BasePlaceload class="h-32 w-full rounded-2xl" />
-          <BasePlaceload class="h-32 w-full rounded-2xl" />
-        </div>
-        <BasePlaceload class="h-64 w-full rounded-2xl" />
-        <BasePlaceload class="h-80 w-full rounded-2xl" />
-      </div>
-      <div class="col-span-12 lg:col-span-4 space-y-4">
-        <BasePlaceload class="h-48 w-full rounded-2xl" />
-        <BasePlaceload class="h-64 w-full rounded-2xl" />
-        <BasePlaceload class="h-64 w-full rounded-2xl" />
-      </div>
-    </div>
+    <!-- Loading State -->
+    <AppPageLoading v-if="isLoading" message="Preparando seu dashboard..." />
 
     <!-- Grid -->
     <div v-else class="grid grid-cols-12 gap-4">

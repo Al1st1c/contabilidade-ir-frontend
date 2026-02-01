@@ -203,7 +203,7 @@ onMounted(() => {
       <div class="dark:bg-muted-800 relative mx-auto w-full max-w-md rounded-2xl bg-white p-8">
         <!-- Loading State -->
         <div v-if="step === 'loading'" class="flex flex-col items-center justify-center py-12">
-          <div class="border-primary-500 mb-4 size-12 animate-spin rounded-full border-4 border-t-transparent"></div>
+          <BaseLoader class="mb-4 size-12 text-primary-500" />
           <BaseParagraph class="text-muted-500">Validando seu convite...</BaseParagraph>
         </div>
 

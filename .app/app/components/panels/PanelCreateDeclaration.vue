@@ -271,8 +271,14 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
           </p>
         </BaseField>
 
+        <!-- Loading State for Search -->
+        <div v-if="isLoadingClients" class="flex flex-col items-center justify-center py-6">
+          <BaseLoader class="mb-2 size-8 text-primary-500" />
+          <BaseParagraph size="xs" class="text-muted-400">Buscando clientes...</BaseParagraph>
+        </div>
+
         <!-- Search Results -->
-        <div v-if="searchResults.length > 0" class="space-y-2">
+        <div v-if="searchResults.length > 0 && !isLoadingClients" class="space-y-2">
           <BaseParagraph size="xs" class="text-muted-500 uppercase tracking-wider font-medium">Resultados
           </BaseParagraph>
           <div class="space-y-2">

@@ -494,12 +494,7 @@ watch(searchTerms, () => {
 
                     <div class="col-span-12 lg:col-span-8 xl:col-span-9">
                       <!-- Loading -->
-                      <div v-if="isLoading" class="flex items-center justify-center py-20">
-                        <div class="text-center">
-                          <Icon name="svg-spinners:blocks-shuffle-3" class="size-12 text-primary-500 mx-auto mb-4" />
-                          <BaseText size="sm" class="text-muted-400">Carregando...</BaseText>
-                        </div>
-                      </div>
+                      <AppPageLoading v-if="isLoading" message="Carregando arquivos..." />
 
                       <!-- Empty filtered results -->
                       <div v-else-if="filteredResults.length === 0" class="py-20">

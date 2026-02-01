@@ -97,17 +97,7 @@ onMounted(fetchTenant)
 <template>
   <div class="pb-24">
     <!-- Skeleton loading -->
-    <div v-if="isLoading" class="space-y-12">
-      <div v-for="i in 3" :key="i" class="grid grid-cols-12 gap-8">
-        <div class="col-span-12 md:col-span-4">
-          <BasePlaceload class="h-6 w-32 mb-2" />
-          <BasePlaceload class="h-4 w-48" />
-        </div>
-        <div class="col-span-12 md:col-span-8">
-          <BasePlaceload class="h-64 w-full rounded-2xl" />
-        </div>
-      </div>
-    </div>
+    <AppPageLoading v-if="isLoading" message="Carregando dados da conta..." />
 
     <form v-else @submit.prevent="saveSettings" class="space-y-20">
       <!-- Section: Basic Info -->

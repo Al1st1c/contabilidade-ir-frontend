@@ -57,8 +57,15 @@ export function useSubscription() {
     loading.value = true
     error.value = null
     try {
-      const { data } = await useCustomFetch<Plan[]>('/subscriptions/plans')
-      plans.value = data
+      const { data } = await useCustomFetch<any>('/subscriptions/plans')
+      if (Array.isArray(data)) {
+        plans.value = data
+      } else if (data && Array.isArray(data.data)) {
+        plans.value = data.data
+      } else {
+        plans.value = []
+        console.error('Formato de resposta de planos inválido:', data)
+      }
     } catch (err: any) {
       error.value = err.message || 'Erro ao carregar planos'
     } finally {
@@ -70,8 +77,12 @@ export function useSubscription() {
     loading.value = true
     error.value = null
     try {
-      const { data } = await useCustomFetch<Subscription>('/subscriptions/my-subscription')
-      currentSubscription.value = data
+      const { data } = await useCustomFetch<any>('/subscriptions/my-subscription')
+      if (data && data.data) {
+        currentSubscription.value = data.data
+      } else {
+        currentSubscription.value = data
+      }
     } catch (err: any) {
       error.value = err.message || 'Erro ao carregar sua assinatura'
     } finally {
@@ -113,7 +124,7 @@ export function useSubscription() {
       })
       return { success: true, data }
     } catch (err: any) {
-      error.value = err.message || 'Erro ao processar assinatura'
+      error.value = err.data?.message || err.message || 'Erro ao processar assinatura'
       return { success: false, error: error.value }
     } finally {
       loading.value = false

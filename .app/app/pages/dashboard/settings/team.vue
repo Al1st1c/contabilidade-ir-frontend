@@ -142,12 +142,8 @@ function openAddMemberPanel() {
     </div>
 
     <!-- Loading -->
-    <div v-if="pending" class="flex items-center justify-center py-20">
-      <div class="text-center">
-        <Icon name="svg-spinners:blocks-shuffle-3" class="size-12 text-primary-500 mx-auto mb-4" />
-        <BaseText size="sm" class="text-muted-400">Carregando membros...</BaseText>
-      </div>
-    </div>
+    <!-- Loading -->
+    <AppPageLoading v-if="pending" message="Carregando membros..." />
 
     <!-- Empty State -->
     <div v-else-if="!data?.data?.length" class="py-10">

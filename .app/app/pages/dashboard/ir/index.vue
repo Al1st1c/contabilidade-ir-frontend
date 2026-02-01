@@ -588,15 +588,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 
         <!-- Fallback for SSR -->
         <template #fallback>
-          <div class="flex gap-6 pb-8">
-            <div v-for="i in 6" :key="i" class="w-80 shrink-0 animate-pulse">
-              <div class="h-8 w-32 bg-muted-200 dark:bg-muted-800 rounded-lg mb-4" />
-              <div class="space-y-3 bg-muted-100/50 dark:bg-muted-900/30 rounded-xl p-3 min-h-[400px]">
-                <div class="h-32 bg-muted-200/50 dark:bg-muted-800/50 rounded-xl" />
-                <div class="h-32 bg-muted-200/50 dark:bg-muted-800/50 rounded-xl" />
-              </div>
-            </div>
-          </div>
+          <AppPageLoading message="Buscando declarações..." />
         </template>
       </ClientOnly>
     </div>

@@ -62,9 +62,9 @@ const statusLabels: Record<string, string> = {
 
     <!-- Content -->
     <div class="nui-slimscroll h-[calc(100dvh-80px)] overflow-y-auto p-8">
-      <div v-if="isLoading" class="space-y-6">
-        <BasePlaceload class="h-24 w-full rounded-xl" />
-        <BasePlaceload class="h-64 w-full rounded-xl" />
+      <div v-if="isLoading" class="flex flex-col items-center justify-center h-[calc(100dvh-200px)]">
+        <BaseLoader class="mb-4 size-10 text-primary-500" />
+        <BaseParagraph size="sm" class="text-muted-500">Carregando informações...</BaseParagraph>
       </div>
 
       <div v-else-if="clientData" class="space-y-10">
