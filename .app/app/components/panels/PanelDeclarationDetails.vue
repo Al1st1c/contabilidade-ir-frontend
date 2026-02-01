@@ -173,6 +173,12 @@ const form = ref({
 })
 const showGovPassword = ref(false)
 
+const filteredAttachments = computed(() => {
+  if (!declaration.value?.attachments) return []
+  const officialCategories = ['irpf_backup', 'irpf_receipt', 'irpf_declaration', 'irpf_darf']
+  return declaration.value.attachments.filter((a: any) => !officialCategories.includes(a.category))
+})
+
 // Team members for assignee dropdown
 const teamMembers = ref<any[]>([])
 const isLoadingTeam = ref(false)
@@ -470,9 +476,56 @@ async function generateLink() {
 }
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const officialFileInput = ref<HTMLInputElement | null>(null)
 const pendingFile = ref<File | null>(null)
 const showChecklistModal = ref(false)
 const selectedChecklistItemId = ref<string | null>(null)
+const selectedOfficialCategory = ref<string | null>(null)
+
+const officialDocumentSlots = [
+  { label: 'Cópia de Segurança IRPF', category: 'irpf_backup', icon: 'solar:database-bold-duotone' },
+  { label: 'Recibo de Entrega', category: 'irpf_receipt', icon: 'solar:clippy-bold-duotone' },
+  { label: 'Declaração IRPF', category: 'irpf_declaration', icon: 'solar:file-text-bold-duotone' },
+  { label: 'DARF do IR', category: 'irpf_darf', icon: 'solar:bill-list-bold-duotone' },
+]
+
+function getSlotAttachment(category: string) {
+  return declaration.value?.attachments?.find((a: any) => a.category === category)
+}
+
+function triggerOfficialUpload(category: string) {
+  selectedOfficialCategory.value = category
+  officialFileInput.value?.click()
+}
+
+async function handleOfficialFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  const file = target.files[0]
+  if (!file || !selectedOfficialCategory.value) return
+
+  await uploadFile(file, null, selectedOfficialCategory.value)
+  selectedOfficialCategory.value = null
+}
+
+async function deleteOfficialDocument(id: string) {
+  if (!confirm('Deseja excluir este documento oficial?')) return
+
+  try {
+    await useCustomFetch(`/declarations/${props.declarationId}/attachments/${id}`, {
+      method: 'DELETE'
+    })
+    await fetchDeclaration()
+    toaster.add({
+      title: 'Excluído',
+      description: 'Documento oficial removido',
+      icon: 'ph:check-circle-fill'
+    })
+  } catch (error) {
+    console.error('Erro ao excluir:', error)
+  }
+}
 
 function triggerUpload() {
   fileInput.value?.click()
@@ -499,13 +552,18 @@ async function handleFileUpload(event: Event) {
   }
 }
 
-async function uploadFile(file: File, checklistItemId: string | null) {
+async function uploadFile(file: File, checklistItemId: string | null, category: string | null = null) {
   const formData = new FormData()
   formData.append('file', file)
 
   // Adicionar checklistItemId se fornecido
   if (checklistItemId) {
     formData.append('checklistItemId', checklistItemId)
+  }
+
+  // Adicionar category se fornecido
+  if (category) {
+    formData.append('category', category)
   }
 
   try {
@@ -663,14 +721,15 @@ onMounted(() => {
                 Anexos ({{ declaration.attachments?.length || 0 }})
               </BaseHeading>
               <input type="file" ref="fileInput" class="hidden" @change="handleFileUpload" multiple />
+              <input type="file" ref="officialFileInput" class="hidden" @change="handleOfficialFileUpload" />
               <BaseButton size="sm" variant="muted" @click="triggerUpload">
                 <Icon name="lucide:upload" class="size-4 mr-2" />
                 Adicionar Anexo
               </BaseButton>
             </div>
 
-            <div v-if="declaration.attachments?.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <BaseCard v-for="att in declaration.attachments" :key="att.id" rounded="lg"
+            <div v-if="filteredAttachments.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <BaseCard v-for="att in filteredAttachments" :key="att.id" rounded="lg"
                 class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-500 transition-colors cursor-pointer group">
                 <div class="flex items-start gap-3">
                   <div class="size-10 rounded bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0">
@@ -776,6 +835,11 @@ onMounted(() => {
               class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
               :class="activeSidebarTab === 'checklist' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
               Checklist
+            </button>
+            <button @click="activeSidebarTab = 'documents'"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
+              :class="activeSidebarTab === 'documents' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
+              Documentos
             </button>
           </div>
 
@@ -1056,6 +1120,74 @@ onMounted(() => {
                   <div v-if="checklistItems.length === 0"
                     class="text-center py-6 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
                     <p class="text-[10px] text-muted-400 uppercase font-medium">Nenhum item definido</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB: DOCUMENTOS (OFICIAIS) -->
+            <div v-if="activeSidebarTab === 'documents'" class="space-y-6 animate-fade-in pb-10">
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Documentos Oficiais</label>
+                </div>
+
+                <div class="space-y-3">
+                  <div v-for="slot in officialDocumentSlots" :key="slot.category"
+                    class="p-4 rounded-xl border bg-white dark:bg-muted-950 transition-all border-muted-200 dark:border-muted-800 hover:border-primary-500/30 group">
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center shrink-0">
+                        <Icon :name="slot.icon" class="size-5 text-muted-400" />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-muted-800 dark:text-muted-100">{{ slot.label }}</p>
+                        <p class="text-[10px] text-muted-400 mt-0.5 truncate">{{
+                          getSlotAttachment(slot.category)?.fileName
+                          || 'Pendente de envio' }}</p>
+                      </div>
+
+                      <div class="flex gap-2">
+                        <!-- If has file -->
+                        <template v-if="getSlotAttachment(slot.category)">
+                          <button
+                            @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })"
+                            class="p-1.5 rounded-lg hover:bg-primary-500/10 text-primary-500 transition-colors"
+                            title="Visualizar">
+                            <Icon name="solar:eye-bold-duotone" class="size-4" />
+                          </button>
+                          <button @click="handleDownload(getSlotAttachment(slot.category))"
+                            class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors"
+                            title="Baixar">
+                            <Icon name="lucide:download" class="size-4" />
+                          </button>
+                          <button @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)"
+                            class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-500/10 text-danger-500 transition-colors"
+                            title="Excluir">
+                            <Icon name="lucide:trash-2" class="size-4" />
+                          </button>
+                        </template>
+
+                        <!-- If no file -->
+                        <template v-else>
+                          <button @click="triggerOfficialUpload(slot.category)"
+                            class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm shadow-primary-500/20">
+                            <Icon name="lucide:upload" class="size-4" />
+                          </button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-primary-500/5 border border-primary-500/20 rounded-xl p-4 mt-6">
+                  <div class="flex gap-3">
+                    <Icon name="solar:info-circle-bold-duotone" class="size-5 text-primary-500 shrink-0" />
+                    <BaseParagraph size="xs" class="text-muted-500 leading-relaxed">
+                      Estes documentos são as versões finais processadas pelo contador. O cliente não pode excluí-los
+                      via
+                      link.
+                    </BaseParagraph>
                   </div>
                 </div>
               </div>
