@@ -346,11 +346,10 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
       <!-- Step 2: Service Configuration -->
       <div v-else-if="currentStep === 2" class="space-y-6">
         <div class="grid grid-cols-2 gap-4">
-          <BaseField label="Ano do Exercício" class="z-30">
+          <BaseField label="Exercício" class="z-30">
             <BaseSelect v-model="serviceData.taxYear" icon="ph:calendar">
-              <BaseSelectItem :value="2024">2024 (IR 2025)</BaseSelectItem>
-              <BaseSelectItem :value="2023">2023 (IR 2024)</BaseSelectItem>
-              <BaseSelectItem :value="2022">2022 (IR 2023)</BaseSelectItem>
+              <BaseSelectItem :value="2025">IRPF 2025 </BaseSelectItem>
+              <BaseSelectItem :value="2024">IRPF 2024</BaseSelectItem>
             </BaseSelect>
           </BaseField>
 
@@ -386,14 +385,14 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
           </BaseSelect>
         </BaseField>
 
-        <BaseField label="Tipo de IR">
+        <!-- <BaseField label="Tipo de IR">
           <div class="flex gap-6 mt-2">
             <BaseRadioGroup v-model="serviceData.declarationType">
               <BaseRadio value="complete" label="Completa" color="primary" />
               <BaseRadio value="simplified" label="Simplificada" color="primary" />
             </BaseRadioGroup>
           </div>
-        </BaseField>
+        </BaseField> -->
 
         <BaseField label="Observações Iniciais">
           <BaseTextarea v-model="serviceData.description" rows="3" placeholder="Ex: Aguardando informe do banco X..." />

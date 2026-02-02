@@ -21,15 +21,19 @@ interface Task {
   declarationType: 'simplified' | 'complete'
   estimatedResult: 'refund' | 'pay' | 'neutral'
   estimatedValue?: number
-  paymentStatus?: 'pending' | 'partial' | 'paid' // Added for financial badge
+  paymentStatus?: 'pending' | 'partial' | 'paid'
   assignee?: {
+    id: string
     name: string
     avatar: string
   }
   dueDate?: string
   comments: number
   attachments: number
+  checklistTotal: number
+  checklistCompleted: number
   tags?: string[]
+  clientTags?: string[]
   whatsapp?: string
   hasDependents?: boolean
 }
@@ -45,6 +49,54 @@ interface Column {
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const taxYearFilter = ref(2025)
+
+const filters = reactive({
+  employeeId: '',
+  clientName: '',
+  tag: '',
+  paymentStatus: ''
+})
+
+// Computed values for filters
+const availableAssignees = computed(() => {
+  const assignees = new Map()
+  columns.value.forEach(col => {
+    col.tasks.forEach(task => {
+      if (task.assignee) {
+        assignees.set(task.assignee.id, task.assignee)
+      }
+    })
+  })
+  return Array.from(assignees.values()) as any[]
+})
+
+const availableTags = computed(() => {
+  const tags = new Set<string>()
+  columns.value.forEach(col => {
+    col.tasks.forEach(task => {
+      task.tags?.forEach(tag => { if (tag) tags.add(tag) })
+      task.clientTags?.forEach(tag => { if (tag) tags.add(tag) })
+    })
+  })
+  return Array.from(tags).filter(t => t !== '')
+})
+
+const filteredColumns = computed(() => {
+  return columns.value.map(col => ({
+    ...col,
+    tasks: col.tasks.filter(task => {
+      const matchEmployee = !filters.employeeId || task.assignee?.id === filters.employeeId
+      const matchClient = !filters.clientName ||
+        task.clientName.toLowerCase().includes(filters.clientName.toLowerCase()) ||
+        task.cpf.includes(filters.clientName)
+      const matchTag = (!filters.tag || filters.tag === 'all') ||
+        (task.tags?.includes(filters.tag) || task.clientTags?.includes(filters.tag))
+      const matchPayment = (!filters.paymentStatus || filters.paymentStatus === 'all') || task.paymentStatus === filters.paymentStatus
+
+      return matchEmployee && matchClient && matchTag && matchPayment
+    })
+  }))
+})
 
 
 // Priority colors
@@ -131,16 +183,20 @@ async function fetchKanban() {
           estimatedResult: card.result || 'neutral',
           estimatedValue: card.resultValue,
           assignee: card.assignedTo ? {
+            id: card.assignedTo.id,
             name: card.assignedTo.name,
-            avatar: card.assignedTo.photo ? `${API_CONFIG.BASE_URL}/files/${card.assignedTo.photo}` : '/img/avatars/placeholder.svg'
+            avatar: card.assignedTo.photo ? `${useRuntimeConfig().public.apiBase}/files/${card.assignedTo.photo}` : '/img/avatars/placeholder.svg'
           } : undefined,
           dueDate: card.dueDate,
           comments: card.commentsTotal || 0,
           attachments: card.attachmentsCount || 0,
-          tags: card.client?.tags || [],
+          checklistTotal: card.checklistTotal || 0,
+          checklistCompleted: card.checklistCompleted || 0,
+          tags: card.tags || [],
+          clientTags: card.client?.tags || [],
           whatsapp: card.client?.whatsapp || card.client?.phone,
           hasDependents: card.hasDependents,
-          paymentStatus: card.paymentStatus || 'pending', // Map from backend
+          paymentStatus: card.paymentStatus || 'pending',
         }))
       }))
     }
@@ -223,45 +279,66 @@ function initAllTaskSortables() {
       fallbackOnBody: true,
       swapThreshold: 0.65,
       onAdd: (evt) => {
-        const fromColumnId = evt.from.dataset.columnId
-        const toColumnId = evt.to.dataset.columnId
-
-        if (fromColumnId && toColumnId && typeof evt.oldIndex === 'number' && typeof evt.newIndex === 'number') {
-          const fromColumn = columns.value.find(c => c.id === fromColumnId)
-          const toColumn = columns.value.find(c => c.id === toColumnId)
-
-          if (fromColumn && toColumn) {
-            const task = fromColumn.tasks[evt.oldIndex]
-            if (task) {
-              fromColumn.tasks.splice(evt.oldIndex, 1)
-              toColumn.tasks.splice(evt.newIndex, 0, task)
-
-              // Persist to backend
-              moveTask(task.id, toColumnId, evt.newIndex)
-            }
-          }
-        }
+        handleTaskMove(evt)
       },
       onUpdate: (evt) => {
-        const columnId = evt.from.dataset.columnId
-
-        if (columnId && typeof evt.oldIndex === 'number' && typeof evt.newIndex === 'number' && evt.oldIndex !== evt.newIndex) {
-          const column = columns.value.find(c => c.id === columnId)
-
-          if (column) {
-            const task = column.tasks.splice(evt.oldIndex, 1)[0]
-            if (task) {
-              column.tasks.splice(evt.newIndex, 0, task)
-              // Persist to backend
-              moveTask(task.id, columnId, evt.newIndex)
-            }
-          }
-        }
+        handleTaskMove(evt)
       },
     })
 
     sortableInstances.value.set(columnId, sortable)
   })
+}
+
+function handleTaskMove(evt: Sortable.SortableEvent) {
+  const taskId = evt.item.dataset.taskId
+  const fromColumnId = evt.from.dataset.columnId
+  const toColumnId = evt.to.dataset.columnId
+
+  if (!taskId || !fromColumnId || !toColumnId) return
+
+  // Find source and target columns in the source of truth (columns ref)
+  const fromColumn = columns.value.find(c => c.id === fromColumnId)
+  const toColumn = columns.value.find(c => c.id === toColumnId)
+
+  if (!fromColumn || !toColumn) return
+
+  // Find the task object
+  const taskIndex = fromColumn.tasks.findIndex(t => t.id === taskId)
+  if (taskIndex === -1) return
+
+  const task = fromColumn.tasks[taskIndex]
+  if (!task) return
+
+  // Find where to insert in the target column
+  // We use the previous sibling in the DOM to determine position
+  const prevElement = evt.item.previousElementSibling as HTMLElement
+  const prevTaskId = prevElement?.dataset?.taskId
+
+  // Calculate new index in the UNFILTERED list
+  let newIndex = 0
+  if (prevTaskId) {
+    const prevTaskIndex = toColumn.tasks.findIndex(t => t.id === prevTaskId)
+    if (prevTaskIndex !== -1) {
+      newIndex = prevTaskIndex + 1
+    } else {
+      // Fallback: if we can't find the prev task (shouldn't happen), append or put at best guess
+      newIndex = toColumn.tasks.length
+    }
+  }
+
+  // Remove from source
+  fromColumn.tasks.splice(taskIndex, 1)
+
+  // Insert into target (adjust index if moving within same column downwards)
+  if (fromColumnId === toColumnId && taskIndex < newIndex) {
+    newIndex--
+  }
+
+  toColumn.tasks.splice(newIndex, 0, task)
+
+  // Persist to backend
+  moveTask(task.id, toColumnId, newIndex)
 }
 
 // Panels
@@ -345,9 +422,9 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 </script>
 
 <template>
-  <div class="h-full">
+  <div class="h-full flex flex-col overflow-hidden">
     <!-- Page Header -->
-    <div class="px-4 md:px-6 lg:px-8 xl:px-10 pb-6">
+    <div class="px-4 md:px-6 lg:px-8 xl:px-10 pb-6 shrink-0">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex h-12 items-center justify-between pe-4 xl:pe-10">
           <div class="flex items-center gap-2">
@@ -356,7 +433,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
               <BaseParagraph size="xs" class="text-muted-400">
                 Gustavo B
               </BaseParagraph>
-              <BaseHeading as="h2" size="sm" weight="medium">
+              <BaseHeading as="h2" size="sm" weight="normal">
                 ConsTar
               </BaseHeading>
             </div>
@@ -379,174 +456,198 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
     </div>
 
     <!-- Kanban Board -->
-    <div class="px-4 md:px-6 lg:px-8 xl:px-10 overflow-x-auto">
+    <!-- Kanban Board -->
+    <!-- Main Content Area (Scrollable) -->
+    <div class="flex-1 flex flex-col min-h-0 px-4 md:px-6 lg:px-8 xl:px-10 font-sans">
+      <!-- Filters Bar (Fixed within scroll area or sticky) -->
+      <div
+        class="mb-6 flex flex-wrap items-center gap-4 bg-white dark:bg-muted-950 p-4 rounded-xl border border-muted-200 dark:border-muted-800 shadow-sm shrink-0">
+        <!-- Search Client -->
+        <div class="w-full md:w-64">
+          <BaseInput v-model="filters.clientName" placeholder="Buscar por cliente ou CPF..." icon="lucide:search"
+            rounded="md" class="!bg-muted-50 dark:!bg-muted-900" />
+        </div>
+
+        <!-- Employee Filter (Avatar Group style) -->
+        <div class="flex items-center gap-2 border-l border-muted-200 dark:border-muted-800 pl-4">
+          <span class="text-[10px] uppercase text-muted-400 tracking-widest mr-2">Responsável</span>
+          <div class="flex items-center -space-x-2">
+            <button v-for="user in availableAssignees" :key="user.id"
+              @click="filters.employeeId = filters.employeeId === user.id ? '' : user.id"
+              class="relative transition-all duration-200 hover:z-10"
+              :class="[filters.employeeId === user.id ? 'scale-110 ring-2 ring-primary-500 rounded-full z-20' : 'opacity-60 hover:opacity-100']">
+              <BaseAvatar :src="user.avatar" size="xs" :title="user.name" />
+            </button>
+            <button v-if="filters.employeeId" @click="filters.employeeId = ''"
+              class="ms-4 text-[10px] text-primary-500 hover:underline">
+              Limpar
+            </button>
+          </div>
+        </div>
+
+        <!-- Tags Filter -->
+        <div class="w-full md:w-48 ml-auto flex items-center gap-2">
+          <BaseSelect v-model="filters.tag" rounded="md" icon="lucide:tag" placeholder="Todas as Tags">
+            <BaseSelectItem value="all">Todas as Tags</BaseSelectItem>
+            <BaseSelectItem v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</BaseSelectItem>
+          </BaseSelect>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="w-full md:w-48 flex items-center gap-2">
+          <BaseSelect v-model="filters.paymentStatus" rounded="md" icon="lucide:wallet">
+            <BaseSelectItem value="all">Financeiro: Todos</BaseSelectItem>
+            <BaseSelectItem value="paid">Pago</BaseSelectItem>
+            <BaseSelectItem value="pending">Pendente</BaseSelectItem>
+          </BaseSelect>
+        </div>
+
+        <!-- Clear All -->
+        <BaseButton v-if="filters.employeeId || filters.clientName || filters.tag || filters.paymentStatus"
+          variant="muted" size="sm" rounded="md"
+          @click="Object.assign(filters, { employeeId: '', clientName: '', tag: '', paymentStatus: '' })">
+          <Icon name="lucide:filter-x" class="size-4 mr-1" />
+          Limpar
+        </BaseButton>
+      </div>
+
+      <!-- Kanban Board + Scrolling -->
       <ClientOnly>
         <template #default>
-          <div class="min-w-max pb-8">
+          <div class="flex-1 overflow-x-auto overflow-y-hidden pb-4">
             <!-- Columns Container -->
-            <div ref="columnsContainer" class="flex gap-6">
-              <!-- Column -->
-              <div v-for="column in columns" :key="column.id" class="w-80 shrink-0">
+            <div ref="columnsContainer" class="flex gap-4 h-full">
+              <!-- Column (Screenshot Style) -->
+              <div v-for="column in filteredColumns" :key="column.id"
+                class="w-80 shrink-0 flex flex-col bg-muted-100/50 dark:bg-muted-900/40 rounded-xl overflow-hidden shadow-sm border border-muted-200/50 dark:border-muted-800/50 h-full max-h-full">
                 <!-- Column Header -->
-                <div class="flex items-center gap-3 mb-4 px-1 group">
-                  <div
-                    class="column-handle cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
-                    <Icon name="lucide:grip-vertical" class="size-4 text-muted-400" />
-                  </div>
-                  <div :class="[columnColors[column.color], 'size-3 rounded-full']" />
-                  <span class=" text-sm text-muted-800 dark:text-muted-100 uppercase tracking-wide font-sans">
+                <div class="flex h-12 shrink-0 items-center px-4">
+                  <span
+                    class="block font-sans text-[11px] text-muted-500 dark:text-muted-400 uppercase tracking-widest truncate">
                     {{ column.title }}
                   </span>
                   <span
-                    class="ml-auto bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-400 px-2 py-0.5 rounded-md text-xs font-bold">
+                    class="ml-2 px-2 py-0.5 rounded bg-muted-200 dark:bg-muted-700 text-muted-600 dark:text-muted-300 text-[10px]">
                     {{ column.tasks.length }}
                   </span>
-                  <button
-                    class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-muted-600 dark:hover:text-muted-300 transition-all">
-                    <Icon name="lucide:more-horizontal" class="size-4" />
+                  <button @click="openCreateDeclaration"
+                    class="text-muted-400 hover:text-primary-500 ms-auto flex size-7 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-muted-800 transition-all duration-300">
+                    <Icon name="lucide:plus" class="size-4" />
                   </button>
                 </div>
 
                 <!-- Tasks Container -->
-                <div class="min-h-[calc(100vh-320px)] rounded-xl bg-muted-100/50 dark:bg-muted-900/30 p-3">
-                  <div :data-column-id="column.id" class="space-y-3 min-h-[100px]">
+                <div class="nui-slimscroll flex-1 overflow-y-auto p-2 pb-20">
+                  <div :data-column-id="column.id" class="space-y-2.5 min-h-[50px]">
                     <!-- Task Card -->
-                    <div v-for="task in column.tasks" :key="task.id"
-                      class="bg-white dark:bg-muted-900 rounded-xl border border-muted-200 dark:border-muted-800 p-4 hover:shadow-lg hover:border-primary-500/30 transition-all duration-200 group relative">
+                    <div v-for="task in (column?.tasks || [])" :key="task.id" :data-task-id="task.id"
+                      class="bg-white dark:bg-muted-950 group relative flex cursor-pointer flex-col items-start rounded-md border border-muted-200 dark:border-muted-800 p-3 hover:shadow-md hover:border-muted-300 dark:hover:border-muted-700 transition-all duration-200 shadow-sm"
+                      :class="[task.priority && priorityColors[task.priority] ? (priorityColors[task.priority] as string).replace('bg-', 'border-l-') : 'border-l-primary-500']"
+                      style="border-left-width: 3px;" @click="openDeclarationDetails(task.id)">
 
-                      <!-- Click to open details (excluding action buttons) -->
-                      <div @click="openDeclarationDetails(task.id)" class="cursor-pointer">
-                        <!-- Card Header: Client Info -->
-                        <div class="mb-3">
-                          <div class="flex items-start justify-between gap-2 mb-1">
-                            <h4 class="font-medium text-base text-muted-800 dark:text-muted-100 font-sans flex-1">
-                              {{ task.clientName }}
-                            </h4>
-                            <span
-                              class="text-[10px] text-muted-400 font-mono bg-muted-50 dark:bg-muted-800/50 px-1.5 py-0.5 rounded shrink-0">
-                              IR {{ task.taxYear }}
-                            </span>
-                          </div>
-                          <span class="text-[11px] text-muted-400 font-mono">{{ task.cpf }}</span>
+                      <!-- JIRA Style: Summary (Client Name) -->
+                      <div class="w-full mb-3">
+                        <BaseHeading as="h4" size="sm" weight="normal"
+                          class="text-muted-900 dark:text-muted-100 leading-snug line-clamp-2">
+                          {{ task.clientName }}
+                        </BaseHeading>
+                        <div class="flex items-center gap-2 mt-1">
+                          <BaseText size="xs" class="text-muted-400 font-mono tracking-tighter">{{ task.cpf }}
+                          </BaseText>
+                          <span class="size-1 rounded-full bg-muted-300"></span>
+                          <BaseText size="xs" class="text-primary-500">IR {{ task.taxYear }}</BaseText>
                         </div>
-
-                        <!-- Financial Status Badge -->
-                        <div class="mb-3 flex items-center gap-2">
-                          <div v-if="task.estimatedValue"
-                            class="flex-1 py-1.5 px-2.5 rounded-lg flex items-center gap-2" :class="[
-                              task.paymentStatus === 'paid' ? 'bg-success-500/10 border border-success-500/20' :
-                                task.paymentStatus === 'partial' ? 'bg-amber-500/10 border border-amber-500/20' :
-                                  'bg-rose-500/10 border border-rose-500/20'
-                            ]">
-                            <Icon :name="task.paymentStatus === 'paid' ? 'lucide:check-circle' : 'lucide:clock'"
-                              class="size-3.5" :class="[
-                                task.paymentStatus === 'paid' ? 'text-success-600' :
-                                  task.paymentStatus === 'partial' ? 'text-amber-600' :
-                                    'text-rose-600'
-                              ]" />
-                            <div class="flex-1 min-w-0">
-                              <p class="text-[9px] uppercase tracking-wide" :class="[
-                                task.paymentStatus === 'paid' ? 'text-success-600/70' :
-                                  task.paymentStatus === 'partial' ? 'text-amber-600/70' :
-                                    'text-rose-600/70'
-                              ]">
-                                {{ task.paymentStatus === 'paid' ? 'Pago' : task.paymentStatus === 'partial' ? 'Parcial'
-                                  : 'Pendente' }}
-                              </p>
-                              <p class="text-xs font-bold truncate" :class="[
-                                task.paymentStatus === 'paid' ? 'text-success-700 dark:text-success-400' :
-                                  task.paymentStatus === 'partial' ? 'text-amber-700 dark:text-amber-400' :
-                                    'text-rose-700 dark:text-rose-400'
-                              ]">
-                                {{ formatCurrency(task.estimatedValue) }}
-                              </p>
-                            </div>
-                          </div>
-                          <span
-                            :class="[priorityColors[task.priority], 'px-2 py-0.5 rounded text-[10px] uppercase shrink-0']">
-                            {{ priorityLabels[task.priority] }}
-                          </span>
-                        </div>
-
-                        <!-- Estimated Result -->
-                        <div v-if="task.estimatedValue && task.estimatedResult"
-                          class="flex items-center gap-2 mb-3 py-2 px-3 rounded-lg bg-mut ed-50 dark:bg-muted-800/50">
-                          <Icon :name="resultIcons[task.estimatedResult] || 'lucide:minus'"
-                            :class="[resultColors[task.estimatedResult] || '', 'size-4']" />
-                          <div class="flex-1">
-                            <span class="text-[10px] text-muted-500 dark:text-muted-400 uppercase">
-                              {{ resultLabels[task.estimatedResult] }}
-                            </span>
-                            <p :class="[resultColors[task.estimatedResult], 'text-sm font-semibold']">
-                              {{ formatCurrency(task.estimatedValue) }}
-                            </p>
-                          </div>
-                          <Icon v-if="task.hasDependents" name="lucide:users" class="size-4 text-muted-400"
-                            title="Possui dependentes" />
-                        </div>
-
-                        <!-- Tags -->
-                        <div v-if="task.tags && task.tags.length > 0" class="flex flex-wrap gap-1.5 mb-3">
-                          <span v-for="tag in task.tags.slice(0, 3)" :key="tag"
-                            :class="[getTagColor(tag), 'px-2 py-0.5 rounded text-[10px] font-medium']">
-                            {{ tag }}
-                          </span>
-                          <span v-if="task.tags.length > 3"
-                            class="px-2 py-0.5 rounded text-[10px] font-medium bg-muted-100 text-muted-600 dark:bg-muted-800 dark:text-muted-400">
-                            +{{ task.tags.length - 3 }}
-                          </span>
-                        </div>
-
-                        <!-- Description -->
-                        <p v-if="task.description"
-                          class="text-xs text-muted-500 dark:text-muted-400 mb-3 line-clamp-2 font-sans">
-                          {{ task.description }}
-                        </p>
                       </div>
 
-                      <!-- Card Footer with Actions -->
-                      <div
-                        class="flex items-center justify-between pt-3 border-t border-muted-100 dark:border-muted-800">
-                        <!-- Assignee Info -->
-                        <div class="flex items-center gap-2">
-                          <BaseAvatar v-if="task.assignee" :src="task.assignee.avatar" size="xxs"
-                            class="ring-2 ring-white dark:ring-muted-900" />
-                          <div v-if="task.assignee" class="flex flex-col">
-                            <span class="text-[10px] font-medium text-muted-600 dark:text-muted-400">
-                              {{ task.assignee.name.split(' ')[0] }}
-                            </span>
+                      <!-- IR Metadata & Progress -->
+                      <div class="w-full space-y-3 mb-4">
+                        <!-- Progress Bar (Subtle JIRA style) -->
+                        <div v-if="task.checklistTotal > 0" class="w-full">
+                          <div class="flex items-center justify-between text-[10px] text-muted-500 mb-1">
+                            <span>Documentação</span>
+                            <span>{{ Math.round((task.checklistCompleted / task.checklistTotal) * 100) }}%</span>
                           </div>
-                          <span v-if="task.dueDate" class="flex items-center gap-1 text-[11px] text-muted-500 ml-2">
-                            <Icon name="lucide:calendar" class="size-3" />
-                            {{ formatDate(task.dueDate) }}
-                          </span>
+                          <div class="h-1.5 w-full bg-muted-100 dark:bg-muted-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-500 transition-all duration-300"
+                              :style="{ width: `${(task.checklistCompleted / task.checklistTotal) * 100}%` }" />
+                          </div>
                         </div>
 
-                        <!-- Quick Actions -->
-                        <div class="flex items-center gap-2" @click.stop>
-                          <!-- WhatsApp Quick Contact -->
-                          <button v-if="task.whatsapp" @click="openWhatsApp(task.whatsapp, task.clientName)"
-                            class="flex items-center gap-1 text-emerald-500 hover:text-emerald-600 transition-colors p-1.5 rounded hover:bg-emerald-500/10"
-                            title="Enviar WhatsApp">
-                            <Icon name="lucide:message-circle" class="size-3.5" />
-                          </button>
+                        <!-- Financial Labels -->
+                        <div class="flex flex-wrap gap-2">
+                          <div v-if="task.estimatedValue"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+                            <Icon :name="(resultIcons[task.estimatedResult] || 'lucide:minus') as any" class="size-3"
+                              :class="resultColors[task.estimatedResult]" />
+                            <span class="text-[10px]" :class="resultColors[task.estimatedResult]">{{
+                              formatCurrency(task.estimatedValue) }}</span>
+                          </div>
+                          <div
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+                            <Icon :name="task.paymentStatus === 'paid' ? 'lucide:check-circle' : 'lucide:clock'"
+                              class="size-3"
+                              :class="task.paymentStatus === 'paid' ? 'text-success-500' : 'text-amber-500'" />
+                            <span class="text-[10px] text-muted-600 dark:text-muted-400">{{ task.paymentStatus
+                              === 'paid' ? 'Pago' : 'Pendente' }}</span>
+                          </div>
+                        </div>
 
-                          <!-- Quick Copy Link Button -->
-                          <button @click="quickCopyCollectionLink(task.id, task.clientName)"
-                            class="flex items-center gap-1 text-primary-500 hover:text-primary-600 transition-colors p-1.5 rounded hover:bg-primary-500/10 opacity-0 group-hover:opacity-100"
-                            title="Copiar Link de Upload">
-                            <Icon name="lucide:link" class="size-3.5" />
-                          </button>
+                        <!-- Tags & Dynamic Status -->
+                        <div
+                          v-if="(task.tags?.length || (task.checklistCompleted > 0 && task.checklistCompleted < task.checklistTotal))"
+                          class="flex flex-wrap gap-1 pt-1">
+                          <!-- Docs. Parcial Dynamic Tag -->
+                          <div v-if="task.checklistCompleted > 0 && task.checklistCompleted < task.checklistTotal"
+                            class="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-tight bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shadow-sm">
+                            Docs. Parcial
+                          </div>
 
-                          <!-- Comments/Attachments -->
-                          <span v-if="task.comments > 0" class="flex items-center gap-1 text-muted-400">
-                            <Icon name="lucide:message-square" class="size-3.5" />
-                            <span class="text-[10px] font-bold">{{ task.comments }}</span>
-                          </span>
-                          <span v-if="task.attachments > 0" class="flex items-center gap-1 text-muted-400">
-                            <Icon name="lucide:paperclip" class="size-3.5" />
-                            <span class="text-[10px] font-bold">{{ task.attachments }}</span>
-                          </span>
+                          <!-- Other Tags -->
+                          <template v-if="task.tags?.length">
+                            <div v-for="tag in task.tags" :key="tag"
+                              :class="[getTagColor(tag), 'px-1.5 py-0.5 rounded text-[9px] uppercase tracking-tight border border-current/10 opacity-90 shadow-sm']">
+                              {{ tag }}
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+
+                      <!-- JIRA Footer: ID & Assignee -->
+                      <div class="w-full flex items-center justify-between mt-auto pt-2">
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted-100 dark:bg-muted-800 border border-muted-200 dark:border-muted-700">
+                            <Icon :name="task.priority === 'high' ? 'lucide:alert-circle' : 'lucide:check-square'"
+                              class="size-3"
+                              :class="task.priority === 'high' ? 'text-danger-500' : 'text-primary-500'" />
+                            <span class="text-[9px] uppercase text-muted-500">DLR-{{ task.id ?
+                              task.id.toString().slice(-4) : '####' }}</span>
+                          </div>
+                          <div class="flex items-center gap-1.5 text-muted-400">
+                            <!-- Prazo (Deadline) -->
+                            <div v-if="task.dueDate"
+                              class="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 text-muted-500"
+                              title="Prazo da Declaração">
+                              <Icon name="lucide:calendar" class="size-3 text-primary-500" />
+                              <span>{{ formatDate(task.dueDate) }}</span>
+                            </div>
+                            <div v-if="task.comments > 0" class="flex items-center gap-0.5" title="Comentários">
+                              <Icon name="lucide:message-square" class="size-3" />
+                              <span class="text-[9px]">{{ task.comments }}</span>
+                            </div>
+                            <div v-if="task.attachments > 0" class="flex items-center gap-0.5" title="Anexos">
+                              <Icon name="lucide:paperclip" class="size-3" />
+                              <span class="text-[9px]">{{ task.attachments }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <button v-if="task.whatsapp" @click.stop="openWhatsApp(task.whatsapp, task.clientName)"
+                            class="text-emerald-500 hover:text-emerald-600">
+                            <Icon name="lucide:message-circle" class="size-4" />
+                          </button>
+                          <BaseAvatar v-if="task.assignee" :src="task.assignee.avatar" size="xxs"
+                            class="ring-2 ring-white dark:ring-muted-950 shadow-sm" />
                         </div>
                       </div>
                     </div>
@@ -558,7 +659,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                         class="size-12 rounded-full bg-muted-200/50 dark:bg-muted-800/50 flex items-center justify-center mb-3">
                         <Icon name="lucide:inbox" class="size-6 text-muted-400" />
                       </div>
-                      <p class="text-sm text-muted-400 font-medium font-sans">Nenhum IR</p>
+                      <p class="text-sm text-muted-400 font-sans">Nenhum IR</p>
                       <p class="text-xs text-muted-400 mt-1 font-sans">Arraste os cards para cá</p>
                     </div>
                   </div>
@@ -572,16 +673,6 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                 </div>
               </div>
 
-              <!-- Add Column Button -->
-              <div class="w-80 shrink-0">
-                <button
-                  class="w-full h-32 rounded-xl border-2 border-dashed border-muted-300 dark:border-muted-700 text-muted-500 dark:text-muted-400 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-500/5 transition-all flex flex-col items-center justify-center gap-2 font-sans">
-                  <div class="size-10 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
-                    <Icon name="lucide:plus" class="size-5" />
-                  </div>
-                  <span class="text-sm ">Nova Coluna</span>
-                </button>
-              </div>
             </div>
           </div>
         </template>
@@ -605,8 +696,9 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 }
 
 .sortable-drag {
-  transform: rotate(2deg) scale(1.05);
+  transform: scale(1.02);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   z-index: 50;
+  cursor: grabbing !important;
 }
 </style>

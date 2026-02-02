@@ -160,21 +160,14 @@ function onDrop(column: ColumnContent, dropResult: any) {
 
 <template>
   <div class="ps-4 md:ps-6 lg:ps-8">
-    <div
-      v-if="data?.project !== undefined"
-      class="flex h-12 items-center justify-between pe-4 xl:pe-10"
-    >
+    <div v-if="data?.project !== undefined" class="flex h-12 items-center justify-between pe-4 xl:pe-10">
       <div class="flex items-center gap-2">
         <BaseAvatar :src="data?.project.customer.logo" size="xs" />
         <div>
           <BaseParagraph size="xs" class="text-muted-400">
             {{ data?.project.customer.name }}
           </BaseParagraph>
-          <BaseHeading
-            as="h2"
-            size="sm"
-            weight="medium"
-          >
+          <BaseHeading as="h2" size="sm" weight="medium">
             {{ data?.project.name }}
           </BaseHeading>
         </div>
@@ -182,11 +175,7 @@ function onDrop(column: ColumnContent, dropResult: any) {
       <div class="flex items-center gap-2">
         <BaseAvatarGroup :avatars="data?.project.team" size="xs" />
         <BaseTooltip content="Project details">
-          <BaseButton
-            :to="`/layouts/projects/details/${slug}`"
-            size="icon-sm"
-            rounded="full"
-          >
+          <BaseButton :to="`/layouts/projects/details/${slug}`" size="icon-sm" rounded="full">
             <Icon name="solar:widget-4-linear" class="size-4" />
           </BaseButton>
         </BaseTooltip>
@@ -199,62 +188,40 @@ function onDrop(column: ColumnContent, dropResult: any) {
     </div>
     <div class="flex h-[calc(100vh_-_128px)] grow space-x-6 overflow-auto pt-2">
       <!-- Column -->
-      <div
-        v-for="column in board"
-        :key="column.title"
-        class="flex h-full w-72 shrink-0 flex-col"
-      >
+      <div v-for="column in board" :key="column.title" class="flex h-full w-72 shrink-0 flex-col">
         <!-- Column header -->
         <div class="flex h-14 shrink-0 items-center px-2">
           <!-- Column title -->
           <span class="block font-sans text-sm font-semibold">{{
             column.title
-          }}</span>
+            }}</span>
           <!-- Column count -->
           <span
-            class="text-primary-500 dark:text-sunny ms-2 flex size-5 items-center justify-center text-sm font-semibold"
-          >{{ column.tasks.length }}</span>
+            class="text-primary-500 dark:text-sunny ms-2 flex size-5 items-center justify-center text-sm font-semibold">{{
+              column.tasks.length }}</span>
           <!-- Column action -->
           <button
-            class="text-primary-500 dark:text-sunny hover:bg-primary-500/20 dark:hover:bg-sunny/20 ms-auto flex size-6 items-center justify-center rounded-full transition-colors duration-300"
-          >
+            class="text-primary-500 dark:text-sunny hover:bg-primary-500/20 dark:hover:bg-sunny/20 ms-auto flex size-6 items-center justify-center rounded-full transition-colors duration-300">
             <Icon name="lucide:plus" class="size-4" />
           </button>
         </div>
         <!-- Scrollable area -->
         <div class="nui-slimscroll overflow-auto pb-10 pe-2">
-          <Container
-            tag="div"
-            class="flex flex-col gap-y-4"
-            orientation="vertical"
-            :group-name="column.title"
-            drag-class="transform rotate-2 transform-gpu"
-            drop-class="opacity-40"
-            :drop-placeholder="{
+          <Container tag="div" class="flex flex-col gap-y-4" orientation="vertical" :group-name="column.title"
+            drag-class="transform rotate-2 transform-gpu" drop-class="opacity-40" :drop-placeholder="{
               className:
                 'mt-4 border-muted-200 border-dashed dark:border-muted-700 dark:bg-muted-800/60 group relative flex cursor-pointer flex-col items-start rounded-lg border bg-white/90 p-4 hover:bg-white opacity-60 mb-4',
-            }"
-            @drop="(dropResult: any) => onDrop(column, dropResult)"
-          >
+            }" @drop="(dropResult: any) => onDrop(column, dropResult)">
             <!-- Board card -->
             <template v-if="column.tasks.length > 0">
               <Draggable v-for="task in column.tasks" :key="task.id">
-                <div
-                  role="button"
-                  tabindex="0"
+                <div role="button" tabindex="0"
                   class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 group relative flex cursor-pointer flex-col items-start rounded-lg border bg-white/90 p-4 hover:bg-white dark:hover:bg-muted-950/80"
-                  draggable="true"
-                  @click="() => openTaskPanel(task.id, data?.project?.tasks)"
-                >
+                  draggable="true" @click="() => openTaskPanel(task.id, data?.project?.tasks)">
                   <div class="relative mb-2">
-                    <div
-                      class="mb-2 flex w-full items-center justify-between gap-2"
-                    >
-                      <BaseTag
-                        rounded="full"
-                        variant="muted"
-                        class="m-0 -ms-1 inline-flex h-6 scale-90 items-center py-0 text-xs font-semibold"
-                      >
+                    <div class="mb-2 flex w-full items-center justify-between gap-2">
+                      <BaseTag rounded="full" variant="muted"
+                        class="m-0 -ms-1 inline-flex h-6 scale-90 items-center py-0 text-xs font-semibold">
                         Task #{{ task.id }}
                       </BaseTag>
                       <BaseText size="xs" class="text-muted-400">
@@ -263,24 +230,14 @@ function onDrop(column: ColumnContent, dropResult: any) {
                         }}
                       </BaseText>
                     </div>
-                    <BaseHeading
-                      as="h4"
-                      size="sm"
-                      weight="medium"
-                      class="line-clamp-2"
-                    >
+                    <BaseHeading as="h4" size="sm" weight="medium" class="line-clamp-2">
                       <span>{{ task.name }}</span>
                     </BaseHeading>
                   </div>
                   <div
-                    class="text-muted-500 dark:text-muted-200 mt-2 flex w-full items-center justify-between text-xs font-medium"
-                  >
+                    class="text-muted-500 dark:text-muted-200 mt-2 flex w-full items-center justify-between text-xs font-medium">
                     <div class="flex items-center gap-2">
-                      <BaseAvatar
-                        :src="task.assignee.src"
-                        size="xxs"
-                        class="shrink-0"
-                      />
+                      <BaseAvatar :src="task.assignee.src" size="xxs" class="shrink-0" />
                       <BaseText size="xs" class="text-muted-600 dark:text-muted-400">
                         {{
                           task.assignee.tooltip
@@ -288,28 +245,16 @@ function onDrop(column: ColumnContent, dropResult: any) {
                       </BaseText>
                     </div>
                     <div class="text-muted-400 flex items-center gap-3">
-                      <BaseTooltip
-                        v-if="task.checklist.length > 0"
-                        :content="`${task.checklist.length} subtask${
-                          task.checklist.length > 1 ? 's' : ''
-                        } in checklist`"
-                      >
+                      <BaseTooltip v-if="task.checklist.length > 0" :content="`${task.checklist.length} subtask${task.checklist.length > 1 ? 's' : ''
+                        } in checklist`">
                         <Icon name="solar:check-square-linear" class="size-4" />
                       </BaseTooltip>
-                      <BaseTooltip
-                        v-if="task.files.length > 0"
-                        :content="`${task.files.length} file${
-                          task.files.length > 1 ? 's' : ''
-                        } uploaded`"
-                      >
+                      <BaseTooltip v-if="task.files.length > 0" :content="`${task.files.length} file${task.files.length > 1 ? 's' : ''
+                        } uploaded`">
                         <Icon name="solar:file-linear" class="size-4" />
                       </BaseTooltip>
-                      <BaseTooltip
-                        v-if="task.comments.length > 0"
-                        :content="`${task.comments.length} comment${
-                          task.comments.length > 1 ? 's' : ''
-                        }`"
-                      >
+                      <BaseTooltip v-if="task.comments.length > 0" :content="`${task.comments.length} comment${task.comments.length > 1 ? 's' : ''
+                        }`">
                         <Icon name="solar:chat-dots-linear" class="size-4" />
                       </BaseTooltip>
                     </div>
@@ -319,30 +264,19 @@ function onDrop(column: ColumnContent, dropResult: any) {
             </template>
             <!-- Placeholder -->
             <div v-else>
-              <div
-                class="text-muted-400 mt-10 flex items-center justify-center"
-              >
+              <div class="text-muted-400 mt-10 flex items-center justify-center">
                 <Icon name="solar:widget-6-linear" class="size-8" />
               </div>
               <div class="mt-2 text-center">
-                <BaseHeading
-                  as="h4"
-                  size="md"
-                  weight="medium"
-                  class="mb-1 text-muted-900 dark:text-muted-100"
-                >
+                <BaseHeading as="h4" size="md" weight="medium" class="mb-1 text-muted-900 dark:text-muted-100">
                   <span>Nothing to show</span>
                 </BaseHeading>
-                <BaseParagraph
-                  size="xs"
-                  lead="tight"
-                  class="text-muted-500 dark:text-muted-400 mx-auto max-w-[230px] font-sans!"
-                >
+                <BaseParagraph size="xs" lead="tight"
+                  class="text-muted-500 dark:text-muted-400 mx-auto max-w-[230px] font-sans!">
                   <span>There are no pending tasks to show in here for now.</span>
                 </BaseParagraph>
                 <button
-                  class="text-primary-500 dark:text-sunny mx-auto mt-2 flex items-center justify-center gap-1 font-sans text-xs underline-offset-4 hover:underline"
-                >
+                  class="text-primary-500 dark:text-sunny mx-auto mt-2 flex items-center justify-center gap-1 font-sans text-xs underline-offset-4 hover:underline">
                   <Icon name="lucide:plus" class="size-3" />
                   <span>New Task</span>
                 </button>
@@ -361,8 +295,7 @@ function onDrop(column: ColumnContent, dropResult: any) {
         <!-- Add button -->
         <div class="w-full">
           <button
-            class="text-muted-500 dark:text-muted-400 hover:text-primary-500 dark:hover:text-sunny border-muted-300 dark:border-muted-600 hover:border-primary-500 dark:hover:border-sunny flex h-12 w-full items-center justify-center gap-x-2 rounded-xl border-2 border-dashed px-6 font-sans transition-colors duration-300 hover:border-solid"
-          >
+            class="text-muted-500 dark:text-muted-400 hover:text-primary-500 dark:hover:text-sunny border-muted-300 dark:border-muted-600 hover:border-primary-500 dark:hover:border-sunny flex h-12 w-full items-center justify-center gap-x-2 rounded-xl border-2 border-dashed px-6 font-sans transition-colors duration-300 hover:border-solid">
             <Icon name="ph:gear-six-duotone" class="size-4" />
             <span class="text-sm">Manage columns</span>
           </button>
@@ -374,7 +307,7 @@ function onDrop(column: ColumnContent, dropResult: any) {
 </template>
 
 <style>
-.smooth-dnd-container.vertical > .smooth-dnd-draggable-wrapper {
+.smooth-dnd-container.vertical>.smooth-dnd-draggable-wrapper {
   overflow: visible;
 }
 </style>
