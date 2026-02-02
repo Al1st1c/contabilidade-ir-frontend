@@ -221,7 +221,11 @@ async function fetchKanban() {
           assignee: card.assignedTo ? {
             id: card.assignedTo.id,
             name: card.assignedTo.name,
-            avatar: card.assignedTo.photo ? `${useRuntimeConfig().public.apiBase}/files/${card.assignedTo.photo}` : '/img/avatars/placeholder.svg'
+            avatar: card.assignedTo.photo
+              ? (card.assignedTo.photo.startsWith('http')
+                ? card.assignedTo.photo
+                : `${useRuntimeConfig().public.apiBase}/files/${card.assignedTo.photo}`)
+              : '/img/avatars/placeholder.svg'
           } : undefined,
           dueDate: card.dueDate,
           comments: card.commentsTotal || 0,
@@ -518,9 +522,9 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
           <div class="flex items-center -space-x-2">
             <button v-for="user in availableAssignees" :key="user.id"
               @click="filters.employeeId = filters.employeeId === user.id ? '' : user.id"
-              class="relative transition-all duration-200 hover:z-10"
-              :class="[filters.employeeId === user.id ? 'scale-110 ring-2 ring-primary-500 rounded-full z-20' : 'opacity-60 hover:opacity-100']">
-              <BaseAvatar :src="user.avatar" size="xs" :title="user.name" />
+              class="relative flex items-center justify-center transition-all duration-200 hover:z-10 rounded-full size-8"
+              :class="[filters.employeeId === user.id ? 'scale-110 ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-muted-950 z-20' : 'opacity-60 hover:opacity-100']">
+              <BaseAvatar :src="user.avatar" size="xs" :title="user.name" class="!size-full" />
             </button>
             <button v-if="filters.employeeId" @click="filters.employeeId = ''"
               class="ms-4 text-[10px] text-primary-500 hover:underline">
