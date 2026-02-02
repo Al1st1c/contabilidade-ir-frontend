@@ -57,6 +57,8 @@ const filters = reactive({
   paymentStatus: ''
 })
 
+const columnSearch = reactive<Record<string, string>>({})
+
 // Computed values for filters
 const availableAssignees = computed(() => {
   const assignees = new Map()
@@ -85,6 +87,7 @@ const filteredColumns = computed(() => {
   return columns.value.map(col => ({
     ...col,
     tasks: col.tasks.filter(task => {
+      // Global Filters
       const matchEmployee = !filters.employeeId || task.assignee?.id === filters.employeeId
       const matchClient = !filters.clientName ||
         task.clientName.toLowerCase().includes(filters.clientName.toLowerCase()) ||
@@ -93,7 +96,14 @@ const filteredColumns = computed(() => {
         (task.tags?.includes(filters.tag) || task.clientTags?.includes(filters.tag))
       const matchPayment = (!filters.paymentStatus || filters.paymentStatus === 'all') || task.paymentStatus === filters.paymentStatus
 
-      return matchEmployee && matchClient && matchTag && matchPayment
+      // Column Local Filter
+      const search = (columnSearch[col.id] || '').toLowerCase()
+      const matchColumnSearch = !search ||
+        task.clientName.toLowerCase().includes(search) ||
+        task.cpf.includes(search) ||
+        (task.description || '').toLowerCase().includes(search)
+
+      return matchEmployee && matchClient && matchTag && matchPayment && matchColumnSearch
     })
   }))
 })
@@ -115,9 +125,35 @@ const priorityLabels: Record<string, string> = {
 // Column colors
 const columnColors: Record<string, string> = {
   amber: 'bg-amber-500',
-  info: 'bg-info-500',
+  info: 'bg-blue-500',
   purple: 'bg-purple-500',
-  success: 'bg-success-500',
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  gray: 'bg-slate-500',
+  red: 'bg-red-500',
+  orange: 'bg-orange-500',
+}
+
+const columnBorderColors: Record<string, string> = {
+  amber: 'border-amber-500',
+  info: 'border-blue-500',
+  purple: 'border-purple-500',
+  success: 'border-emerald-500',
+  warning: 'border-amber-500',
+  gray: 'border-slate-500',
+  red: 'border-red-500',
+  orange: 'border-orange-500',
+}
+
+const cardBorderColors: Record<string, string> = {
+  amber: 'border-l-amber-500',
+  info: 'border-l-blue-500',
+  purple: 'border-l-purple-500',
+  success: 'border-l-emerald-500',
+  warning: 'border-l-amber-500',
+  gray: 'border-l-slate-500',
+  red: 'border-l-red-500',
+  orange: 'border-l-orange-500',
 }
 
 // Declaration type labels
@@ -343,7 +379,15 @@ function handleTaskMove(evt: Sortable.SortableEvent) {
 
 // Panels
 const { open } = usePanels()
-import { PanelsPanelCreateDeclaration, PanelsPanelDeclarationDetails } from '#components'
+import { PanelsPanelCreateDeclaration, PanelsPanelDeclarationDetails, PanelsPanelManageColumns } from '#components'
+
+function openManageColumns() {
+  open(PanelsPanelManageColumns, {
+    onSaved: () => {
+      fetchKanban()
+    }
+  })
+}
 
 function openCreateDeclaration() {
   open(PanelsPanelCreateDeclaration, {
@@ -441,8 +485,8 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
         </div>
         <div class="flex items-center gap-3">
           <BaseAvatarGroup :avatars="[]" size="xs" />
-          <BaseTooltip content="Detalhes">
-            <BaseButton size="icon-sm" rounded="full">
+          <BaseTooltip content="Gerenciar Colunas">
+            <BaseButton size="icon-sm" rounded="full" @click="openManageColumns">
               <Icon name="solar:widget-4-linear" class="size-4" />
             </BaseButton>
           </BaseTooltip>
@@ -521,19 +565,47 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
               <div v-for="column in filteredColumns" :key="column.id"
                 class="w-80 shrink-0 flex flex-col bg-muted-100/50 dark:bg-muted-900/40 rounded-xl overflow-hidden shadow-sm border border-muted-200/50 dark:border-muted-800/50 h-full max-h-full">
                 <!-- Column Header -->
-                <div class="flex h-12 shrink-0 items-center px-4">
-                  <span
-                    class="block font-sans text-[11px] text-muted-500 dark:text-muted-400 uppercase tracking-widest truncate">
-                    {{ column.title }}
-                  </span>
-                  <span
-                    class="ml-2 px-2 py-0.5 rounded bg-muted-200 dark:bg-muted-700 text-muted-600 dark:text-muted-300 text-[10px]">
-                    {{ column.tasks.length }}
-                  </span>
-                  <button @click="openCreateDeclaration"
-                    class="text-muted-400 hover:text-primary-500 ms-auto flex size-7 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-muted-800 transition-all duration-300">
-                    <Icon name="lucide:plus" class="size-4" />
-                  </button>
+                <div class="flex flex-col border-b border-muted-200/50 dark:border-muted-800/50 transition-all">
+                  <div class="flex h-12 shrink-0 items-center px-4 justify-between">
+                    <div class="flex items-center gap-2 overflow-hidden max-w-[70%]">
+                      <span
+                        class="block font-sans text-[11px] text-muted-500 dark:text-muted-400 uppercase tracking-widest truncate"
+                        :title="column.title">
+                        {{ column.title }}
+                      </span>
+                      <span
+                        class="px-1.5 py-0.5 rounded bg-muted-200 dark:bg-muted-700 text-muted-600 dark:text-muted-300 text-[10px]">
+                        {{ column.tasks.length }}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                      <!-- Filter Toggle -->
+                      <button
+                        @click="columnSearch[column.id] === undefined ? (columnSearch[column.id] = '') : (delete columnSearch[column.id])"
+                        class="text-muted-400 hover:text-primary-500 flex size-7 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-muted-800 transition-all duration-300"
+                        :class="columnSearch[column.id] !== undefined ? 'text-primary-500 bg-white dark:bg-muted-800' : ''">
+                        <Icon name="lucide:search" class="size-3.5" />
+                      </button>
+
+                      <!-- Add Task -->
+                      <button @click="openCreateDeclaration"
+                        class="text-muted-400 hover:text-primary-500 flex size-7 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-muted-800 transition-all duration-300">
+                        <Icon name="lucide:plus" class="size-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Local Filter Input -->
+                  <div v-if="columnSearch[column.id] !== undefined"
+                    class="px-3 pb-3 animate-in slide-in-from-top-2 fade-in duration-200">
+                    <div class="relative">
+                      <input v-model="columnSearch[column.id]" type="text" placeholder="Filtrar nesta coluna..."
+                        class="w-full h-8 pl-8 pr-2 rounded-lg text-xs bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-700 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-muted-600 dark:text-muted-300 placeholder-muted-400"
+                        autoFocus />
+                      <Icon name="lucide:filter" class="absolute left-2.5 top-2.5 size-3 text-muted-400" />
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Tasks Container -->
@@ -541,9 +613,9 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                   <div :data-column-id="column.id" class="space-y-2.5 min-h-[50px]">
                     <!-- Task Card -->
                     <div v-for="task in (column?.tasks || [])" :key="task.id" :data-task-id="task.id"
-                      class="bg-white dark:bg-muted-950 group relative flex cursor-pointer flex-col items-start rounded-md border border-muted-200 dark:border-muted-800 p-3 hover:shadow-md hover:border-muted-300 dark:hover:border-muted-700 transition-all duration-200 shadow-sm"
-                      :class="[task.priority && priorityColors[task.priority] ? (priorityColors[task.priority] as string).replace('bg-', 'border-l-') : 'border-l-primary-500']"
-                      style="border-left-width: 3px;" @click="openDeclarationDetails(task.id)">
+                      class="bg-white dark:bg-muted-950 group relative flex cursor-pointer flex-col items-start rounded-md border border-muted-200 dark:border-muted-800 p-3 hover:shadow-md hover:border-muted-300 dark:hover:border-muted-700 transition-all duration-200 shadow-sm border-l-4"
+                      :class="[column.color && cardBorderColors[column.color] ? cardBorderColors[column.color] : 'border-l-primary-500']"
+                      @click="openDeclarationDetails(task.id)">
 
                       <!-- JIRA Style: Summary (Client Name) -->
                       <div class="w-full mb-3">
@@ -670,6 +742,18 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                     <Icon name="lucide:plus" class="size-4" />
                     Criar novo IR
                   </button>
+                </div>
+              </div>
+
+              <!-- Manage Columns Placeholder -->
+              <div
+                class="w-14 shrink-0 flex flex-col justify-center items-center py-4 bg-muted-50/50 dark:bg-muted-900/20 rounded-xl border border-dashed border-muted-200 dark:border-muted-800 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors cursor-pointer group"
+                @click="openManageColumns" title="Gerenciar Colunas">
+                <div class="flex flex-col items-center gap-4 group-hover:scale-110 transition-transform">
+                  <Icon name="lucide:settings-2" class="size-5 text-muted-400 group-hover:text-primary-500" />
+                  <span
+                    class="text-[10px] text-muted-400 group-hover:text-primary-500 font-medium tracking-widest uppercase"
+                    style="writing-mode: vertical-rl; text-orientation: mixed;">Configurar</span>
                 </div>
               </div>
 
