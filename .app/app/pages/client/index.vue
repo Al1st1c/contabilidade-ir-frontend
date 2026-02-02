@@ -56,14 +56,38 @@ const clientData = computed(() => {
     finished: { label: 'Transmitida', color: 'info', icon: 'solar:flag-bold-duotone', description: 'Processo concluído. Todos os documentos foram processados.' },
   }
 
-  const currentStatus = statusMapper[declaration?.status as string] || statusMapper.pending
+  // Determine visual status and steps based on column mapping
+  // Determine visual status using backend calculated appStatus, fallback to specific logic or raw status
+  const visualStatus = declaration?.appStatus || (declaration?.status as string) || 'pending'
 
+  const statusOrder = ['pending', 'in_progress', 'submitted', 'finished']
+  const currentStatusIndex = statusOrder.indexOf(visualStatus)
+
+  // Mapping strict based on new clientStatus field if available
   const steps = [
-    { label: 'Envio de Dados', completed: !!declaration },
-    { label: 'Em Análise', active: declaration?.status === 'in_progress', completed: ['submitted', 'finished'].includes(declaration?.status) },
-    { label: 'Em Preenchimento', active: declaration?.status === 'submitted', completed: ['finished'].includes(declaration?.status) },
-    { label: 'Transmitida', active: declaration?.status === 'finished', completed: declaration?.status === 'finished' },
+    {
+      label: 'Envio de Dados',
+      completed: !!declaration
+    },
+    {
+      label: 'Em Análise',
+      active: visualStatus === 'in_progress',
+      completed: currentStatusIndex > 1 // > in_progress
+    },
+    {
+      label: 'Em Preenchimento',
+      active: visualStatus === 'submitted',
+      completed: currentStatusIndex > 2 // > submitted
+    },
+    {
+      label: 'Transmitida',
+      active: visualStatus === 'finished',
+      completed: visualStatus === 'finished'
+    },
   ]
+
+  const currentStatus = statusMapper[visualStatus] || statusMapper.pending
+
 
   return {
     name: rawClient.value?.name?.split(' ')[0] || 'Usuário',

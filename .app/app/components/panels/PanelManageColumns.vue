@@ -23,7 +23,10 @@ async function fetchColumns() {
   try {
     const { data } = await useCustomFetch<any>('/declarations/columns')
     if (data.success) {
-      columns.value = data.data
+      columns.value = data.data.map((col: any) => ({
+        ...col,
+        clientStatus: col.clientStatus || 'NONE'
+      }))
 
       nextTick(() => {
         if (listContainer.value) {
@@ -68,14 +71,14 @@ async function addColumn() {
       }
     })
     if (data.success) {
-      toast.add({ title: 'Sucesso', message: 'Coluna criada!', type: 'success' })
+      toast.add({ title: 'Sucesso', description: 'Coluna criada!' })
       newColumnName.value = ''
       await fetchColumns()
       props.onSaved?.()
     }
   } catch (err) {
     console.error(err)
-    toast.add({ title: 'Erro', message: 'Erro ao criar coluna', type: 'danger' })
+    toast.add({ title: 'Erro', description: 'Erro ao criar coluna' })
   } finally {
     isCreating.value = false
   }
@@ -89,15 +92,16 @@ async function updateColumn(column: any) {
       body: {
         name: column.name,
         color: column.color,
+        clientStatus: column.clientStatus === 'NONE' ? null : column.clientStatus,
         isInitial: column.isInitial,
         isFinal: column.isFinal
       }
     })
-    toast.add({ title: 'Sucesso', message: 'Coluna atualizada', type: 'success' })
+    toast.add({ title: 'Sucesso', description: 'Coluna atualizada' })
     props.onSaved?.()
   } catch (err) {
     console.error(err)
-    toast.add({ title: 'Erro', message: 'Erro ao atualizar', type: 'danger' })
+    toast.add({ title: 'Erro', description: 'Erro ao atualizar' })
   }
 }
 
@@ -108,13 +112,13 @@ async function deleteColumn(id: string) {
     await useCustomFetch(`/declarations/columns/${id}`, {
       method: 'DELETE'
     })
-    toast.add({ title: 'Sucesso', message: 'Coluna excluída', type: 'success' })
+    toast.add({ title: 'Sucesso', description: 'Coluna excluída' })
     await fetchColumns()
     props.onSaved?.()
   } catch (err: any) {
     console.error(err)
     const msg = err.data?.message || 'Erro ao excluir'
-    toast.add({ title: 'Erro', message: msg, type: 'danger' })
+    toast.add({ title: 'Erro', description: msg })
   }
 }
 
@@ -131,7 +135,7 @@ async function onDragEnd() {
     props.onSaved?.()
   } catch (err) {
     console.error(err)
-    toast.add({ title: 'Erro', message: 'Erro ao reordenar', type: 'danger' })
+    toast.add({ title: 'Erro', description: 'Erro ao reordenar' })
   }
 }
 
@@ -147,6 +151,14 @@ const colorOptions = [
   { label: 'Roxo', value: 'purple' },
   { label: 'Vermelho', value: 'red' },
   { label: 'Laranja', value: 'orange' },
+]
+
+const statusOptions = [
+  { label: 'Ocultar no App (Etapa Intermediária)', value: 'NONE' },
+  { label: 'Aguardando Documentos', value: 'DOCUMENTS' },
+  { label: 'Em Análise', value: 'ANALYSIS' },
+  { label: 'Em Preenchimento (Receita)', value: 'FILLING' },
+  { label: 'Transmitida', value: 'TRANSMITTED' },
 ]
 </script>
 
@@ -217,6 +229,16 @@ const colorOptions = [
                               color.value === 'orange' ? 'bg-orange-500' : 'bg-slate-500'
                 ]" :title="color.label">
               </button>
+            </div>
+
+            <!-- Client App Status -->
+            <div class="flex-1">
+              <BaseSelect v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
+                @update:model-value="updateColumn(element)">
+                <BaseSelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </BaseSelectItem>
+              </BaseSelect>
             </div>
           </div>
         </div>

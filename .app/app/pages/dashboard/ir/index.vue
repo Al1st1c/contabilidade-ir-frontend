@@ -678,7 +678,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                               class="size-3"
                               :class="task.paymentStatus === 'paid' ? 'text-success-500' : 'text-amber-500'" />
                             <span class="text-[10px] text-muted-600 dark:text-muted-400">{{ task.paymentStatus
-                              === 'paid' ? 'Pago' : 'Pendente' }}</span>
+                              === 'paid' ? 'Pago' : 'Pgm. Pendente' }}</span>
                           </div>
                         </div>
 

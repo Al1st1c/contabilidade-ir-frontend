@@ -12,9 +12,13 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 const profile = ref<any>(null)
 
-// Pix Editing State
+// Editing States
 const isEditingPix = ref(false)
 const editedPixKey = ref('')
+
+const isEditingGov = ref(false)
+const editedGovPassword = ref('')
+const isGovVisible = ref(false)
 
 async function loadProfile() {
   if (!authUser.value?.id) return
@@ -25,6 +29,7 @@ async function loadProfile() {
     if (data.success) {
       profile.value = data.data
       editedPixKey.value = data.data.pixKey || ''
+      editedGovPassword.value = data.data.govPassword || ''
     }
   } catch (error) {
     console.error('Erro ao carregar perfil:', error)
@@ -58,6 +63,38 @@ async function savePixKey() {
     add({
       title: 'Erro',
       description: error.message || 'Não foi possível atualizar a chave PIX.',
+      icon: 'solar:danger-circle-bold-duotone'
+    })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function saveGovPassword() {
+  if (!profile.value?.id) return
+
+  try {
+    isSaving.value = true
+    const { data } = await useCustomFetch(`/clients/${profile.value.id}`, {
+      method: 'PUT',
+      body: {
+        govPassword: editedGovPassword.value
+      }
+    })
+
+    if (data.success) {
+      profile.value.govPassword = editedGovPassword.value
+      isEditingGov.value = false
+      add({
+        title: 'Sucesso',
+        description: 'Senha Gov.br atualizada com segurança!',
+        icon: 'solar:shield-check-bold-duotone'
+      })
+    }
+  } catch (error: any) {
+    add({
+      title: 'Erro',
+      description: error.message || 'Não foi possível atualizar a senha.',
       icon: 'solar:danger-circle-bold-duotone'
     })
   } finally {
@@ -180,7 +217,7 @@ function handleLogout() {
               <div class="flex items-center justify-between mb-1">
                 <span class="text-xs text-muted-500">Chave PIX</span>
                 <span v-if="!isEditingPix" class="text-sm font-mono font-bold text-primary-500">{{ profile.pixKey || '-'
-                  }}</span>
+                }}</span>
               </div>
 
               <div v-if="isEditingPix" class="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
@@ -194,6 +231,85 @@ function handleLogout() {
                     Cancelar
                   </BaseButton>
                 </div>
+              </div>
+            </div>
+          </div>
+        </BaseCard>
+
+        <!-- Gov.br Access -->
+        <BaseCard class="p-6 border-none shadow-sm bg-white dark:bg-muted-950 overflow-hidden relative">
+          <!-- Security Badge -->
+          <div class="absolute -top-1 -right-1">
+            <div
+              class="bg-success-500/10 text-success-500 text-[8px] font-bold uppercase py-1 px-3 rounded-bl-xl border-b border-l border-success-500/20 flex items-center gap-1">
+              <Icon name="solar:shield-check-bold" class="size-2.5" />
+              Criptografado
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <BaseHeading as="h3" size="sm" weight="semibold">Acesso Gov.br</BaseHeading>
+              <BaseTag color="success" variant="muted" rounded="full" class="text-[9px] px-2 font-bold uppercase">Seguro
+              </BaseTag>
+            </div>
+            <button v-if="!isEditingGov" @click="isEditingGov = true"
+              class="text-[10px] text-primary-500 font-bold uppercase hover:underline">
+              Atualizar Senha
+            </button>
+          </div>
+
+          <BaseParagraph size="xs" class="text-muted-500 mb-4 leading-tight">
+            Sua senha do portal Gov.br é necessária para que possamos consultar pendências e realizar a transmissão do
+            seu IRPF.
+          </BaseParagraph>
+
+          <div class="space-y-4">
+            <div v-if="!isEditingGov"
+              class="flex items-center justify-between p-3 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-100 dark:border-muted-800">
+              <div class="flex items-center gap-3">
+                <div class="size-8 rounded-lg bg-white dark:bg-muted-800 flex items-center justify-center shadow-sm">
+                  <Icon name="solar:lock-password-bold-duotone" class="size-5 text-muted-400" />
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-[10px] text-muted-400 uppercase font-bold leading-none mb-1">Sua Senha</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-mono font-bold tracking-widest text-muted-700 dark:text-muted-300">
+                      {{ profile.govPassword ? (isGovVisible ? profile.govPassword : '••••••••') : 'Não informada' }}
+                    </span>
+                    <button v-if="profile.govPassword" @click="isGovVisible = !isGovVisible"
+                      class="text-muted-400 hover:text-primary-500">
+                      <Icon :name="isGovVisible ? 'solar:eye-closed-linear' : 'solar:eye-linear'" class="size-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="isEditingGov" class="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div class="space-y-1">
+                <BaseParagraph size="xs" class="text-muted-500 font-bold uppercase ml-1">Nova Senha Gov.br
+                </BaseParagraph>
+                <BaseInput v-model="editedGovPassword" type="password" placeholder="Digite sua senha do Gov.br"
+                  size="sm" rounded="lg" icon="solar:key-linear" />
+              </div>
+
+              <div class="p-3 rounded-lg bg-primary-500/5 border border-primary-500/10 flex gap-2">
+                <Icon name="solar:shield-warning-bold-duotone" class="size-4 text-primary-500 shrink-0 mt-0.5" />
+                <p class="text-[10px] text-primary-700 dark:text-primary-300 font-medium leading-tight">
+                  Seus dados são protegidos por criptografia de ponta a ponta e acessíveis apenas pela sua equipe
+                  contábil.
+                </p>
+              </div>
+
+              <div class="flex gap-2">
+                <BaseButton color="primary" size="sm" rounded="lg" class="flex-1 font-bold" :loading="isSaving"
+                  @click="saveGovPassword">
+                  Confirmar e Salvar
+                </BaseButton>
+                <BaseButton color="muted" size="sm" rounded="lg" @click="isEditingGov = false">
+                  Cancelar
+                </BaseButton>
               </div>
             </div>
           </div>
@@ -234,7 +350,7 @@ function handleLogout() {
             <TairoLogo class="size-5 text-muted-400" />
             <span class="text-xs font-bold text-muted-400 opacity-50 uppercase tracking-widest">{{ tenant?.tradeName ||
               tenant?.name || 'CONSTAR'
-              }}</span>
+            }}</span>
           </div>
           <BaseParagraph size="xs" class="text-muted-400">Plataforma de Gestão IR • Versão 1.0.0</BaseParagraph>
         </div>
