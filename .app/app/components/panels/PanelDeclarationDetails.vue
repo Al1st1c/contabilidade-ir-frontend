@@ -171,9 +171,15 @@ const form = ref({
   assignedToId: 'unassigned',
   govPassword: '',
   tags: [] as string[],
+  rectificationDescription: '',
 })
 const showGovPassword = ref(false)
 const newTag = ref('')
+
+const isRectified = computed(() => {
+  const tags = form.value.tags || []
+  return tags.some(t => t.toUpperCase() === 'RETIFICADO' || t.toUpperCase() === 'RETIFICAÇÃO')
+})
 
 function addTag() {
   const tag = newTag.value.trim()
@@ -289,6 +295,7 @@ async function fetchDeclaration() {
         assignedToId: result.assignedTo?.id || 'unassigned',
         govPassword: result.govPassword || '',
         tags: result.tags || [],
+        rectificationDescription: result.rectificationDescription || '',
       }
 
       // Check for latest collection link
@@ -712,7 +719,7 @@ onMounted(() => {
                 <div>
                   <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
                   <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                  }}</p>
+                    }}</p>
                 </div>
               </div>
             </BaseCard>
@@ -804,7 +811,7 @@ onMounted(() => {
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                      }}</span>
+                        }}</span>
                       <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
                     <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
@@ -932,6 +939,14 @@ onMounted(() => {
                 </div>
               </div>
 
+              <!-- Rectification Description (Conditional) -->
+              <div v-if="isRectified"
+                class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800 animate-fade-in">
+                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Motivo da Retificação</label>
+                <BaseTextarea v-model="form.rectificationDescription" rounded="md" rows="4"
+                  placeholder="Descreva o que motivou a retificação..." size="sm" @blur="save" />
+              </div>
+
               <!-- Due Date -->
               <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
                 <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo de Entrega</label>
@@ -1003,8 +1018,7 @@ onMounted(() => {
 
                 <div class="space-y-2">
                   <button v-for="(tpl, idx) in smsTemplates" :key="tpl.id" @click="handleSelectTemplate(idx)"
-                    class="w-full text-left p-2.5 rounded-lg border transition-all duration-200 group"
-                    :class="selectedTemplateIndex === idx
+                    class="w-full text-left p-2.5 rounded-lg border transition-all duration-200 group" :class="selectedTemplateIndex === idx
                       ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500'
                       : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50'">
                     <div class="flex items-center gap-3">

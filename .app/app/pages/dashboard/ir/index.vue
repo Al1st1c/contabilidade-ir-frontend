@@ -44,7 +44,7 @@ interface Column {
 // Reactive state
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
-const taxYearFilter = ref(2024)
+const taxYearFilter = ref(2025)
 
 
 // Priority colors
