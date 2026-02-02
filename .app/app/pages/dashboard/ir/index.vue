@@ -21,7 +21,7 @@ interface Task {
   declarationType: 'simplified' | 'complete'
   estimatedResult: 'refund' | 'pay' | 'neutral'
   estimatedValue?: number
-  paymentStatus?: 'pending' | 'partial' | 'paid'
+  paymentStatus?: 'pending' | 'processing' | 'partial' | 'paid'
   assignee?: {
     id: string
     name: string
@@ -674,11 +674,14 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                           </div>
                           <div
                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
-                            <Icon :name="task.paymentStatus === 'paid' ? 'lucide:check-circle' : 'lucide:clock'"
+                            <Icon
+                              :name="task.paymentStatus === 'paid' ? 'lucide:check-circle' : (task.paymentStatus === 'processing' ? 'lucide:alert-circle' : 'lucide:clock')"
                               class="size-3"
-                              :class="task.paymentStatus === 'paid' ? 'text-success-500' : 'text-amber-500'" />
-                            <span class="text-[10px] text-muted-600 dark:text-muted-400">{{ task.paymentStatus
-                              === 'paid' ? 'Pago' : 'Pgm. Pendente' }}</span>
+                              :class="task.paymentStatus === 'paid' ? 'text-success-500' : (task.paymentStatus === 'processing' ? 'text-orange-500' : 'text-amber-500')" />
+                            <span class="text-[10px] text-muted-600 dark:text-muted-400">
+                              {{ task.paymentStatus === 'paid' ? 'Pago' : (task.paymentStatus === 'processing' ?
+                                'Confirme!' : 'Pgm. Pendente') }}
+                            </span>
                           </div>
                         </div>
 

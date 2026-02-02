@@ -7,7 +7,7 @@ export const useWhitelabel = () => {
   })
 
   // Apply whitelabel colors using Tailwind color names
-  function applyColors(primaryColor: string, secondaryColor: string, logo?: string, persist = true) {
+  function applyColors(primaryColor: string, secondaryColor: string, logo?: string, name?: string, tradeName?: string, persist = true) {
     if (process.client) {
       const root = document.documentElement
 
@@ -35,7 +35,9 @@ export const useWhitelabel = () => {
       const hasChanged =
         current.primaryColor !== primaryColor ||
         current.secondaryColor !== secondaryColor ||
-        (logo !== undefined && current.logo !== logo)
+        (logo !== undefined && current.logo !== logo) ||
+        (name !== undefined && current.name !== name) ||
+        (tradeName !== undefined && current.tradeName !== tradeName)
 
       if (hasChanged) {
         settings.value = {
@@ -43,6 +45,8 @@ export const useWhitelabel = () => {
           primaryColor,
           secondaryColor,
           ...(logo !== undefined ? { logo } : {}),
+          ...(name !== undefined ? { name } : {}),
+          ...(tradeName !== undefined ? { tradeName } : {}),
           updatedAt: new Date().toISOString()
         }
       }

@@ -124,7 +124,7 @@ function handleLogout() {
     <div v-else-if="profile">
       <!-- Profile Header -->
       <section class="flex flex-col items-center py-6 text-center">
-        <BaseAvatar src="/img/avatars/placeholder.svg" size="xl"
+        <BaseAvatar :src="profile.photoUrl || '/img/avatars/placeholder.svg'" size="xl"
           class="mb-4 ring-4 ring-white dark:ring-muted-900 shadow-xl" />
         <BaseHeading as="h2" size="xl" weight="bold" class="text-muted-800 dark:text-white px-4 leading-tight">
           {{ profile.name }}
@@ -320,17 +320,6 @@ function handleLogout() {
           <BaseHeading as="h3" size="sm" weight="semibold" class="mb-2">Acesso e Segurança</BaseHeading>
 
           <div class="space-y-1">
-            <button
-              class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors group">
-              <div class="flex items-center gap-3">
-                <div
-                  class="size-8 rounded-lg bg-primary-500/10 text-primary-500 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors">
-                  <Icon name="solar:lock-keyhole-linear" class="size-5" />
-                </div>
-                <span class="text-sm font-medium">Alterar CPF de Acesso</span>
-              </div>
-              <Icon name="solar:alt-arrow-right-linear" class="size-4 text-muted-400" />
-            </button>
             <button @click="handleLogout"
               class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-danger-500/5 transition-colors group">
               <div class="flex items-center gap-3 text-danger-500">

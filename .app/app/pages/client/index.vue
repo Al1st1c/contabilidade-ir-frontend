@@ -6,22 +6,35 @@ definePageMeta({
 const { user } = useAuth()
 const { useCustomFetch } = useApi()
 const { selectedTaxYear } = useClientSession()
+const { fetchTenant, tenant } = useTenant()
 
 const isLoading = ref(true)
+const isReportingPayment = ref(false)
 const rawClient = ref<any>(null)
 const rawDeclaration = ref<any>(null)
+const showOnboarding = ref(false)
 
 async function loadData() {
   if (!user.value?.id) return
 
   try {
     isLoading.value = true
-    const { data: clientRes } = await useCustomFetch(`/clients/${user.value.id}`)
-    if (clientRes.success) {
-      rawClient.value = clientRes.data
+    const [clientRes] = await Promise.all([
+      useCustomFetch<any>(`/clients/${user.value.id}`),
+      fetchTenant()
+    ])
+
+    if (clientRes.data.success) {
+      rawClient.value = clientRes.data.data
+
+
+      // Check for onboarding
+      if (!clientRes.data.data.onboardingCompleted) {
+        showOnboarding.value = true
+      }
 
       // Busca declaração que bate com o ano selecionado
-      const declaration = clientRes.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
+      const declaration = clientRes.data.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
 
       if (declaration) {
         const { data: decRes } = await useCustomFetch(`/declarations/${declaration.id}`)
@@ -84,17 +97,28 @@ const clientData = computed(() => {
       active: visualStatus === 'finished',
       completed: visualStatus === 'finished'
     },
+    {
+      label: 'Pagamento Honorários',
+      active: visualStatus === 'finished' && declaration?.paymentStatus !== 'paid',
+      completed: declaration?.paymentStatus === 'paid'
+    },
   ]
 
   const currentStatus = statusMapper[visualStatus] || statusMapper.pending
 
 
   return {
+    id: declaration?.id,
     name: rawClient.value?.name?.split(' ')[0] || 'Usuário',
     currentYear: selectedTaxYear.value,
     status: {
       ...currentStatus,
       steps
+    },
+    payment: {
+      status: declaration?.paymentStatus || 'pending',
+      pixKey: tenant.value?.pixKey,
+      value: declaration?.serviceValue || 0
     },
     refund: {
       value: declaration?.resultValue || 0,
@@ -109,6 +133,65 @@ const clientData = computed(() => {
     pixKey: rawClient.value?.pixKey
   }
 })
+
+async function handleReportPayment() {
+  if (!rawDeclaration.value?.id) return
+
+  // Simular clique em "Já Paguei"
+  // Em uma implementação real, abriríamos um modal para upload opcional
+  // Por agora vamos apenas marcar como pago
+  try {
+    isReportingPayment.value = true
+    const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
+      method: 'POST'
+    })
+
+    if (res.success) {
+      await loadData()
+    }
+  } catch (error) {
+    console.error('Erro ao reportar pagamento:', error)
+  } finally {
+    isReportingPayment.value = false
+  }
+}
+
+function handleUploadReceipt() {
+  // Trigger file input
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*,application/pdf'
+  input.onchange = async (e: any) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      isReportingPayment.value = true
+      const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (res.success) {
+        await loadData()
+      }
+    } catch (error) {
+      console.error('Erro ao subir comprovante:', error)
+    } finally {
+      isReportingPayment.value = false
+    }
+  }
+  input.click()
+}
+
+function copyPixKey() {
+  if (!clientData.value.payment.pixKey) return
+  navigator.clipboard.writeText(clientData.value.payment.pixKey)
+  // Toast opcional
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -130,7 +213,7 @@ function openWhatsApp(phone: string) {
     <section v-if="!isLoading" class="pt-6 animate-in fade-in slide-in-from-top-4 duration-500">
       <BaseParagraph size="sm" class="text-muted-500 mb-1">Olá, {{ clientData.name }} 👋</BaseParagraph>
       <BaseHeading as="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white leading-tight">
-        Seu IRPF {{ clientData.currentYear }} (Ano Calendário {{ clientData.currentYear - 1 }})
+        Seu IRPF {{ clientData.currentYear }}
       </BaseHeading>
     </section>
     <!-- Pending Documents Alert -->
@@ -205,57 +288,148 @@ function openWhatsApp(phone: string) {
                 class="w-0.5 h-full absolute top-6 transition-colors duration-300"
                 :class="step.completed ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"></div>
             </div>
-            <div class="pt-0.5">
+            <div class="pt-0.5 flex-1">
               <BaseHeading as="h4" size="xs" weight="bold"
                 :class="step.active || step.completed ? 'text-muted-800 dark:text-muted-100' : 'text-muted-400'">
                 {{ step.label }}
               </BaseHeading>
+
+              <!-- Minimalist Payment Section (REFINED) -->
+              <div v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
+                class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                <div class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
+                  <div class="flex items-center gap-2">
+                    <Icon name="fa6-brands:pix" class="size-3 text-emerald-500" />
+                    <BaseText size="xs" weight="bold" class="text-primary-600 dark:text-primary-400 font-mono">
+                      {{ clientData.payment.pixKey }}
+                    </BaseText>
+                  </div>
+                  <button @click="copyPixKey"
+                    class="text-[10px] font-bold text-primary-500 hover:text-primary-600 uppercase tracking-wider">
+                    Copiar
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <BaseText size="xs" class="text-muted-500">Valor do Honorário</BaseText>
+                  <BaseText size="xs" weight="bold" class="text-muted-800 dark:text-white">
+                    {{ formatCurrency(clientData.payment.value) }}
+                  </BaseText>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                  <BaseButton variant="primary" rounded="lg" size="sm" :loading="isReportingPayment"
+                    class="flex-1 h-8 font-bold text-[10px] uppercase tracking-wider" @click="handleReportPayment">
+                    Já Paguei
+                  </BaseButton>
+                  <BaseButton variant="none" rounded="lg" size="sm" :disabled="isReportingPayment"
+                    class="flex-1 h-8 border border-muted-200 dark:border-muted-800 text-muted-500 hover:text-primary-500 font-bold text-[10px] uppercase tracking-wider"
+                    @click="handleUploadReceipt">
+                    Comprovante
+                  </BaseButton>
+                </div>
+              </div>
+
+              <!-- Awaiting Verification Status (NEW) -->
+              <div v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
+                class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2">
+                <div class="flex items-center gap-3">
+                  <div class="size-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                    <Icon name="solar:clock-circle-bold-duotone" class="size-5" />
+                  </div>
+                  <div class="leading-tight">
+                    <BaseText size="xs" weight="bold" class="text-orange-600 dark:text-orange-400 block">Confirmação
+                      Pendente</BaseText>
+                    <BaseText size="xs" class="text-muted-500 text-[10px]">Já recebemos seu aviso. Nossa equipe
+                      confirmará o pagamento em breve.</BaseText>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Paid Confirmation (REFINED) -->
+              <div v-if="index === 4 && step.completed"
+                class="mt-2 flex items-center gap-2 text-success-500 animate-in fade-in">
+                <Icon name="solar:verified-check-bold" class="size-4" />
+                <BaseText size="xs" weight="bold">Pagamento Confirmado</BaseText>
+              </div>
             </div>
           </div>
         </div>
       </BaseCard>
 
-      <!-- Results Card (Refund/Pay) -->
-      <!-- Results Card (Refund/Pay/Downloads) -->
-      <BaseCard v-if="clientData.refund.status || clientData.status.steps[3].completed"
-        class="p-6 border-none shadow-sm bg-white dark:bg-muted-950">
-        <div class="flex flex-col gap-6">
-          <!-- Official Result -->
-          <div v-if="clientData.refund.status" class="flex items-center justify-between">
-            <div>
-              <BaseHeading as="h3" size="sm" weight="bold" class="text-muted-400 uppercase tracking-widest mb-1">
-                Resultado do IR
-              </BaseHeading>
-              <BaseHeading as="h4" size="lg" weight="bold"
-                :class="clientData.refund.status === 'A Receber' ? 'text-success-500' : 'text-rose-500'">
-                {{ formatCurrency(clientData.refund.value) }}
-              </BaseHeading>
+      <!-- Results & Payment Card (Refund/Pay/Fees) -->
+      <BaseCard
+        v-if="clientData.refund.status || clientData.status.steps[3].completed || clientData.status.steps[4].active || clientData.status.steps[4].completed"
+        rounded="lg" class="border-none shadow-xl relative overflow-hidden group">
 
-              <!-- PIX Key for Refund -->
-              <div v-if="clientData.refund.status === 'A Receber' && clientData.pixKey"
-                class="mt-2 flex items-center gap-2">
-                <Icon name="fa6-brands:pix" class="size-3.5 text-muted-400" />
-                <span class="text-xs font-mono text-muted-500">{{ clientData.pixKey }}</span>
+        <!-- Premium Background Effects -->
+        <div class="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none">
+          <div class="absolute -top-24 -right-24 size-64 rounded-full blur-3xl transition-colors duration-500"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/40'"></div>
+          <div class="absolute -bottom-24 -left-24 size-64 rounded-full blur-3xl transition-colors duration-500"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/20'"></div>
+        </div>
+
+        <div class="relative flex flex-col h-full">
+          <!-- Result Header -->
+          <div class="p-8 border-b border-muted-100 dark:border-muted-800">
+            <div class="flex items-center justify-between mb-8">
+              <BaseHeading as="h4" size="xs" weight="medium" lead="none"
+                class="text-muted-400 uppercase tracking-widest">
+                Resultado Oficial
+              </BaseHeading>
+              <div class="size-10 rounded-xl flex items-center justify-center shadow-lg"
+                :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'">
+                <Icon
+                  :name="clientData.refund.status === 'A Receber' ? 'solar:hand-stars-bold-duotone' : 'solar:bill-list-bold-duotone'"
+                  class="size-6" />
               </div>
             </div>
-            <BaseTag :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
-              rounded="full" class="font-bold">
-              {{ clientData.refund.status }}
-            </BaseTag>
+
+            <div v-if="clientData.refund.status" class="space-y-4">
+              <div class="flex items-baseline gap-2">
+                <!-- <span class="text-2xl font-light text-muted-400">R$</span> -->
+                <BaseHeading as="h2" size="5xl" weight="bold" class="tracking-tight leading-none"
+                  :class="clientData.refund.status === 'A Receber' ? 'text-green-500' : 'text-red-500'">
+                  {{ clientData.refund.status }}
+                </BaseHeading>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <BaseTag :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
+                  rounded="full" class="px-4 py-1.5 font-bold text-[10px] uppercase tracking-wider">
+                  {{ clientData.refund.status }}
+                </BaseTag>
+                <BaseText size="xs" class="text-muted-500 font-medium">
+                  {{ clientData.refund.status === 'A Receber' ?
+                    'A ser depositado em sua conta' : 'Valor a ser pago à Receita' }}
+                </BaseText>
+              </div>
+            </div>
+
+            <div v-else class="py-4">
+              <BasePlaceholderMinimal title="Aguardando Transmissão"
+                subtitle="O resultado oficial aparecerá aqui após a entrega." class="!bg-transparent" />
+            </div>
           </div>
 
-          <!-- Official Documents (Visible when Transmitted) -->
-          <div v-if="clientData.status.steps[3].completed" class="pt-4 border-t border-muted-100 dark:border-muted-800">
-            <BaseHeading as="h3" size="sm" weight="bold" class="text-muted-400 uppercase tracking-widest mb-3">
-              Documentos Oficiais
-            </BaseHeading>
-            <BaseButton variant="muted" color="primary" class="w-full justify-between group"
+          <!-- Quick Access / Documents (only if transmitted) -->
+          <div v-if="clientData.status.steps[3].completed || clientData.status.steps[4].completed"
+            class="p-6 bg-muted-50/50 dark:bg-muted-900/50">
+            <BaseButton variant="none" rounded="lg" size="lg"
+              class="w-full justify-between group h-14 bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-800 shadow-sm"
               @click="navigateTo('/client/documents')">
-              <span class="flex items-center gap-2">
-                <Icon name="solar:folder-with-files-bold-duotone" class="size-5" />
-                Acessar Recibos e DARFs
-              </span>
-              <Icon name="lucide:arrow-right" class="size-4 group-hover:translate-x-1 transition-transform" />
+              <div class="flex items-center gap-3">
+                <div class="size-10 rounded-lg bg-primary-500/10 text-primary-500 flex items-center justify-center">
+                  <Icon name="solar:folder-with-files-bold-duotone" class="size-6" />
+                </div>
+                <div class="text-left leading-none">
+                  <span class="block font-bold text-sm text-muted-800 dark:text-muted-100">Recibo & Declaração</span>
+                  <span class="text-[10px] text-muted-400 font-medium">Arquivos oficiais para download</span>
+                </div>
+              </div>
+              <Icon name="solar:alt-arrow-right-bold"
+                class="size-5 text-muted-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
             </BaseButton>
           </div>
         </div>
@@ -281,19 +455,21 @@ function openWhatsApp(phone: string) {
       </BaseCard>
     </template>
 
-    <!-- Empty State (No declaration for the year) -->
     <!-- Empty State -->
     <div v-else-if="!isLoading && !rawDeclaration" class="py-20 text-center px-4">
       <div class="size-20 bg-muted-100 dark:bg-muted-900 rounded-full flex items-center justify-center mx-auto mb-6">
         <Icon name="solar:document-add-linear" class="size-10 text-muted-400" />
       </div>
-      <BaseHeading as="h3" size="md" weight="semibold" class="text-muted-400">Nenhuma declaração para {{ selectedTaxYear
-      }}</BaseHeading>
+      <BaseHeading as="h3" size="md" weight="semibold" class="text-muted-400">
+        Nenhuma declaração para {{ selectedTaxYear }}
+      </BaseHeading>
       <BaseParagraph size="sm" class="text-muted-500 mt-2 max-w-[280px] mx-auto">
         Não encontramos uma declaração iniciada para este ano. Entre em contato com seu contador.
       </BaseParagraph>
     </div>
 
-    <!-- Quick Help -->
+    <!-- Onboarding Modal -->
+    <ClientOnboardingModal :open="showOnboarding" :client="rawClient" @close="showOnboarding = false"
+      @complete="loadData" />
   </div>
 </template>

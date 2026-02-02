@@ -9,8 +9,8 @@
   --font-mono:
     var(--default-mono-font-family), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
-  --font-alt: 'Karla', sans-serif;
-  --font-heading: var(--font-sans);
+  --font-alt: 'Inter', sans-serif;
+  --font-heading: 'Inter', sans-serif;
 
   --animate-spin-slow: spin 3s linear infinite;
   --animate-spin-fast: spin 0.65s linear infinite;

@@ -10,7 +10,9 @@ export const useTenant = () => {
       return {
         primaryColor: settings.value.primaryColor,
         secondaryColor: settings.value.secondaryColor,
-        logo: settings.value.logo
+        logo: settings.value.logo,
+        name: settings.value.name,
+        tradeName: settings.value.tradeName
       }
     }
     return null
@@ -32,7 +34,13 @@ export const useTenant = () => {
 
       // Apply and persist whitelabel colors if available - this will update the cookie
       if (source?.primaryColor && source?.secondaryColor) {
-        applyColors(source.primaryColor, source.secondaryColor, source.logo)
+        applyColors(
+          source.primaryColor,
+          source.secondaryColor,
+          source.logo,
+          source.name,
+          source.tradeName
+        )
       }
 
       return source
@@ -56,13 +64,17 @@ export const useTenant = () => {
       if (
         t.primaryColor !== newSettings.primaryColor ||
         t.secondaryColor !== newSettings.secondaryColor ||
-        t.logo !== newSettings.logo
+        t.logo !== newSettings.logo ||
+        t.name !== newSettings.name ||
+        t.tradeName !== newSettings.tradeName
       ) {
         tenant.value = {
           ...(tenant.value || {}),
           primaryColor: newSettings.primaryColor,
           secondaryColor: newSettings.secondaryColor,
-          logo: newSettings.logo
+          logo: newSettings.logo,
+          name: newSettings.name,
+          tradeName: newSettings.tradeName
         }
       }
     }, { deep: true, immediate: true })
@@ -71,10 +83,16 @@ export const useTenant = () => {
     // We pass 'persist: false' when applying from this watcher to avoid 
     // circular updates back to the cookie if it was the cookie that triggered this change.
     watch(
-      [() => tenant.value?.primaryColor, () => tenant.value?.secondaryColor, () => tenant.value?.logo],
-      ([p, s, l]) => {
+      [
+        () => tenant.value?.primaryColor,
+        () => tenant.value?.secondaryColor,
+        () => tenant.value?.logo,
+        () => tenant.value?.name,
+        () => tenant.value?.tradeName
+      ],
+      ([p, s, l, n, tn]) => {
         if (p && s) {
-          applyColors(p, s, l, false) // Apply to DOM but don't re-save to cookie
+          applyColors(p, s, l, n, tn, false) // Apply to DOM but don't re-save to cookie
         }
       }
     )

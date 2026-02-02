@@ -1,6 +1,13 @@
 <script setup lang="ts">
-const { tenant } = useTenant()
+const { tenant, fetchTenant } = useTenant()
 const { selectedTaxYear, availableYears } = useClientSession()
+
+const isReady = ref(!!tenant.value?.name)
+
+onMounted(async () => {
+  await fetchTenant()
+  isReady.value = true
+})
 
 const menuItems = [
   {
@@ -27,13 +34,23 @@ const menuItems = [
 </script>
 
 <template>
-  <div class="min-h-screen bg-muted-50 dark:bg-muted-950 pb-20">
+  <div v-if="!isReady" class="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-muted-950">
+    <div class="flex flex-col items-center gap-4">
+      <BaseIconBox size="xl" shape="full" variant="primary" mask="blob" class="animate-pulse">
+        <TairoLogo class="size-10" />
+      </BaseIconBox>
+      <BaseText size="sm" weight="medium" class="text-muted-400 animate-pulse">Carregando...</BaseText>
+    </div>
+  </div>
+
+  <div v-else class="min-h-screen bg-muted-50 dark:bg-muted-950 pb-20">
     <!-- Header/Logo -->
     <header
       class="sticky top-0 z-30 bg-white/80 dark:bg-muted-900/80 backdrop-blur-md border-b border-muted-200 dark:border-muted-800 px-4 py-3">
       <div class="flex items-center justify-between max-w-lg mx-auto">
         <div class="flex items-center gap-3">
-          <TairoLogo class="size-8 text-primary-500" />
+          <img v-if="tenant?.logo" :src="tenant.logo" class="size-8 object-contain" alt="Logo" />
+          <TairoLogo v-else class="size-8 text-primary-500" />
           <div class="flex flex-col">
             <BaseHeading as="h1" size="xs" weight="bold" class="text-muted-800 dark:text-muted-100 leading-none">
               {{ tenant?.tradeName || tenant?.name || 'Contabilidade' }}
