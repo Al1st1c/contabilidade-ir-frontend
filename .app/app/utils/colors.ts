@@ -84,6 +84,38 @@ export const resolveBgLightColor = (color: string) => {
   return bgLightColors[color] || 'bg-white'
 }
 
+export const bgLight100Colors: Record<string, string> = {
+  slate: 'bg-slate-100',
+  gray: 'bg-gray-100',
+  zinc: 'bg-zinc-100',
+  neutral: 'bg-neutral-100',
+  stone: 'bg-stone-100',
+  red: 'bg-red-100',
+  orange: 'bg-orange-100',
+  amber: 'bg-amber-100',
+  yellow: 'bg-yellow-100',
+  lime: 'bg-lime-100',
+  green: 'bg-green-100',
+  emerald: 'bg-emerald-100',
+  teal: 'bg-teal-100',
+  cyan: 'bg-cyan-100',
+  sky: 'bg-sky-100',
+  blue: 'bg-blue-100',
+  indigo: 'bg-indigo-100',
+  violet: 'bg-violet-100',
+  purple: 'bg-purple-100',
+  fuchsia: 'bg-fuchsia-100',
+  pink: 'bg-pink-100',
+  rose: 'bg-rose-100',
+  info: 'bg-blue-100',
+  success: 'bg-emerald-100',
+  warning: 'bg-amber-100',
+}
+
+export const resolveBgLight100Color = (color: string) => {
+  return bgLight100Colors[color] || 'bg-white'
+}
+
 export const borderColors: Record<string, string> = {
   slate: 'border-slate-500',
   gray: 'border-gray-500',
