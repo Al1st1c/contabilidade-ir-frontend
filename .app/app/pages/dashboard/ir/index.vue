@@ -127,39 +127,12 @@ const priorityLabels: Record<string, string> = {
   high: 'Alta',
 }
 
-// Column colors
-const columnColors: Record<string, string> = {
-  amber: 'bg-amber-500',
-  info: 'bg-blue-500',
-  purple: 'bg-purple-500',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  gray: 'bg-slate-500',
-  red: 'bg-red-500',
-  orange: 'bg-orange-500',
-}
+import { bgColors, borderColors, borderLeftColors } from '~/utils/colors'
 
-const columnBorderColors: Record<string, string> = {
-  amber: 'border-amber-500',
-  info: 'border-blue-500',
-  purple: 'border-purple-500',
-  success: 'border-emerald-500',
-  warning: 'border-amber-500',
-  gray: 'border-slate-500',
-  red: 'border-red-500',
-  orange: 'border-orange-500',
-}
-
-const cardBorderColors: Record<string, string> = {
-  amber: 'border-l-amber-500',
-  info: 'border-l-blue-500',
-  purple: 'border-l-purple-500',
-  success: 'border-l-emerald-500',
-  warning: 'border-l-amber-500',
-  gray: 'border-l-slate-500',
-  red: 'border-l-red-500',
-  orange: 'border-l-orange-500',
-}
+// Column colors (mapped from utils/colors)
+const columnColors = bgColors
+const columnBorderColors = borderColors
+const cardBorderColors = borderLeftColors
 
 // Declaration type labels
 const declarationTypeLabels: Record<string, string> = {

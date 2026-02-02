@@ -24,31 +24,10 @@ const form = ref({
   secondaryColor: 'zinc',
 })
 
-// Tailwind color options
-const primaryColors = [
-  { name: 'slate', label: 'Slate', class: 'bg-slate-500' },
-  { name: 'gray', label: 'Gray', class: 'bg-gray-500' },
-  { name: 'zinc', label: 'Zinc', class: 'bg-zinc-500' },
-  { name: 'neutral', label: 'Neutral', class: 'bg-neutral-500' },
-  { name: 'stone', label: 'Stone', class: 'bg-stone-500' },
-  { name: 'red', label: 'Red', class: 'bg-red-500' },
-  { name: 'orange', label: 'Orange', class: 'bg-orange-500' },
-  { name: 'amber', label: 'Amber', class: 'bg-amber-500' },
-  { name: 'yellow', label: 'Yellow', class: 'bg-yellow-500' },
-  { name: 'lime', label: 'Lime', class: 'bg-lime-500' },
-  { name: 'green', label: 'Green', class: 'bg-green-500' },
-  { name: 'emerald', label: 'Emerald', class: 'bg-emerald-500' },
-  { name: 'teal', label: 'Teal', class: 'bg-teal-500' },
-  { name: 'cyan', label: 'Cyan', class: 'bg-cyan-500' },
-  { name: 'sky', label: 'Sky', class: 'bg-sky-500' },
-  { name: 'blue', label: 'Blue', class: 'bg-blue-500' },
-  { name: 'indigo', label: 'Indigo', class: 'bg-indigo-500' },
-  { name: 'violet', label: 'Violet', class: 'bg-violet-500' },
-  { name: 'purple', label: 'Purple', class: 'bg-purple-500' },
-  { name: 'fuchsia', label: 'Fuchsia', class: 'bg-fuchsia-500' },
-  { name: 'pink', label: 'Pink', class: 'bg-pink-500' },
-  { name: 'rose', label: 'Rose', class: 'bg-rose-500' },
-]
+import { safeColors } from '~/utils/colors'
+
+// Tailwind color options (now using centralized safe list)
+const primaryColors = safeColors
 
 const mutedColors = [
   { name: 'slate', label: 'Slate', class: 'bg-slate-300 dark:bg-slate-700' },

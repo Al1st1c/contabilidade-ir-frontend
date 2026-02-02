@@ -231,6 +231,8 @@ function openWaitingDocs() {
   })
 }
 
+import { resolveColor } from '~/utils/colors'
+
 const pipelineChart = computed(() => ({
   type: 'bar' as const,
   height: 280,
@@ -243,7 +245,7 @@ const pipelineChart = computed(() => ({
       toolbar: { show: false },
       sparkline: { enabled: false }
     },
-    colors: pipelineData.value.map(d => d.color || 'var(--color-primary-500)'),
+    colors: pipelineData.value.map(d => resolveColor(d.color || 'primary')),
     plotOptions: {
       bar: { horizontal: true, borderRadius: 4, barHeight: '60%', distributed: true }
     },
@@ -260,7 +262,7 @@ const pipelinePieChart = computed(() => ({
   options: {
     chart: { toolbar: { show: false } },
     labels: pipelineData.value.map(d => d.name),
-    colors: pipelineData.value.map(d => d.color || 'var(--color-primary-500)'),
+    colors: pipelineData.value.map(d => resolveColor(d.color || 'primary')),
     legend: {
       position: 'bottom',
       fontSize: '11px',

@@ -139,19 +139,11 @@ async function onDragEnd() {
   }
 }
 
+import { safeColors } from '~/utils/colors'
+
 onMounted(() => {
   fetchColumns()
 })
-
-const colorOptions = [
-  { label: 'Cinza', value: 'gray' },
-  { label: 'Azul', value: 'info' },
-  { label: 'Verde', value: 'success' },
-  { label: 'Âmbar', value: 'warning' },
-  { label: 'Roxo', value: 'purple' },
-  { label: 'Vermelho', value: 'red' },
-  { label: 'Laranja', value: 'orange' },
-]
 
 const statusOptions = [
   { label: 'Ocultar no App (Etapa Intermediária)', value: 'NONE' },
@@ -215,18 +207,12 @@ const statusOptions = [
 
           <!-- Details (Color) -->
           <div class="flex items-center gap-3 pl-6">
-            <div class="flex items-center gap-1">
-              <button v-for="color in colorOptions" :key="color.value"
-                @click="element.color = color.value; updateColumn(element)"
+            <div class="flex items-center gap-1 flex-wrap max-w-[200px]">
+              <button v-for="color in safeColors" :key="color.name"
+                @click="element.color = color.name; updateColumn(element)"
                 class="size-4 rounded-full border transition-all" :class="[
-                  element.color === color.value ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
-                  color.value === 'gray' ? 'bg-slate-500' :
-                    color.value === 'info' ? 'bg-blue-500' :
-                      color.value === 'success' ? 'bg-emerald-500' :
-                        color.value === 'warning' ? 'bg-amber-500' :
-                          color.value === 'purple' ? 'bg-purple-500' :
-                            color.value === 'red' ? 'bg-red-500' :
-                              color.value === 'orange' ? 'bg-orange-500' : 'bg-slate-500'
+                  element.color === color.name ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
+                  color.class
                 ]" :title="color.label">
               </button>
             </div>
