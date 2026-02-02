@@ -48,7 +48,12 @@ interface Column {
 // Reactive state
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
-const taxYearFilter = ref(2025)
+const taxYearFilter = ref(new Date().getFullYear())
+
+const availableYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  return [currentYear, currentYear - 1, currentYear - 2, currentYear - 3]
+})
 
 const filters = reactive({
   employeeId: '',
@@ -510,6 +515,15 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
       <!-- Filters Bar (Fixed within scroll area or sticky) -->
       <div
         class="mb-6 flex flex-wrap items-center gap-4 bg-white dark:bg-muted-950 p-4 rounded-xl border border-muted-200 dark:border-muted-800 shadow-sm shrink-0">
+        <!-- Year Filter -->
+        <div class="w-full md:w-48">
+          <BaseSelect v-model="taxYearFilter" rounded="md" icon="ph:calendar" @change="fetchKanban">
+            <BaseSelectItem v-for="year in availableYears" :key="year" :value="year">
+              IR {{ year }} (Ano-C {{ year - 1 }})
+            </BaseSelectItem>
+          </BaseSelect>
+        </div>
+
         <!-- Search Client -->
         <div class="w-full md:w-64">
           <BaseInput v-model="filters.clientName" placeholder="Buscar por cliente ou CPF..." icon="lucide:search"

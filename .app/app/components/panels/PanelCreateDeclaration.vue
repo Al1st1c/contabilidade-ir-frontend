@@ -348,8 +348,9 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
         <div class="grid grid-cols-2 gap-4">
           <BaseField label="Exercício" class="z-30">
             <BaseSelect v-model="serviceData.taxYear" icon="ph:calendar">
-              <BaseSelectItem :value="2025">IRPF 2025 </BaseSelectItem>
-              <BaseSelectItem :value="2024">IRPF 2024</BaseSelectItem>
+              <BaseSelectItem v-for="year in [2026, 2025, 2024]" :key="year" :value="year">
+                IR {{ year }} (Ano-C {{ year - 1 }})
+              </BaseSelectItem>
             </BaseSelect>
           </BaseField>
 
@@ -416,8 +417,9 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
             </div>
 
             <div class="flex items-center justify-between py-3 border-b border-muted-100 dark:border-muted-800">
-              <span class="text-sm text-muted-500">Ano do Exercício</span>
-              <span class="text-sm font-medium">{{ serviceData.taxYear }}</span>
+              <span class="text-sm text-muted-500">Exercício</span>
+              <span class="text-sm font-medium">IR {{ serviceData.taxYear }} (Ano-C {{ serviceData.taxYear - 1
+              }})</span>
             </div>
 
             <div class="flex items-center justify-between py-3 border-b border-muted-100 dark:border-muted-800">
