@@ -83,6 +83,7 @@ const stats = ref({
   docsWaiting: 0,
   revenue: 0,
   received: 0,
+  awaitingVerification: 0,
   overdue: 0,
   completedToday: 0,
   stuckRevenue: 0,
@@ -152,6 +153,7 @@ async function fetchDashboard() {
         docsWaiting: Number(payload.stats.docsWaiting || 0),
         revenue: Number(payload.stats.revenue || 0),
         received: Number(payload.stats.received || 0),
+        awaitingVerification: Number(payload.stats.awaitingVerification || 0),
         overdue: Number(payload.stats.overdue || 0),
         completedToday: Number(payload.stats.completedToday || 0),
         stuckRevenue: Number(payload.stats.stuckRevenue || 0),
@@ -241,12 +243,13 @@ const pipelineChart = computed(() => ({
       toolbar: { show: false },
       sparkline: { enabled: false }
     },
-    colors: ['var(--color-primary-500)'],
+    colors: pipelineData.value.map(d => d.color || 'var(--color-primary-500)'),
     plotOptions: {
-      bar: { horizontal: true, borderRadius: 4, barHeight: '60%' }
+      bar: { horizontal: true, borderRadius: 4, barHeight: '60%', distributed: true }
     },
     xaxis: { categories: pipelineData.value.map(d => d.name) },
-    grid: { show: false }
+    grid: { show: false },
+    legend: { show: false }
   }
 }))
 
@@ -257,15 +260,7 @@ const pipelinePieChart = computed(() => ({
   options: {
     chart: { toolbar: { show: false } },
     labels: pipelineData.value.map(d => d.name),
-    colors: [
-      'var(--color-primary-500)',
-      '#10b981', // green
-      '#f59e0b', // amber
-      '#6366f1', // indigo
-      '#ec4899', // pink
-      '#8b5cf6', // violet
-      '#f43f5e'  // rose
-    ],
+    colors: pipelineData.value.map(d => d.color || 'var(--color-primary-500)'),
     legend: {
       position: 'bottom',
       fontSize: '11px',
@@ -290,11 +285,11 @@ const revenueAreaChart = computed(() => ({
       toolbar: { show: false },
       zoom: { enabled: false },
     },
-    colors: ['var(--color-primary-500)', 'var(--color-amber-400)'],
+    colors: ['var(--color-primary-500)', '#3ca6ff', '#10b981'],
     legend: { position: 'top' },
     dataLabels: { enabled: false },
     stroke: {
-      width: [2, 2],
+      width: [2, 2, 2],
       curve: 'smooth',
     },
     fill: {
@@ -828,9 +823,9 @@ const filteredMembers = computed(() => {
                     'R$ ••••••' }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-[10px] uppercase  text-danger-500 mb-1">Em Atraso</span>
-                  <span class="text-sm font-semibold text-danger-600">{{ showRevenue ? formatCurrency(stats.overdue) :
-                    'R$ ••••••' }}</span>
+                  <span class="text-[10px] uppercase text-orange-500 mb-1">Em Análise</span>
+                  <span class="text-sm font-semibold text-orange-600">{{ showRevenue ?
+                    formatCurrency(stats.awaitingVerification) : 'R$ ••••••' }}</span>
                 </div>
               </div>
 
