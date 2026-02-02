@@ -85,17 +85,14 @@ async function handleFileUpload(event: Event, itemId: string) {
     if (file) {
       formData.append('file', file)
     }
+    if (itemId !== 'extra') {
+      formData.append('checklistItemId', itemId)
+    }
+    formData.append('category', 'document')
 
     const result = await $fetch<any>(getApiUrl(`/public/${collectionLink.value.token}/upload`), {
       method: 'POST',
-      body: {
-        fileKey: `uploads/${Date.now()}-${file?.name || 'file'}`,
-        fileName: file?.name || 'file',
-        fileSize: file?.size || 0,
-        mimeType: file?.type || 'application/octet-stream',
-        checklistItemId: itemId === 'extra' ? undefined : itemId,
-        category: 'document'
-      }
+      body: formData
     })
 
     if (result.id || result.success) {

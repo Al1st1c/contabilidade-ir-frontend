@@ -51,9 +51,9 @@ const clientData = computed(() => {
 
   const statusMapper: Record<string, any> = {
     pending: { label: 'Aguardando Documentos', color: 'danger', icon: 'solar:document-add-bold-duotone', description: 'Por favor, envie seus documentos para iniciarmos sua declaração.' },
-    in_progress: { label: 'Em Análise', color: 'warning', icon: 'solar:magnifer-bold-duotone', description: 'Sua declaração foi recebida e está sendo analisada por nossa equipe.' },
-    submitted: { label: 'Enviada', color: 'success', icon: 'solar:check-read-bold-duotone', description: 'Sua declaração foi transmitida com sucesso para a Receita Federal.' },
-    finished: { label: 'Finalizado', color: 'info', icon: 'solar:flag-bold-duotone', description: 'Processo concluído. Todos os documentos foram processados.' },
+    in_progress: { label: 'Em Análise', color: 'warning', icon: 'solar:magnifer-bold-duotone', description: 'Seus documentos foram recebidos e estão sendo analisados por nossa equipe.' },
+    submitted: { label: 'Em Preenchimento', color: 'success', icon: 'solar:check-read-bold-duotone', description: 'Seu IRPF está sendo preenchido na Receita Federal.' },
+    finished: { label: 'Transmitida', color: 'info', icon: 'solar:flag-bold-duotone', description: 'Processo concluído. Todos os documentos foram processados.' },
   }
 
   const currentStatus = statusMapper[declaration?.status as string] || statusMapper.pending
@@ -61,8 +61,8 @@ const clientData = computed(() => {
   const steps = [
     { label: 'Envio de Dados', completed: !!declaration },
     { label: 'Em Análise', active: declaration?.status === 'in_progress', completed: ['submitted', 'finished'].includes(declaration?.status) },
-    { label: 'Entrega IRPF', active: declaration?.status === 'submitted', completed: ['finished'].includes(declaration?.status) },
-    { label: 'Concluído', active: declaration?.status === 'finished', completed: declaration?.status === 'finished' },
+    { label: 'Em Preenchimento', active: declaration?.status === 'submitted', completed: ['finished'].includes(declaration?.status) },
+    { label: 'Transmitida', active: declaration?.status === 'finished', completed: declaration?.status === 'finished' },
   ]
 
   return {
@@ -103,7 +103,6 @@ function openWhatsApp(phone: string) {
         Seu IRPF {{ clientData.currentYear }} (Ano Calendário {{ clientData.currentYear - 1 }})
       </BaseHeading>
     </section>
-
     <!-- Pending Documents Alert -->
     <section v-if="!isLoading && clientData.hasPendingDocs"
       class="mt-4 animate-in fade-in slide-in-from-top-4 duration-500 delay-150">
@@ -132,7 +131,7 @@ function openWhatsApp(phone: string) {
     </section>
 
     <!-- Skeleton if loading -->
-    <div v-else class="space-y-6">
+    <div v-else-if="!isLoading && clientData.hasPendingDocs" class="space-y-6">
       <BasePlaceload class="h-8 w-48 rounded" />
       <BasePlaceload class="h-64 w-full rounded-2xl" />
       <BasePlaceload class="h-32 w-full rounded-2xl" />
