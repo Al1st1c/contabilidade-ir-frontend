@@ -105,7 +105,8 @@ const clientData = computed(() => {
       photo: declaration.assignedTo.photo,
       phone: declaration.assignedTo.phone
     } : null,
-    hasPendingDocs: declaration?.status === 'pending'
+    hasPendingDocs: declaration?.status === 'pending',
+    pixKey: rawClient.value?.pixKey
   }
 })
 
@@ -120,6 +121,11 @@ function openWhatsApp(phone: string) {
 
 <template>
   <div class="space-y-10 pb-24">
+
+    <div v-if="isLoading" class="px-4 space-y-4">
+      <BasePlaceload v-for="i in 2" :key="i" class="h-30 w-full rounded-2xl" />
+    </div>
+
     <!-- Welcome Section -->
     <section v-if="!isLoading" class="pt-6 animate-in fade-in slide-in-from-top-4 duration-500">
       <BaseParagraph size="sm" class="text-muted-500 mb-1">Olá, {{ clientData.name }} 👋</BaseParagraph>
@@ -210,21 +216,48 @@ function openWhatsApp(phone: string) {
       </BaseCard>
 
       <!-- Results Card (Refund/Pay) -->
-      <BaseCard v-if="clientData.refund.status" class="p-6 border-none shadow-sm bg-white dark:bg-muted-950">
-        <div class="flex items-center justify-between">
-          <div>
-            <BaseHeading as="h3" size="sm" weight="bold" class="text-muted-400 uppercase tracking-widest mb-1">
-              Resultado Estimado
-            </BaseHeading>
-            <BaseHeading as="h4" size="lg" weight="bold"
-              :class="clientData.refund.status === 'A Receber' ? 'text-success-500' : 'text-rose-500'">
-              {{ formatCurrency(clientData.refund.value) }}
-            </BaseHeading>
+      <!-- Results Card (Refund/Pay/Downloads) -->
+      <BaseCard v-if="clientData.refund.status || clientData.status.steps[3].completed"
+        class="p-6 border-none shadow-sm bg-white dark:bg-muted-950">
+        <div class="flex flex-col gap-6">
+          <!-- Official Result -->
+          <div v-if="clientData.refund.status" class="flex items-center justify-between">
+            <div>
+              <BaseHeading as="h3" size="sm" weight="bold" class="text-muted-400 uppercase tracking-widest mb-1">
+                Resultado do IR
+              </BaseHeading>
+              <BaseHeading as="h4" size="lg" weight="bold"
+                :class="clientData.refund.status === 'A Receber' ? 'text-success-500' : 'text-rose-500'">
+                {{ formatCurrency(clientData.refund.value) }}
+              </BaseHeading>
+
+              <!-- PIX Key for Refund -->
+              <div v-if="clientData.refund.status === 'A Receber' && clientData.pixKey"
+                class="mt-2 flex items-center gap-2">
+                <Icon name="fa6-brands:pix" class="size-3.5 text-muted-400" />
+                <span class="text-xs font-mono text-muted-500">{{ clientData.pixKey }}</span>
+              </div>
+            </div>
+            <BaseTag :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
+              rounded="full" class="font-bold">
+              {{ clientData.refund.status }}
+            </BaseTag>
           </div>
-          <BaseTag :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
-            rounded="full" class="font-bold">
-            {{ clientData.refund.status }}
-          </BaseTag>
+
+          <!-- Official Documents (Visible when Transmitted) -->
+          <div v-if="clientData.status.steps[3].completed" class="pt-4 border-t border-muted-100 dark:border-muted-800">
+            <BaseHeading as="h3" size="sm" weight="bold" class="text-muted-400 uppercase tracking-widest mb-3">
+              Documentos Oficiais
+            </BaseHeading>
+            <BaseButton variant="muted" color="primary" class="w-full justify-between group"
+              @click="navigateTo('/client/documents')">
+              <span class="flex items-center gap-2">
+                <Icon name="solar:folder-with-files-bold-duotone" class="size-5" />
+                Acessar Recibos e DARFs
+              </span>
+              <Icon name="lucide:arrow-right" class="size-4 group-hover:translate-x-1 transition-transform" />
+            </BaseButton>
+          </div>
         </div>
       </BaseCard>
 
@@ -250,7 +283,7 @@ function openWhatsApp(phone: string) {
 
     <!-- Empty State (No declaration for the year) -->
     <!-- Empty State -->
-    <div v-else-if="!rawDeclaration" class="py-20 text-center px-4">
+    <div v-else-if="!isLoading && !rawDeclaration" class="py-20 text-center px-4">
       <div class="size-20 bg-muted-100 dark:bg-muted-900 rounded-full flex items-center justify-center mx-auto mb-6">
         <Icon name="solar:document-add-linear" class="size-10 text-muted-400" />
       </div>
