@@ -71,7 +71,7 @@ async function loadData() {
           taxYear: result.data?.declaration?.taxYear,
           status: result.data?.declaration?.status,
           assignedTo: null,
-          paymentStatus: null,
+          paymentStatus: result.data?.declaration?.paymentStatus || null,
           result: result.data?.declaration?.result || null,
           resultValue: result.data?.declaration?.resultValue || 0,
         }
@@ -362,6 +362,7 @@ function goToDocuments() {
                 :class="step.active || step.completed ? 'text-muted-800 dark:text-muted-100' : 'text-muted-400'"
               >
                 {{ step.label }}
+                <Icon v-if="Number(index) === 4 && step.completed" name="solar:verified-check-bold" class="size-3 ml-1 text-success-500 align-middle" />
               </BaseHeading>
 
               <!-- Minimalist Payment Section (REFINED) -->
@@ -412,7 +413,7 @@ function goToDocuments() {
 
               <!-- Awaiting Verification Status (NEW) -->
               <div
-                v-if="!isPublicMode && index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
+                v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
                 class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2"
               >
                 <div class="flex items-center gap-3">
@@ -434,7 +435,7 @@ function goToDocuments() {
 
               <!-- Paid Confirmation (REFINED) -->
               <div
-                v-if="!isPublicMode && index === 4 && step.completed"
+                v-if="index === 4 && step.completed"
                 class="mt-2 flex items-center gap-2 text-success-500 animate-in fade-in"
               >
                 <Icon name="solar:verified-check-bold" class="size-4" />
