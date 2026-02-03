@@ -740,6 +740,32 @@ onMounted(() => {
                   <span class="text-muted-300 dark:text-muted-700">·</span>
                   <span class="text-xs text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
                 </div>
+                <!-- Link de Coleta (minimalista) -->
+                <div class="mt-2 flex items-center gap-2">
+                  <Icon name="lucide:link" class="size-3.5 text-muted-400" />
+                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                    Link de Coleta
+                  </BaseText>
+                  <div v-if="collectionLink" class="flex items-center gap-2 ml-auto">
+                    <BaseButton size="sm" variant="none" class="px-2 py-1 bg-primary-500 text-white" @click="copyLink">
+                      <Icon name="lucide:copy" class="size-3 mr-1" /> Copiar
+                    </BaseButton>
+                    <BaseButton size="sm" variant="muted" :to="collectionLinkUrl" target="_blank">
+                      <Icon name="lucide:external-link" class="size-4" />
+                    </BaseButton>
+                    <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors" :disabled="isValidatingLink" @click="validatePublicLink">
+                      <Icon name="lucide:shield-check" class="size-4" />
+                    </button>
+                    <BaseTag v-if="linkValidation" size="sm" variant="none" :class="linkValidation.valid ? 'bg-success-500 text-white' : 'bg-danger-500 text-white'" class="text-[9px]">
+                      {{ linkValidation.valid ? 'Válido' : 'Inválido' }}
+                    </BaseTag>
+                  </div>
+                  <div v-else class="ml-auto">
+                    <BaseButton size="sm" variant="primary" :loading="isGeneratingLink" @click="generateLink">
+                      <Icon name="lucide:link" class="size-3.5 mr-1.5" /> Gerar
+                    </BaseButton>
+                  </div>
+                </div>
               </div>
               <!-- Tags inline do cliente -->
               <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1 shrink-0">
@@ -1129,45 +1155,6 @@ onMounted(() => {
 
           <!-- ━━━ TAB: COMUNICAÇÃO ━━━ -->
           <div v-if="activeTab === 'communication'" class="space-y-6 animate-fade-in">
-            <!-- Link de Coleta -->
-            <div class="space-y-2">
-              <div class="flex items-center gap-2">
-                <Icon name="lucide:link" class="size-4 text-muted-400" />
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
-                  Link de Coleta
-                </BaseText>
-              </div>
-              <div class="p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
-                <div v-if="collectionLink">
-                  <p class="text-xs font-mono text-muted-500 mb-3 break-all">
-                    {{ fullCollectionLink }}
-                  </p>
-                  <div class="flex gap-2 items-center">
-                    <BaseButton size="sm" class="flex-1" @click="copyLink">
-                      <Icon name="lucide:copy" class="size-3.5 mr-1.5" /> Copiar Link
-                    </BaseButton>
-                    <BaseButton size="sm" variant="muted" :to="collectionLinkUrl" target="_blank">
-                      <Icon name="lucide:external-link" class="size-4" />
-                    </BaseButton>
-                    <BaseButton size="sm" variant="muted" :loading="isValidatingLink" @click="validatePublicLink">
-                      <Icon name="lucide:shield-check" class="size-4 mr-1.5" /> Validar
-                    </BaseButton>
-                    <BaseTag v-if="linkValidation" size="sm" variant="none" :class="linkValidation.valid ? 'bg-success-500 text-white' : 'bg-danger-500 text-white'" class="text-[9px]">
-                      {{ linkValidation.valid ? 'Válido' : 'Inválido' }}
-                    </BaseTag>
-                  </div>
-                </div>
-                <div v-else>
-                  <p class="text-xs text-muted-500 mb-3">
-                    Gere um link para o cliente enviar seus documentos de forma segura.
-                  </p>
-                  <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink" @click="generateLink">
-                    <Icon name="lucide:link" class="size-3.5 mr-1.5" /> Gerar Novo Link
-                  </BaseButton>
-                </div>
-              </div>
-            </div>
-
             <!-- SMS -->
             <div class="space-y-3">
               <div class="flex items-center justify-between">
