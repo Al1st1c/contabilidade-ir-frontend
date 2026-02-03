@@ -610,10 +610,11 @@ const filteredMembers = computed(() => {
                     <!-- New Rookies (Team Members) -->
                     <div class="flex h-full flex-1 flex-col px-4 sm:px-6 border-muted-700/50 sm:border-l">
                       <BaseHeading as="h2" size="lg" weight="semibold" lead="tight" class="mb-1 text-white">
-                        <span>Sua Equipe</span>
+                        <span>Equipe</span>
                       </BaseHeading>
                       <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
-                        Acompanhe a produtividade dos seus colaboradores em tempo real.
+                        <span v-if="isViewingAdmin">Acompanhe a produtividade dos seus colaboradores em tempo real.</span>
+                        <span v-else>Acompanhe seu desempenho e metas individuais em tempo real.</span>
                       </BaseParagraph>
                       <div class="mt-auto flex items-center gap-2">
                         <div class="flex -space-x-2">
@@ -622,7 +623,7 @@ const filteredMembers = computed(() => {
                             :src="rookie.avatar" class="border-2 border-primary-800"
                           />
                         </div>
-                        <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team">
+                        <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team" v-if="isViewingAdmin">
                           <Icon name="lucide:plus" class="size-4" />
                         </BaseButton>
                       </div>
@@ -672,9 +673,9 @@ const filteredMembers = computed(() => {
                           : 'Prepare sua equipe! O período oficial de entrega das declarações do IR 2026 inicia em breve.'
                         }}
                       </BaseParagraph>
-                      <BaseButton size="sm" variant="default" class="w-fit" to="/imposto-de-renda">
+                      <!-- <BaseButton size="sm" variant="default" class="w-fit" to="/imposto-de-renda">
                         {{ isIrPeriodStarted ? 'Gerenciar IRs' : 'Ver Cronograma' }}
-                      </BaseButton>
+                      </BaseButton> -->
                     </div>
 
                     <!-- Visual Area (Interactive Clock) -->
@@ -895,6 +896,7 @@ const filteredMembers = computed(() => {
           <!-- Inner grid -->
           <div class="grid gap-4 lg:flex lg:flex-col">
             <!-- Widget -->
+
 
             <!-- Widget: Produtividade da Equipe -->
             <BaseCard v-if="canViewAll" rounded="md" class="p-4 md:p-6">

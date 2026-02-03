@@ -179,6 +179,16 @@ export function useSubscription() {
     }
   }
 
+  const getPaymentHistory = async () => {
+    try {
+      const { data } = await useCustomFetch<any>('/payments/history')
+      return { success: true, data }
+    }
+    catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  }
+
   const purchaseCredits = async (amount: number, paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO') => {
     loading.value = true
     error.value = null
@@ -232,6 +242,7 @@ export function useSubscription() {
     selectFreePlan,
     getPaymentStatus,
     getPrepaidBalance,
+    getPaymentHistory,
     purchaseCredits,
     validateCoupon,
   }

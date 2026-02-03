@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PanelsPanelNotifications } from '#components'
+import { PanelsPanelNotifications, PanelsPanelSubscription } from '#components'
 import { useApi, useAuth } from '~/composables/useAuth'
 
 const { user, logout } = useAuth()
@@ -55,6 +55,10 @@ onMounted(() => {
 function openNotifications() {
   open(PanelsPanelNotifications, {})
 }
+
+function openSubscription() {
+  open(PanelsPanelSubscription, {})
+}
 </script>
 
 <template>
@@ -62,6 +66,16 @@ function openNotifications() {
     <div class="scale-[0.8]">
       <BaseThemeSwitch />
     </div>
+
+    <!-- Plan Button -->
+    <button
+      type="button"
+      class="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+      title="Plano e Pagamentos"
+      @click="openSubscription"
+    >
+      <Icon name="solar:crown-bold-duotone" class="size-5 text-muted-400" />
+    </button>
 
     <!-- Notifications Button -->
     <button
