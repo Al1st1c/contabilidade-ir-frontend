@@ -26,31 +26,33 @@ const fund = computed(() => fundDetails.value || {})
 
 // Funções helper
 function formatCurrency(value: number): string {
-  if (!value) return '0,00'
+  if (!value)
+    return '0,00'
   return Math.abs(value).toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   })
 }
 
 function formatDate(dateString: string): string {
-  if (!dateString) return 'N/A'
+  if (!dateString)
+    return 'N/A'
   return new Date(dateString).toLocaleDateString('pt-BR')
 }
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    'active': 'Ativo',
-    'disabled': 'Desabilitado',
-    'locked': 'Bloqueado'
+    active: 'Ativo',
+    disabled: 'Desabilitado',
+    locked: 'Bloqueado',
   }
   return labels[status] || status
 }
 
 function getTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    'money': 'Dinheiro',
-    'bank': 'Banco'
+    money: 'Dinheiro',
+    bank: 'Banco',
   }
   return labels[type] || type
 }
@@ -101,12 +103,15 @@ async function fetchFundDetails() {
     if (data.success) {
       fundDetails.value = data.data
       console.log('Fund details set:', fundDetails.value)
-    } else {
+    }
+    else {
       console.error('Erro ao buscar detalhes do fundo:', data)
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro na requisição de detalhes do fundo:', error)
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -122,7 +127,6 @@ watch(() => props.card?.id, (newId) => {
     fetchFundDetails()
   }
 })
-
 </script>
 
 <template>
@@ -133,9 +137,11 @@ watch(() => props.card?.id, (newId) => {
       </BaseHeading>
 
       <!-- Close button -->
-      <button type="button"
+      <button
+        type="button"
         class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
-        @click="() => emits('close')">
+        @click="() => emits('close')"
+      >
         <Icon name="lucide:arrow-right" class="size-4" />
       </button>
     </div>
@@ -144,7 +150,7 @@ watch(() => props.card?.id, (newId) => {
       <!-- Loading state -->
       <div v-if="loading" class="flex items-center justify-center py-8">
         <div class="flex items-center gap-3">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
           <span class="text-muted-500">Carregando detalhes do fundo...</span>
         </div>
       </div>
@@ -162,11 +168,13 @@ watch(() => props.card?.id, (newId) => {
             </BaseParagraph>
           </div>
           <div class="text-end">
-            <BaseHeading as="h4" size="sm" :class="[
-              getCurrentBalance() >= 0
-                ? 'text-muted-900 dark:text-muted-100'
-                : 'text-red-600 dark:text-red-400'
-            ]">
+            <BaseHeading
+              as="h4" size="sm" :class="[
+                getCurrentBalance() >= 0
+                  ? 'text-muted-900 dark:text-muted-100'
+                  : 'text-red-600 dark:text-red-400',
+              ]"
+            >
               R$ {{ formatCurrency(getCurrentBalance()) }}
             </BaseHeading>
             <BaseParagraph size="xs" class="text-muted-400">
@@ -175,17 +183,23 @@ watch(() => props.card?.id, (newId) => {
           </div>
         </div>
         <!-- Progress -->
-        <BaseProgress :model-value="getProgressPercentage()" size="xs"
-          :variant="getCurrentBalance() >= 0 ? 'primary' : 'dark'" class="my-2" />
+        <BaseProgress
+          :model-value="getProgressPercentage()" size="xs"
+          :variant="getCurrentBalance() >= 0 ? 'primary' : 'dark'" class="my-2"
+        />
 
         <!-- Card details -->
         <div class="pt-2">
-          <button type="button" class="focus-visible:nui-focus mb-3 flex w-full items-center"
-            @click="detailsExpanded = !detailsExpanded">
+          <button
+            type="button" class="focus-visible:nui-focus mb-3 flex w-full items-center"
+            @click="detailsExpanded = !detailsExpanded"
+          >
             <span class="text-muted-500 dark:text-muted-400 flex w-full items-center justify-between">
               <span class="flex items-center gap-1">
-                <Icon name="lucide:chevron-down" class="size-3 transition-transform duration-300"
-                  :class="detailsExpanded ? 'rotate-180' : ''" />
+                <Icon
+                  name="lucide:chevron-down" class="size-3 transition-transform duration-300"
+                  :class="detailsExpanded ? 'rotate-180' : ''"
+                />
                 <BaseText v-if="!detailsExpanded" size="xs">
                   Mostrar detalhes
                 </BaseText>
@@ -206,11 +220,13 @@ watch(() => props.card?.id, (newId) => {
               <BaseHeading as="h5" size="xs" class="text-muted-600 dark:text-muted-300">
                 Resumo das Operações
               </BaseHeading>
-              <BaseText size="sm" :class="[
-                getCurrentBalance() >= 0
-                  ? 'text-muted-800 dark:text-muted-100'
-                  : 'text-red-600 dark:text-red-400'
-              ]">
+              <BaseText
+                size="sm" :class="[
+                  getCurrentBalance() >= 0
+                    ? 'text-muted-800 dark:text-muted-100'
+                    : 'text-red-600 dark:text-red-400',
+                ]"
+              >
                 R$ {{ formatCurrency(getCurrentBalance()) }}
               </BaseText>
             </div>
@@ -249,11 +265,12 @@ watch(() => props.card?.id, (newId) => {
               <!-- Item -->
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <div :class="[
-                    'size-2 rounded-full',
-                    fund.status === 'active' ? 'bg-success-500' :
-                      fund.status === 'disabled' ? 'bg-muted-400' : 'bg-destructive-500'
-                  ]" />
+                  <div
+                    class="size-2 rounded-full" :class="[
+                      fund.status === 'active' ? 'bg-success-500'
+                      : fund.status === 'disabled' ? 'bg-muted-400' : 'bg-destructive-500',
+                    ]"
+                  />
                   <BaseParagraph size="sm" class="text-muted-700 dark:text-muted-400">
                     Status do Fundo
                   </BaseParagraph>
@@ -268,19 +285,22 @@ watch(() => props.card?.id, (newId) => {
               <!-- Item -->
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                  <div :class="[
-                    'size-2 rounded-full',
-                    getCurrentBalance() >= 0 ? 'bg-success-500' : 'bg-destructive-500'
-                  ]" />
+                  <div
+                    class="size-2 rounded-full" :class="[
+                      getCurrentBalance() >= 0 ? 'bg-success-500' : 'bg-destructive-500',
+                    ]"
+                  />
                   <BaseParagraph size="sm" class="text-muted-700 dark:text-muted-400">
                     Situação Financeira
                   </BaseParagraph>
                 </div>
-                <BaseText size="sm" :class="[
-                  getCurrentBalance() >= 0
-                    ? 'text-success-600 dark:text-success-400'
-                    : 'text-red-600 dark:text-red-400'
-                ]">
+                <BaseText
+                  size="sm" :class="[
+                    getCurrentBalance() >= 0
+                      ? 'text-success-600 dark:text-success-400'
+                      : 'text-red-600 dark:text-red-400',
+                  ]"
+                >
                   {{ getCurrentBalance() >= 0 ? 'Positivo' : 'NEGATIVO' }}
                 </BaseText>
               </div>
@@ -290,8 +310,10 @@ watch(() => props.card?.id, (newId) => {
 
         <div class="mt-4 w-full space-y-5">
           <!-- Current Day Operation Info -->
-          <div v-if="fund.currentDay"
-            class="border-muted-200 dark:border-muted-700 border rounded-lg p-4 bg-primary-50 dark:bg-primary-900/10">
+          <div
+            v-if="fund.currentDay"
+            class="border-muted-200 dark:border-muted-700 border rounded-lg p-4 bg-primary-50 dark:bg-primary-900/10"
+          >
             <div class="mb-3">
               <BaseHeading as="h5" size="xs" class="text-primary-600 dark:text-primary-400 mb-2">
                 Operação do Dia Atual
@@ -313,11 +335,13 @@ watch(() => props.card?.id, (newId) => {
 
               <div class="flex items-center justify-between">
                 <span class="text-sm text-muted-600 dark:text-muted-300">Saldo Atual:</span>
-                <span class="text-sm font-mono" :class="[
-                  fund.currentDay.fundOperation.currentAmount >= 0
-                    ? 'text-success-600 dark:text-success-400'
-                    : 'text-red-600 dark:text-red-400'
-                ]">
+                <span
+                  class="text-sm font-mono" :class="[
+                    fund.currentDay.fundOperation.currentAmount >= 0
+                      ? 'text-success-600 dark:text-success-400'
+                      : 'text-red-600 dark:text-red-400',
+                  ]"
+                >
                   R$ {{ formatCurrency(fund.currentDay.fundOperation.currentAmount) }}
                 </span>
               </div>
@@ -339,8 +363,10 @@ watch(() => props.card?.id, (newId) => {
           </div>
 
           <!-- No Current Day -->
-          <div v-else
-            class="border-muted-200 dark:border-muted-700 border rounded-lg p-4 bg-muted-50 dark:bg-muted-900/50">
+          <div
+            v-else
+            class="border-muted-200 dark:border-muted-700 border rounded-lg p-4 bg-muted-50 dark:bg-muted-900/50"
+          >
             <div class="text-center py-2">
               <Icon name="lucide:calendar-x" class="size-6 text-muted-400 mx-auto mb-2" />
               <BaseParagraph size="xs" class="text-muted-500">
@@ -357,8 +383,10 @@ watch(() => props.card?.id, (newId) => {
 
             <!-- Action Button -->
             <div class="flex justify-center pt-2">
-              <BaseButton :to="`/dashboard/transactions?fundId=${fund.id}`" variant="primary" size="sm" rounded="md"
-                class="w-full">
+              <BaseButton
+                :to="`/dashboard/transactions?fundId=${fund.id}`" variant="primary" size="sm" rounded="md"
+                class="w-full"
+              >
                 <Icon name="lucide:list" class="size-4 me-2" />
                 Ver Transações deste Fundo
               </BaseButton>
@@ -478,11 +506,13 @@ watch(() => props.card?.id, (newId) => {
                   <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-300">
                     Saldo Atual da Semana
                   </BaseParagraph>
-                  <BaseParagraph size="sm" :class="[
-                    fund.currentWeek.fundOperation.currentAmount >= 0
-                      ? 'text-success-600 dark:text-success-400'
-                      : 'text-red-600 dark:text-red-400'
-                  ]">
+                  <BaseParagraph
+                    size="sm" :class="[
+                      fund.currentWeek.fundOperation.currentAmount >= 0
+                        ? 'text-success-600 dark:text-success-400'
+                        : 'text-red-600 dark:text-red-400',
+                    ]"
+                  >
                     R$ {{ formatCurrency(fund.currentWeek.fundOperation.currentAmount) }}
                   </BaseParagraph>
                 </div>
@@ -502,11 +532,13 @@ watch(() => props.card?.id, (newId) => {
                 <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-300">
                   Saldo Histórico Total
                 </BaseParagraph>
-                <BaseParagraph size="sm" :class="[
-                  fund.stats?.totalAmount >= 0
-                    ? 'text-muted-600 dark:text-muted-300'
-                    : 'text-red-600 dark:text-red-400'
-                ]">
+                <BaseParagraph
+                  size="sm" :class="[
+                    fund.stats?.totalAmount >= 0
+                      ? 'text-muted-600 dark:text-muted-300'
+                      : 'text-red-600 dark:text-red-400',
+                  ]"
+                >
                   R$ {{ formatCurrency(fund.stats?.totalAmount || 0) }}
                 </BaseParagraph>
               </div>
@@ -536,14 +568,15 @@ watch(() => props.card?.id, (newId) => {
                 </BaseParagraph>
 
                 <BaseTooltip content="Status atual do fundo">
-                  <span :class="[
-                    'text-sm',
-                    fund.status === 'active'
-                      ? 'text-success-600 dark:text-success-400'
-                      : fund.status === 'disabled'
-                        ? 'text-muted-600 dark:text-muted-400'
-                        : 'text-destructive-600 dark:text-destructive-400'
-                  ]">
+                  <span
+                    class="text-sm" :class="[
+                      fund.status === 'active'
+                        ? 'text-success-600 dark:text-success-400'
+                        : fund.status === 'disabled'
+                          ? 'text-muted-600 dark:text-muted-400'
+                          : 'text-destructive-600 dark:text-destructive-400',
+                    ]"
+                  >
                     {{ getStatusLabel(fund.status) }}
                   </span>
                 </BaseTooltip>

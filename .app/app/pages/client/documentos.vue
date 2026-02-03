@@ -15,7 +15,8 @@ const documents = ref<any[]>([])
 const isUploading = ref<string | null>(null)
 
 async function loadDocuments() {
-  if (!user.value?.id) return
+  if (!user.value?.id)
+    return
 
   try {
     isLoading.value = true
@@ -37,25 +38,29 @@ async function loadDocuments() {
             status: item.status, // pending, uploaded, approved, rejected
             isRequired: item.isRequired,
             comment: item.comment,
-            attachmentId: item.attachment?.id
+            attachmentId: item.attachment?.id,
           }))
 
           // Pegar o link de coleta ativo
           collectionLink.value = decRes.data.collectionLinks?.find((l: any) => l.isActive)
-        } else {
+        }
+        else {
           declaration.value = null
           documents.value = []
           collectionLink.value = null
         }
-      } else {
+      }
+      else {
         declaration.value = null
         documents.value = []
         collectionLink.value = null
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao carregar documentos:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -67,7 +72,8 @@ onMounted(loadDocuments)
 
 async function handleFileUpload(event: Event, itemId: string) {
   const target = event.target as HTMLInputElement
-  if (!target.files || target.files.length === 0) return
+  if (!target.files || target.files.length === 0)
+    return
   if (!collectionLink.value?.token) {
     add({
       title: 'Erro',
@@ -92,7 +98,7 @@ async function handleFileUpload(event: Event, itemId: string) {
 
     const result = await $fetch<any>(getApiUrl(`/public/${collectionLink.value.token}/upload`), {
       method: 'POST',
-      body: formData
+      body: formData,
     })
 
     if (result.id || result.success) {
@@ -103,13 +109,15 @@ async function handleFileUpload(event: Event, itemId: string) {
       })
       await loadDocuments() // Recarregar lista
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     add({
       title: 'Erro no Upload',
       description: error.data?.message || 'Não foi possível enviar o documento.',
       icon: 'solar:danger-circle-bold-duotone',
     })
-  } finally {
+  }
+  finally {
     isUploading.value = null
   }
 }
@@ -146,10 +154,12 @@ function getStatusLabel(status: string) {
   <div class="space-y-6 pb-24">
     <!-- Header -->
     <section class="pt-6 px-4">
-      <BaseHeading as="h2" size="xl" weight="bold" class="text-muted-800 dark:text-white">Documentação</BaseHeading>
+      <BaseHeading as="h2" size="xl" weight="bold" class="text-muted-800 dark:text-white">
+        Documentação
+      </BaseHeading>
       <BaseParagraph size="sm" class="text-muted-500">
-        {{ declaration ? `Arquivos para o exercício ${selectedTaxYear} (Ano Calendário ${selectedTaxYear - 1})` :
-          'Nenhuma declaração encontrada para este ano.' }}
+        {{ declaration ? `Arquivos para o exercício ${selectedTaxYear} (Ano Calendário ${selectedTaxYear - 1})`
+          : 'Nenhuma declaração encontrada para este ano.' }}
       </BaseParagraph>
     </section>
 
@@ -174,16 +184,20 @@ function getStatusLabel(status: string) {
 
     <!-- Documents List -->
     <div v-else class="px-4 space-y-4">
-      <div v-for="doc in documents" :key="doc.id"
-        class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300">
+      <div
+        v-for="doc in documents" :key="doc.id"
+        class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300"
+      >
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
                 {{ doc.title }}
               </BaseHeading>
-              <BaseTag v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
-                class="text-[9px] uppercase font-bold py-0.5 px-2">
+              <BaseTag
+                v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
+                class="text-[9px] uppercase font-bold py-0.5 px-2"
+              >
                 Obrigatório
               </BaseTag>
             </div>
@@ -192,8 +206,10 @@ function getStatusLabel(status: string) {
             </BaseParagraph>
 
             <!-- Rejection Reason -->
-            <div v-if="doc.status === 'rejected' && doc.comment"
-              class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2">
+            <div
+              v-if="doc.status === 'rejected' && doc.comment"
+              class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2"
+            >
               <Icon name="solar:info-circle-bold" class="size-4 text-danger-500 shrink-0 mt-0.5" />
               <p class="text-[10px] text-danger-600 dark:text-danger-400 font-medium leading-tight">
                 {{ doc.comment }}
@@ -204,7 +220,8 @@ function getStatusLabel(status: string) {
           <!-- Status / Action -->
           <div class="shrink-0 flex flex-col items-center gap-2">
             <div
-              :class="['size-10 rounded-xl flex items-center justify-center transition-colors', getStatusColor(doc.status)]">
+              class="size-10 rounded-xl flex items-center justify-center transition-colors" :class="[getStatusColor(doc.status)]"
+            >
               <Icon :name="getStatusIcon(doc.status)" class="size-6" />
             </div>
             <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
@@ -213,12 +230,15 @@ function getStatusLabel(status: string) {
         </div>
 
         <!-- Upload Button (only if not approved) -->
-        <div v-if="doc.status !== 'approved'"
-          class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800 flex justify-end">
+        <div
+          v-if="doc.status !== 'approved'"
+          class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800 flex justify-end"
+        >
           <label class="relative cursor-pointer">
-            <input type="file" class="hidden" @change="handleFileUpload($event, doc.id)" :disabled="!!isUploading" />
+            <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
             <div
-              class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
+              class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20"
+            >
               <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
               <Icon v-else name="solar:upload-linear" class="size-4" />
               {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
@@ -229,13 +249,17 @@ function getStatusLabel(status: string) {
 
       <!-- Optional Extra Files -->
       <BaseCard
-        class="p-6 border-dashed border-2 border-muted-200 dark:border-muted-800 bg-transparent flex flex-col items-center text-center">
-        <BaseHeading as="h4" size="sm" weight="bold" class="mb-1 text-muted-600 dark:text-muted-300">Outros Documentos
+        class="p-6 border-dashed border-2 border-muted-200 dark:border-muted-800 bg-transparent flex flex-col items-center text-center"
+      >
+        <BaseHeading as="h4" size="sm" weight="bold" class="mb-1 text-muted-600 dark:text-muted-300">
+          Outros Documentos
         </BaseHeading>
-        <BaseParagraph size="xs" class="text-muted-400 mb-4">Envie qualquer outro arquivo adicional que considerar
-          relevante.</BaseParagraph>
+        <BaseParagraph size="xs" class="text-muted-400 mb-4">
+          Envie qualquer outro arquivo adicional que considerar
+          relevante.
+        </BaseParagraph>
         <label class="cursor-pointer">
-          <input type="file" class="hidden" @change="handleFileUpload($event, 'extra')" :disabled="!!isUploading" />
+          <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, 'extra')">
           <BaseButton variant="muted" rounded="lg" size="sm" class="h-9 font-bold" :loading="isUploading === 'extra'">
             <Icon name="solar:add-circle-linear" class="size-4 mr-2" />
             Adicionar Extra

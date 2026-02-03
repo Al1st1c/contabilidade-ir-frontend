@@ -1,46 +1,3 @@
-<template>
-  <div v-if="isVisible" class="winner-celebration-overlay">
-    <div class="celebration-background"></div>
-    
-    <div class="winner-celebration-card">
-      <div class="celebration-glow"></div>
-      
-      <div class="winner-content">
-        <div class="winner-avatar">
-          <Icon name="lucide:crown" class="crown-icon" />
-          <Icon name="lucide:user" class="avatar-icon" />
-        </div>
-        
-        <h1 class="winner-name">{{ winner?.userName || 'Ganhador' }}</h1>
-        
-        <div class="prize-info">
-          <h2 class="prize-name">{{ winner?.prizeName || 'Prêmio' }}</h2>
-          <div v-if="winner?.prizeValue" class="prize-value">
-            Valor: R$ {{ winner.prizeValue }}
-          </div>
-        </div>
-        
-        <div class="winner-ticket">
-          <span class="ticket-label">Bilhete da Sorte:</span>
-          <span class="ticket-number">#{{ winner?.ticketNumber || 'N/A' }}</span>
-        </div>
-        
-        <div class="celebration-message">
-          <h3>🎉 PARABÉNS! 🎉</h3>
-          <p>Você é o grande ganhador!</p>
-        </div>
-      </div>
-      
-      <button @click="handleComplete" class="close-celebration">
-        <Icon name="lucide:x" class="close-icon" />
-      </button>
-    </div>
-    
-    <!-- Confetti Canvas -->
-    <canvas ref="confettiCanvas" class="confetti-canvas"></canvas>
-  </div>
-</template>
-
 <script setup lang="ts">
 interface Winner {
   userId: string
@@ -83,9 +40,9 @@ function triggerConfetti() {
       particleCount: 200,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3']
+      colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'],
     })
-    
+
     // Confetes laterais
     setTimeout(() => {
       window.confetti({
@@ -93,24 +50,24 @@ function triggerConfetti() {
         angle: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3']
+        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'],
       })
       window.confetti({
         particleCount: 150,
         angle: 120,
         spread: 55,
         origin: { x: 1 },
-        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3']
+        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'],
       })
     }, 500)
-    
+
     // Confetes adicionais
     setTimeout(() => {
       window.confetti({
         particleCount: 100,
         spread: 100,
         origin: { y: 0.3 },
-        colors: ['#ffd700', '#ffed4e', '#ff6b6b', '#4ecdc4']
+        colors: ['#ffd700', '#ffed4e', '#ff6b6b', '#4ecdc4'],
       })
     }, 1000)
   }
@@ -120,6 +77,53 @@ function handleComplete() {
   emit('complete')
 }
 </script>
+
+<template>
+  <div v-if="isVisible" class="winner-celebration-overlay">
+    <div class="celebration-background" />
+
+    <div class="winner-celebration-card">
+      <div class="celebration-glow" />
+
+      <div class="winner-content">
+        <div class="winner-avatar">
+          <Icon name="lucide:crown" class="crown-icon" />
+          <Icon name="lucide:user" class="avatar-icon" />
+        </div>
+
+        <h1 class="winner-name">
+          {{ winner?.userName || 'Ganhador' }}
+        </h1>
+
+        <div class="prize-info">
+          <h2 class="prize-name">
+            {{ winner?.prizeName || 'Prêmio' }}
+          </h2>
+          <div v-if="winner?.prizeValue" class="prize-value">
+            Valor: R$ {{ winner.prizeValue }}
+          </div>
+        </div>
+
+        <div class="winner-ticket">
+          <span class="ticket-label">Bilhete da Sorte:</span>
+          <span class="ticket-number">#{{ winner?.ticketNumber || 'N/A' }}</span>
+        </div>
+
+        <div class="celebration-message">
+          <h3>🎉 PARABÉNS! 🎉</h3>
+          <p>Você é o grande ganhador!</p>
+        </div>
+      </div>
+
+      <button class="close-celebration" @click="handleComplete">
+        <Icon name="lucide:x" class="close-icon" />
+      </button>
+    </div>
+
+    <!-- Confetti Canvas -->
+    <canvas ref="confettiCanvas" class="confetti-canvas" />
+  </div>
+</template>
 
 <style scoped>
 .winner-celebration-overlay {
@@ -173,8 +177,14 @@ function handleComplete() {
 }
 
 @keyframes celebrationGlow {
-  from { opacity: 0.4; transform: scale(1); }
-  to { opacity: 0.7; transform: scale(1.05); }
+  from {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
 }
 
 .winner-content {
@@ -205,8 +215,12 @@ function handleComplete() {
 }
 
 @keyframes crownBounce {
-  from { transform: translateY(0px); }
-  to { transform: translateY(-8px); }
+  from {
+    transform: translateY(0px);
+  }
+  to {
+    transform: translateY(-8px);
+  }
 }
 
 .avatar-icon {
@@ -337,15 +351,15 @@ function handleComplete() {
     padding: 40px 30px;
     margin: 20px;
   }
-  
+
   .winner-name {
     font-size: 36px;
   }
-  
+
   .prize-name {
     font-size: 24px;
   }
-  
+
   .celebration-message h3 {
     font-size: 24px;
   }

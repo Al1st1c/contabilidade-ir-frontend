@@ -22,13 +22,14 @@ const authMessage = computed(() => {
 })
 
 async function requestOtp() {
-  if (cpf.value.length < 11) return
+  if (cpf.value.length < 11)
+    return
 
   isLoading.value = true
   try {
     const result = await $fetch<any>(getApiUrl('/auth/client/request-otp'), {
       method: 'POST',
-      body: { cpf: cpf.value.replace(/\D/g, '') }
+      body: { cpf: cpf.value.replace(/\D/g, '') },
     })
 
     if (result.error || !result.success) {
@@ -46,19 +47,22 @@ async function requestOtp() {
       icon: 'solar:check-circle-bold-duotone',
     })
     step.value = 'otp'
-  } catch (error: any) {
+  }
+  catch (error: any) {
     add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao conectar com o servidor.',
       icon: 'solar:danger-circle-bold-duotone',
     })
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
 
 async function verifyOtp() {
-  if (otp.value.length < 4) return
+  if (otp.value.length < 4)
+    return
 
   isLoading.value = true
   try {
@@ -66,8 +70,8 @@ async function verifyOtp() {
       method: 'POST',
       body: {
         cpf: cpf.value.replace(/\D/g, ''),
-        code: otp.value
-      }
+        code: otp.value,
+      },
     })
 
     if (result.error || !result.success) {
@@ -83,7 +87,7 @@ async function verifyOtp() {
     token.value = result.access_token
     user.value = {
       ...result.user,
-      userType: 'client'
+      userType: 'client',
     }
 
     add({
@@ -93,13 +97,15 @@ async function verifyOtp() {
     })
 
     navigateTo('/client')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     add({
       title: 'Erro',
       description: error.data?.message || 'Falha na verificação',
       icon: 'solar:danger-circle-bold-duotone',
     })
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -126,11 +132,15 @@ async function verifyOtp() {
         <!-- Step 1: CPF -->
         <div v-if="step === 'cpf'" class="space-y-6">
           <div class="space-y-4">
-            <BaseInput v-model="cpf" label="Seu CPF" placeholder="000.000.000-00" icon="solar:user-id-linear"
-              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900" />
+            <BaseInput
+              v-model="cpf" label="Seu CPF" placeholder="000.000.000-00" icon="solar:user-id-linear"
+              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900"
+            />
           </div>
-          <BaseButton variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="cpf.length < 11"
-            @click="requestOtp">
+          <BaseButton
+            variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="cpf.length < 11"
+            @click="requestOtp"
+          >
             Continuar
           </BaseButton>
         </div>
@@ -138,16 +148,20 @@ async function verifyOtp() {
         <!-- Step 2: OTP -->
         <div v-else class="space-y-6">
           <div class="space-y-4">
-            <BaseInput v-model="otp" label="Código de Acesso" placeholder="0000" icon="solar:shield-keyhole-linear"
-              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900 text-center tracking-[1em]" maxlength="6" />
+            <BaseInput
+              v-model="otp" label="Código de Acesso" placeholder="0000" icon="solar:shield-keyhole-linear"
+              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900 text-center tracking-[1em]" maxlength="6"
+            />
             <div class="text-center">
               <button class="text-xs text-primary-500 font-medium hover:underline" @click="step = 'cpf'">
                 Não recebi o código ou CPF incorreto
               </button>
             </div>
           </div>
-          <BaseButton variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="otp.length < 4"
-            @click="verifyOtp">
+          <BaseButton
+            variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="otp.length < 4"
+            @click="verifyOtp"
+          >
             Acessar Painel
           </BaseButton>
         </div>

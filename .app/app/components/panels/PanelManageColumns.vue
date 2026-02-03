@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import Sortable from 'sortablejs'
 
-const emit = defineEmits(['close'])
+import { safeColors } from '~/utils/colors'
+
 const props = defineProps<{
   onSaved?: () => void
 }>()
-
+const emit = defineEmits(['close'])
 function close() {
   emit('close')
 }
@@ -25,7 +26,7 @@ async function fetchColumns() {
     if (data.success) {
       columns.value = data.data.map((col: any) => ({
         ...col,
-        clientStatus: col.clientStatus || 'NONE'
+        clientStatus: col.clientStatus || 'NONE',
       }))
 
       nextTick(() => {
@@ -40,15 +41,17 @@ async function fetchColumns() {
                 columns.value.splice(newIndex, 0, item)
                 onDragEnd()
               }
-            }
+            },
           })
         }
       })
     }
-  } catch (err) {
+  }
+  catch (err) {
     console.error(err)
     toast.add({ title: 'Erro', message: 'Erro ao buscar colunas', type: 'danger' })
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -58,7 +61,8 @@ const newColumnName = ref('')
 const isCreating = ref(false)
 
 async function addColumn() {
-  if (!newColumnName.value.trim()) return
+  if (!newColumnName.value.trim())
+    return
   isCreating.value = true
   try {
     const { data } = await useCustomFetch<any>('/declarations/columns', {
@@ -67,8 +71,8 @@ async function addColumn() {
         name: newColumnName.value,
         color: 'info', // default
         isInitial: false,
-        isFinal: false
-      }
+        isFinal: false,
+      },
     })
     if (data.success) {
       toast.add({ title: 'Sucesso', description: 'Coluna criada!' })
@@ -76,10 +80,12 @@ async function addColumn() {
       await fetchColumns()
       props.onSaved?.()
     }
-  } catch (err) {
+  }
+  catch (err) {
     console.error(err)
     toast.add({ title: 'Erro', description: 'Erro ao criar coluna' })
-  } finally {
+  }
+  finally {
     isCreating.value = false
   }
 }
@@ -94,12 +100,13 @@ async function updateColumn(column: any) {
         color: column.color,
         clientStatus: column.clientStatus === 'NONE' ? null : column.clientStatus,
         isInitial: column.isInitial,
-        isFinal: column.isFinal
-      }
+        isFinal: column.isFinal,
+      },
     })
     toast.add({ title: 'Sucesso', description: 'Coluna atualizada' })
     props.onSaved?.()
-  } catch (err) {
+  }
+  catch (err) {
     console.error(err)
     toast.add({ title: 'Erro', description: 'Erro ao atualizar' })
   }
@@ -107,15 +114,17 @@ async function updateColumn(column: any) {
 
 // Delete Column
 async function deleteColumn(id: string) {
-  if (!confirm('Tem certeza? Se houver cards nesta coluna, a exclusão falhará.')) return
+  if (!confirm('Tem certeza? Se houver cards nesta coluna, a exclusão falhará.'))
+    return
   try {
     await useCustomFetch(`/declarations/columns/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
     toast.add({ title: 'Sucesso', description: 'Coluna excluída' })
     await fetchColumns()
     props.onSaved?.()
-  } catch (err: any) {
+  }
+  catch (err: any) {
     console.error(err)
     const msg = err.data?.message || 'Erro ao excluir'
     toast.add({ title: 'Erro', description: msg })
@@ -125,21 +134,20 @@ async function deleteColumn(id: string) {
 // Reorder
 async function onDragEnd() {
   const payload = {
-    columns: columns.value.map((c, index) => ({ id: c.id, order: index }))
+    columns: columns.value.map((c, index) => ({ id: c.id, order: index })),
   }
   try {
     await useCustomFetch('/declarations/columns/reorder', {
       method: 'PUT',
-      body: payload
+      body: payload,
     })
     props.onSaved?.()
-  } catch (err) {
+  }
+  catch (err) {
     console.error(err)
     toast.add({ title: 'Erro', description: 'Erro ao reordenar' })
   }
 }
-
-import { safeColors } from '~/utils/colors'
 
 onMounted(() => {
   fetchColumns()
@@ -156,7 +164,8 @@ const statusOptions = [
 
 <template>
   <div
-    class="flex h-full flex-col bg-white dark:bg-muted-900 shadow-xl w-full sm:w-[500px] border-l border-muted-200 dark:border-muted-800">
+    class="flex h-full flex-col bg-white dark:bg-muted-900 shadow-xl w-full sm:w-[500px] border-l border-muted-200 dark:border-muted-800"
+  >
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 border-b border-muted-200 dark:border-muted-800">
       <BaseHeading as="h3" size="md" weight="medium">
@@ -169,11 +178,10 @@ const statusOptions = [
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-6">
-
       <!-- Add New -->
       <div class="flex gap-2 mb-6">
         <BaseInput v-model="newColumnName" placeholder="Nova coluna..." class="flex-1" @keyup.enter="addColumn" />
-        <BaseButton color="primary" @click="addColumn" :loading="isCreating" :disabled="!newColumnName">
+        <BaseButton color="primary" :loading="isCreating" :disabled="!newColumnName" @click="addColumn">
           <Icon name="lucide:plus" class="size-4 mr-2" />
           Adicionar
         </BaseButton>
@@ -187,20 +195,26 @@ const statusOptions = [
       </div>
 
       <div v-else ref="listContainer" class="space-y-3">
-        <div v-for="element in columns" :key="element.id"
-          class="group flex flex-col gap-2 p-3 rounded-lg border border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
+        <div
+          v-for="element in columns" :key="element.id"
+          class="group flex flex-col gap-2 p-3 rounded-lg border border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50"
+        >
           <div class="flex items-center gap-2">
             <button class="drag-handle cursor-grab text-muted-400 hover:text-muted-600">
               <Icon name="lucide:grip-vertical" class="size-4" />
             </button>
 
             <!-- Name Edit -->
-            <input v-model="element.name" @change="updateColumn(element)"
-              class="flex-1 bg-transparent text-sm font-medium border-none focus:ring-0 p-0 text-muted-800 dark:text-muted-100 placeholder-muted-400" />
+            <input
+              v-model="element.name" class="flex-1 bg-transparent text-sm font-medium border-none focus:ring-0 p-0 text-muted-800 dark:text-muted-100 placeholder-muted-400"
+              @change="updateColumn(element)"
+            >
 
             <!-- Delete -->
-            <button @click="deleteColumn(element.id)" class="text-muted-400 hover:text-danger-500 transition-colors p-1"
-              title="Excluir">
+            <button
+              class="text-muted-400 hover:text-danger-500 transition-colors p-1" title="Excluir"
+              @click="deleteColumn(element.id)"
+            >
               <Icon name="lucide:trash-2" class="size-4" />
             </button>
           </div>
@@ -208,19 +222,22 @@ const statusOptions = [
           <!-- Details (Color) -->
           <div class="flex items-center gap-3 pl-6">
             <div class="flex items-center gap-1 flex-wrap max-w-[200px]">
-              <button v-for="color in safeColors" :key="color.name"
-                @click="element.color = color.name; updateColumn(element)"
-                class="size-4 rounded-full border transition-all" :class="[
+              <button
+                v-for="color in safeColors" :key="color.name"
+                class="size-4 rounded-full border transition-all"
+                :class="[
                   element.color === color.name ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
-                  color.class
-                ]" :title="color.label">
-              </button>
+                  color.class,
+                ]" :title="color.label" @click="element.color = color.name; updateColumn(element)"
+              />
             </div>
 
             <!-- Client App Status -->
             <div class="flex-1">
-              <BaseSelect v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
-                @update:model-value="updateColumn(element)">
+              <BaseSelect
+                v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
+                @update:model-value="updateColumn(element)"
+              >
                 <BaseSelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </BaseSelectItem>

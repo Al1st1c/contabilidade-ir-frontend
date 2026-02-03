@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Importar composable para API
+import { useApi } from '~/composables/useAuth'
+
 interface FilterData {
   dateRange?: string
   dateFrom?: string
@@ -48,9 +51,6 @@ const transactionTypeOptions = [
   { value: 'BONUS', label: 'Bônus' },
   { value: 'FREE_CREDITS', label: 'Créditos Grátis' },
 ]
-
-// Importar composable para API
-import { useApi } from '~/composables/useAuth'
 const { useCustomFetch } = useApi()
 
 // Estado para os fundos
@@ -58,19 +58,22 @@ const funds = ref<any[]>([])
 const loadingFunds = ref(false)
 
 // Função para buscar fundos
-const fetchFunds = async () => {
-  if (loadingFunds.value) return
-  
+async function fetchFunds() {
+  if (loadingFunds.value)
+    return
+
   loadingFunds.value = true
   try {
     const { data } = await useCustomFetch<any>('/funds', {
       method: 'GET',
     })
     funds.value = data?.data || []
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar fundos:', error)
     funds.value = []
-  } finally {
+  }
+  finally {
     loadingFunds.value = false
   }
 }
@@ -90,14 +93,14 @@ watch(() => props.modelValue, (newValue) => {
 }, { deep: true })
 
 // Função para aplicar filtros
-const applyFilters = () => {
+function applyFilters() {
   emit('update:modelValue', { ...localFilters.value })
   emit('apply', { ...localFilters.value })
   dropdownOpen.value = false
 }
 
 // Função para limpar filtros
-const clearFilters = () => {
+function clearFilters() {
   localFilters.value = {}
   emit('update:modelValue', {})
   emit('clear')
@@ -105,7 +108,7 @@ const clearFilters = () => {
 }
 
 // Reset tab quando dropdown abre
-const onOpenChange = (open: boolean) => {
+function onOpenChange(open: boolean) {
   dropdownOpen.value = open
   if (open) {
     activeFilterTab.value = 'filter-1'
@@ -114,7 +117,7 @@ const onOpenChange = (open: boolean) => {
 
 // Computed para verificar se há filtros aplicados
 const hasFilters = computed(() => {
-  return Object.keys(localFilters.value).some(key => {
+  return Object.keys(localFilters.value).some((key) => {
     const value = localFilters.value[key as keyof FilterData]
     return value !== undefined && value !== '' && value !== null
   })
@@ -123,34 +126,39 @@ const hasFilters = computed(() => {
 // Computed para texto dos filtros aplicados
 const appliedFiltersText = computed(() => {
   const filters = []
-  
+
   if (localFilters.value.dateRange && localFilters.value.dateRange !== 'all') {
     const option = dateRangeOptions.find(opt => opt.value === localFilters.value.dateRange)
-    if (option) filters.push(option.label)
+    if (option)
+      filters.push(option.label)
   }
-  
+
   if (localFilters.value.transactionType && localFilters.value.transactionType !== 'all') {
     const option = transactionTypeOptions.find(opt => opt.value === localFilters.value.transactionType)
-    if (option) filters.push(option.label)
+    if (option)
+      filters.push(option.label)
   }
-  
+
   if (localFilters.value.fundId && localFilters.value.fundId !== 'all') {
     const fund = funds.value.find((f: any) => f.id === localFilters.value.fundId)
-    if (fund) filters.push(`Fundo: ${fund.name}`)
+    if (fund)
+      filters.push(`Fundo: ${fund.name}`)
   }
-  
+
   if (localFilters.value.minAmount !== undefined || localFilters.value.maxAmount !== undefined) {
     let amountText = 'Valor: '
     if (localFilters.value.minAmount !== undefined && localFilters.value.maxAmount !== undefined) {
       amountText += `R$ ${localFilters.value.minAmount} - R$ ${localFilters.value.maxAmount}`
-    } else if (localFilters.value.minAmount !== undefined) {
+    }
+    else if (localFilters.value.minAmount !== undefined) {
       amountText += `≥ R$ ${localFilters.value.minAmount}`
-    } else if (localFilters.value.maxAmount !== undefined) {
+    }
+    else if (localFilters.value.maxAmount !== undefined) {
       amountText += `≤ R$ ${localFilters.value.maxAmount}`
     }
     filters.push(amountText)
   }
-  
+
   return filters.length > 0 ? filters.join(', ') : 'Nenhum filtro aplicado'
 })
 </script>
@@ -356,7 +364,7 @@ const appliedFiltersText = computed(() => {
                 <Icon name="lucide:x" class="size-4 me-2" />
                 Limpar
               </BaseButton>
-              
+
               <BaseButton
                 variant="primary"
                 size="sm"
@@ -366,7 +374,7 @@ const appliedFiltersText = computed(() => {
                 Aplicar Filtros
               </BaseButton>
             </div>
-            </div>
+          </div>
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>

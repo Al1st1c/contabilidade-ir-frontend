@@ -1,31 +1,3 @@
-<template>
-  <div class="slot-machine">
-    <div class="slot-machine-frame">
-      <div class="slot-reel" :class="{ spinning: isSpinning }">
-        <div 
-          v-for="(participant, index) in participants" 
-          :key="participant.userId"
-          class="slot-item"
-          :class="{ highlighted: highlightedIndex === index }"
-        >
-          <div class="slot-avatar">
-            <Icon name="lucide:user" class="avatar-icon" />
-          </div>
-          <div class="slot-name">{{ participant.userName }}</div>
-          <div class="slot-tickets">
-            {{ participant.ticketNumbers?.length || participant.ticketCount || 0 }} bilhetes
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="slot-machine-text">
-      <h2>{{ isSpinning ? 'SORTEANDO...' : 'AGUARDANDO SORTEIO' }}</h2>
-      <p>{{ isSpinning ? 'A sorte está sendo decidida!' : 'O sorteio começará em breve' }}</p>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 interface Participant {
   userId: string
@@ -52,7 +24,8 @@ const highlightedIndex = ref(-1)
 watch(() => props.isSpinning, (spinning) => {
   if (spinning) {
     startSpinning()
-  } else {
+  }
+  else {
     stopSpinning()
   }
 })
@@ -62,18 +35,18 @@ function startSpinning() {
   const interval = setInterval(() => {
     highlightedIndex.value = Math.floor(Math.random() * props.participants.length)
   }, 100)
-  
+
   // Parar após 3 segundos e emitir resultado
   setTimeout(() => {
     clearInterval(interval)
     const winnerIndex = Math.floor(Math.random() * props.participants.length)
     highlightedIndex.value = winnerIndex
-    
+
     // Emitir resultado após um pequeno delay
     setTimeout(() => {
       emit('complete', {
         winner: props.participants[winnerIndex],
-        index: winnerIndex
+        index: winnerIndex,
       })
     }, 1000)
   }, 3000)
@@ -84,6 +57,36 @@ function stopSpinning() {
 }
 </script>
 
+<template>
+  <div class="slot-machine">
+    <div class="slot-machine-frame">
+      <div class="slot-reel" :class="{ spinning: isSpinning }">
+        <div
+          v-for="(participant, index) in participants"
+          :key="participant.userId"
+          class="slot-item"
+          :class="{ highlighted: highlightedIndex === index }"
+        >
+          <div class="slot-avatar">
+            <Icon name="lucide:user" class="avatar-icon" />
+          </div>
+          <div class="slot-name">
+            {{ participant.userName }}
+          </div>
+          <div class="slot-tickets">
+            {{ participant.ticketNumbers?.length || participant.ticketCount || 0 }} bilhetes
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot-machine-text">
+      <h2>{{ isSpinning ? 'SORTEANDO...' : 'AGUARDANDO SORTEIO' }}</h2>
+      <p>{{ isSpinning ? 'A sorte está sendo decidida!' : 'O sorteio começará em breve' }}</p>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .slot-machine {
   width: 400px;
@@ -91,7 +94,7 @@ function stopSpinning() {
   background: linear-gradient(145deg, #2c3e50, #34495e);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 
+  box-shadow:
     0 0 50px rgba(0, 0, 0, 0.5),
     inset 0 0 20px rgba(255, 255, 255, 0.1);
   border: 4px solid #ffd700;
@@ -116,8 +119,12 @@ function stopSpinning() {
 }
 
 @keyframes slotSpin {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-60px); }
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-60px);
+  }
 }
 
 .slot-item {
@@ -183,8 +190,14 @@ function stopSpinning() {
 }
 
 @keyframes slotTextGlow {
-  from { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7); }
-  to { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.8); }
+  from {
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+  }
+  to {
+    text-shadow:
+      3px 3px 6px rgba(0, 0, 0, 0.7),
+      0 0 30px rgba(255, 215, 0, 0.8);
+  }
 }
 
 .slot-machine-text p {

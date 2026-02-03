@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useApi } from '~/composables/useAuth'
 import { useDebounceFn } from '@vueuse/core'
+import { useApi } from '~/composables/useAuth'
 
 const emit = defineEmits(['close', 'saved'])
 const { useCustomFetch } = useApi()
@@ -34,7 +34,7 @@ const serviceData = ref({
   declarationType: 'complete' as 'simplified' | 'complete',
   serviceValue: 0,
   assignedToId: '',
-  description: ''
+  description: '',
 })
 
 // Step 3: Generated Link
@@ -54,14 +54,16 @@ const debouncedSearch = useDebounceFn(async (query: string) => {
   isLoadingClients.value = true
   try {
     const { data } = await useCustomFetch<any>('/clients', {
-      query: { search: query, limit: 10 }
+      query: { search: query, limit: 10 },
     })
     if (data.success) {
       searchResults.value = data.data
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar clientes:', error)
-  } finally {
+  }
+  finally {
     isLoadingClients.value = false
   }
 }, 300)
@@ -94,9 +96,11 @@ async function fetchTeamMembers() {
         serviceData.value.assignedToId = teamMembers.value[0].id
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar equipe:', error)
-  } finally {
+  }
+  finally {
     isLoadingTeam.value = false
   }
 }
@@ -107,7 +111,7 @@ function goToStep2() {
     toaster.add({
       title: 'Atenção',
       description: 'Selecione um cliente ou cadastre um novo',
-      icon: 'ph:warning-circle-fill'
+      icon: 'ph:warning-circle-fill',
     })
     return
   }
@@ -117,7 +121,7 @@ function goToStep2() {
       toaster.add({
         title: 'Atenção',
         description: 'Preencha nome e CPF do novo cliente',
-        icon: 'ph:warning-circle-fill'
+        icon: 'ph:warning-circle-fill',
       })
       return
     }
@@ -132,7 +136,7 @@ function goToStep3() {
     toaster.add({
       title: 'Atenção',
       description: 'Informe o valor do honorário',
-      icon: 'ph:warning-circle-fill'
+      icon: 'ph:warning-circle-fill',
     })
     return
   }
@@ -151,24 +155,25 @@ async function createDeclaration() {
   isSaving.value = true
   try {
     const payload: any = {
-      ...serviceData.value
+      ...serviceData.value,
     }
 
     if (selectedClient.value) {
       payload.clientId = selectedClient.value.id
-    } else if (showNewClientForm.value) {
+    }
+    else if (showNewClientForm.value) {
       payload.newClientData = newClientData.value
     }
 
     const { data } = await useCustomFetch<any>('/declarations', {
       method: 'POST',
-      body: payload
+      body: payload,
     })
 
     if (data.success) {
       // Immediately generate collection link
       const linkResponse = await useCustomFetch<any>(`/declarations/${data.data.id}/collection-link`, {
-        method: 'POST'
+        method: 'POST',
       })
 
       if (linkResponse.data.success) {
@@ -181,7 +186,7 @@ async function createDeclaration() {
           title: 'Sucesso!',
           description: 'Declaração criada e link copiado para área de transferência',
           icon: 'ph:check-circle-fill',
-          duration: 4000
+          duration: 4000,
         })
       }
 
@@ -193,13 +198,15 @@ async function createDeclaration() {
         emit('close')
       }, 2000)
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao criar declaração',
-      icon: 'ph:warning-circle-fill'
+      icon: 'ph:warning-circle-fill',
     })
-  } finally {
+  }
+  finally {
     isSaving.value = false
   }
 }
@@ -211,26 +218,30 @@ function copyLinkAgain() {
 }
 
 const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
-
 </script>
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl">
+    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl"
+  >
     <!-- Header -->
     <div class="border-muted-200 dark:border-muted-800 flex h-20 w-full items-center justify-between border-b px-8">
       <div>
-        <BaseHeading as="h3" size="sm" weight="medium"
-          class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
+        <BaseHeading
+          as="h3" size="sm" weight="medium"
+          class="text-muted-800 dark:text-muted-100 uppercase tracking-wider"
+        >
           Novo Imposto de Renda
         </BaseHeading>
         <BaseParagraph size="xs" class="text-muted-400 mt-1">
           Etapa {{ currentStep }} de 3: {{ stepTitles[currentStep - 1] }}
         </BaseParagraph>
       </div>
-      <button type="button"
+      <button
+        type="button"
         class="text-muted-500 rounded-full p-2 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
-        @click="() => $emit('close')">
+        @click="() => $emit('close')"
+      >
         <Icon name="lucide:x" class="size-5" />
       </button>
     </div>
@@ -240,21 +251,27 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
       <div class="flex items-center justify-between">
         <div v-for="(title, idx) in stepTitles" :key="idx" class="flex items-center flex-1">
           <div class="flex items-center gap-2 flex-1">
-            <div class="size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all" :class="[
-              currentStep > idx + 1 ? 'bg-success-500 text-white' :
-                currentStep === idx + 1 ? 'bg-primary-500 text-white' :
-                  'bg-muted-200 text-muted-400 dark:bg-muted-800'
-            ]">
+            <div
+              class="size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all" :class="[
+                currentStep > idx + 1 ? 'bg-success-500 text-white'
+                : currentStep === idx + 1 ? 'bg-primary-500 text-white'
+                  : 'bg-muted-200 text-muted-400 dark:bg-muted-800',
+              ]"
+            >
               <Icon v-if="currentStep > idx + 1" name="lucide:check" class="size-4" />
               <span v-else>{{ idx + 1 }}</span>
             </div>
-            <span class="text-xs font-medium hidden md:inline"
-              :class="currentStep === idx + 1 ? 'text-primary-600 dark:text-primary-400' : 'text-muted-500'">
+            <span
+              class="text-xs font-medium hidden md:inline"
+              :class="currentStep === idx + 1 ? 'text-primary-600 dark:text-primary-400' : 'text-muted-500'"
+            >
               {{ title }}
             </span>
           </div>
-          <div v-if="idx < stepTitles.length - 1" class="h-0.5 w-full mx-2"
-            :class="currentStep > idx + 1 ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"></div>
+          <div
+            v-if="idx < stepTitles.length - 1" class="h-0.5 w-full mx-2"
+            :class="currentStep > idx + 1 ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"
+          />
         </div>
       </div>
     </div>
@@ -264,8 +281,10 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
       <!-- Step 1: Client Selection -->
       <div v-if="currentStep === 1" class="space-y-6">
         <BaseField label="Buscar Cliente">
-          <BaseInput v-model="clientSearch" placeholder="Digite o nome ou CPF do cliente..." icon="ph:magnifying-glass"
-            autocomplete="off" />
+          <BaseInput
+            v-model="clientSearch" placeholder="Digite o nome ou CPF do cliente..." icon="ph:magnifying-glass"
+            autocomplete="off"
+          />
           <p class="text-xs text-muted-400 mt-1">
             Digite pelo menos 3 caracteres para buscar
           </p>
@@ -274,38 +293,53 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
         <!-- Loading State for Search -->
         <div v-if="isLoadingClients" class="flex flex-col items-center justify-center py-6">
           <BaseLoader class="mb-2 size-8 text-primary-500" />
-          <BaseParagraph size="xs" class="text-muted-400">Buscando clientes...</BaseParagraph>
+          <BaseParagraph size="xs" class="text-muted-400">
+            Buscando clientes...
+          </BaseParagraph>
         </div>
 
         <!-- Search Results -->
         <div v-if="searchResults.length > 0 && !isLoadingClients" class="space-y-2">
-          <BaseParagraph size="xs" class="text-muted-500 uppercase tracking-wider font-medium">Resultados
+          <BaseParagraph size="xs" class="text-muted-500 uppercase tracking-wider font-medium">
+            Resultados
           </BaseParagraph>
           <div class="space-y-2">
-            <button v-for="client in searchResults" :key="client.id" type="button" @click="selectClient(client)"
-              class="w-full p-4 rounded-lg border transition-all text-left" :class="[
+            <button
+              v-for="client in searchResults" :key="client.id" type="button" class="w-full p-4 rounded-lg border transition-all text-left"
+              :class="[
                 selectedClient?.id === client.id
                   ? 'border-primary-500 bg-primary-500/5'
-                  : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50'
-              ]">
+                  : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50',
+              ]" @click="selectClient(client)"
+            >
               <div class="flex items-center gap-3">
                 <Icon name="lucide:user" class="size-5 text-primary-500" />
                 <div class="flex-1">
-                  <BaseParagraph size="sm" weight="medium">{{ client.name }}</BaseParagraph>
-                  <BaseParagraph size="xs" class="text-muted-400 font-mono">{{ client.cpf }}</BaseParagraph>
+                  <BaseParagraph size="sm" weight="medium">
+                    {{ client.name }}
+                  </BaseParagraph>
+                  <BaseParagraph size="xs" class="text-muted-400 font-mono">
+                    {{ client.cpf }}
+                  </BaseParagraph>
                 </div>
-                <Icon v-if="selectedClient?.id === client.id" name="lucide:check-circle"
-                  class="size-5 text-success-500" />
+                <Icon
+                  v-if="selectedClient?.id === client.id" name="lucide:check-circle"
+                  class="size-5 text-success-500"
+                />
               </div>
             </button>
           </div>
         </div>
 
         <!-- No Results / Register New -->
-        <div v-if="clientSearch && searchResults.length === 0 && !isLoadingClients && !showNewClientForm"
-          class="text-center py-8 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+        <div
+          v-if="clientSearch && searchResults.length === 0 && !isLoadingClients && !showNewClientForm"
+          class="text-center py-8 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl"
+        >
           <Icon name="lucide:search-x" class="size-12 text-muted-300 mx-auto mb-3" />
-          <BaseParagraph size="sm" class="text-muted-500 mb-4">Nenhum cliente encontrado</BaseParagraph>
+          <BaseParagraph size="sm" class="text-muted-500 mb-4">
+            Nenhum cliente encontrado
+          </BaseParagraph>
           <BaseButton size="sm" variant="primary" @click="showRegisterForm">
             <Icon name="lucide:user-plus" class="size-4 mr-2" />
             Cadastrar Novo Cliente
@@ -327,13 +361,17 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
 
           <div class="grid grid-cols-2 gap-4">
             <BaseField label="CPF *">
-              <BaseInput v-model="newClientData.cpf" v-maska="masks" placeholder="000.000.000-00"
-                icon="ph:identification-card" />
+              <BaseInput
+                v-model="newClientData.cpf" v-maska="masks" placeholder="000.000.000-00"
+                icon="ph:identification-card"
+              />
             </BaseField>
 
             <BaseField label="Telefone/WhatsApp">
-              <BaseInput v-model="newClientData.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
-                icon="ph:phone" />
+              <BaseInput
+                v-model="newClientData.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                icon="ph:phone"
+              />
             </BaseField>
           </div>
 
@@ -356,16 +394,24 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
 
           <BaseField label="Prioridade" class="z-30">
             <BaseSelect v-model="serviceData.priority" icon="ph:flag">
-              <BaseSelectItem value="low">Baixa</BaseSelectItem>
-              <BaseSelectItem value="medium">Média</BaseSelectItem>
-              <BaseSelectItem value="high">Alta</BaseSelectItem>
+              <BaseSelectItem value="low">
+                Baixa
+              </BaseSelectItem>
+              <BaseSelectItem value="medium">
+                Média
+              </BaseSelectItem>
+              <BaseSelectItem value="high">
+                Alta
+              </BaseSelectItem>
             </BaseSelect>
           </BaseField>
         </div>
 
         <BaseField label="Honorários (R$) *">
-          <BaseInput v-model.number="serviceData.serviceValue" type="number" step="0.01" placeholder="350.00"
-            icon="lucide:dollar-sign" />
+          <BaseInput
+            v-model.number="serviceData.serviceValue" type="number" step="0.01" placeholder="350.00"
+            icon="lucide:dollar-sign"
+          />
           <p class="text-xs text-muted-400 mt-1">
             Valor a ser cobrado pelo serviço
           </p>
@@ -375,8 +421,10 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
           <BaseSelect v-model="serviceData.assignedToId" icon="ph:user-circle" placeholder="Selecione o responsável...">
             <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
               <div class="flex items-center gap-2">
-                <BaseAvatar :src="member.avatar" :text="member.name.charAt(0).toUpperCase()" size="xs"
-                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
+                <BaseAvatar
+                  :src="member.avatar" :text="member.name.charAt(0).toUpperCase()" size="xs"
+                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
+                />
                 <div class="flex flex-col">
                   <span class="font-medium text-xs">{{ member.name }}</span>
                   <span class="text-[10px] text-muted-500">{{ member.role?.name }}</span>
@@ -411,8 +459,12 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
             <div class="flex items-start justify-between py-3 border-b border-muted-100 dark:border-muted-800">
               <span class="text-sm text-muted-500">Cliente</span>
               <div class="text-right">
-                <p class="text-sm font-medium">{{ selectedClient?.name || newClientData.name }}</p>
-                <p class="text-xs text-muted-400 font-mono">{{ selectedClient?.cpf || newClientData.cpf }}</p>
+                <p class="text-sm font-medium">
+                  {{ selectedClient?.name || newClientData.name }}
+                </p>
+                <p class="text-xs text-muted-400 font-mono">
+                  {{ selectedClient?.cpf || newClientData.cpf }}
+                </p>
               </div>
             </div>
 
@@ -426,7 +478,7 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
               <span class="text-sm text-muted-500">Honorários</span>
               <span class="text-sm font-medium text-primary-600">
                 {{ new Intl.NumberFormat('pt-BR', {
-                  style: 'currency', currency: 'BRL'
+                  style: 'currency', currency: 'BRL',
                 }).format(serviceData.serviceValue) }}
               </span>
             </div>
@@ -459,7 +511,7 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
             <BaseParagraph size="xs" class="flex-1 truncate font-mono text-muted-500">
               {{ generatedLink }}
             </BaseParagraph>
-            <BaseButton size="icon-sm" @click="copyLinkAgain" title="Copiar novamente">
+            <BaseButton size="icon-sm" title="Copiar novamente" @click="copyLinkAgain">
               <Icon name="lucide:copy" class="size-3.5" />
             </BaseButton>
           </div>
@@ -472,15 +524,18 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
 
     <!-- Footer Actions -->
     <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-t px-8 bg-muted-50/50 dark:bg-muted-950/50">
-      <BaseButton v-if="currentStep > 1 && !generatedLink" @click="goBack" size="sm">
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-t px-8 bg-muted-50/50 dark:bg-muted-950/50"
+    >
+      <BaseButton v-if="currentStep > 1 && !generatedLink" size="sm" @click="goBack">
         <Icon name="lucide:arrow-left" class="size-4 mr-2" />
         Voltar
       </BaseButton>
-      <div v-else></div>
+      <div v-else />
 
       <div class="flex gap-3">
-        <BaseButton v-if="!generatedLink" @click="() => $emit('close')" size="sm">Cancelar</BaseButton>
+        <BaseButton v-if="!generatedLink" size="sm" @click="() => $emit('close')">
+          Cancelar
+        </BaseButton>
         <BaseButton v-if="currentStep === 1" variant="primary" size="sm" @click="goToStep2">
           Continuar
           <Icon name="lucide:arrow-right" class="size-4 ml-2" />
@@ -489,8 +544,10 @@ const stepTitles = ['Selecionar Cliente', 'Dados do IR', 'Revisão e Link']
           Continuar
           <Icon name="lucide:arrow-right" class="size-4 ml-2" />
         </BaseButton>
-        <BaseButton v-else-if="currentStep === 3 && !generatedLink" variant="primary" size="lg" :loading="isSaving"
-          @click="createDeclaration">
+        <BaseButton
+          v-else-if="currentStep === 3 && !generatedLink" variant="primary" size="lg" :loading="isSaving"
+          @click="createDeclaration"
+        >
           <Icon name="lucide:rocket" class="size-4 mr-2" />
           Criar e Gerar Link
         </BaseButton>

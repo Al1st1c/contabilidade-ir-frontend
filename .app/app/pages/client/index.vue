@@ -15,18 +15,18 @@ const rawDeclaration = ref<any>(null)
 const showOnboarding = ref(false)
 
 async function loadData() {
-  if (!user.value?.id) return
+  if (!user.value?.id)
+    return
 
   try {
     isLoading.value = true
     const [clientRes] = await Promise.all([
       useCustomFetch<any>(`/clients/${user.value.id}`),
-      fetchTenant()
+      fetchTenant(),
     ])
 
     if (clientRes.data.success) {
       rawClient.value = clientRes.data.data
-
 
       // Check for onboarding
       if (!clientRes.data.data.onboardingCompleted) {
@@ -40,16 +40,20 @@ async function loadData() {
         const { data: decRes } = await useCustomFetch(`/declarations/${declaration.id}`)
         if (decRes.success) {
           rawDeclaration.value = decRes.data
-        } else {
+        }
+        else {
           rawDeclaration.value = null
         }
-      } else {
+      }
+      else {
         rawDeclaration.value = null
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao carregar dados:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -80,32 +84,31 @@ const clientData = computed(() => {
   const steps = [
     {
       label: 'Envio de Dados',
-      completed: !!declaration
+      completed: !!declaration,
     },
     {
       label: 'Em Análise',
       active: visualStatus === 'in_progress',
-      completed: currentStatusIndex > 1 // > in_progress
+      completed: currentStatusIndex > 1, // > in_progress
     },
     {
       label: 'Em Preenchimento',
       active: visualStatus === 'submitted',
-      completed: currentStatusIndex > 2 // > submitted
+      completed: currentStatusIndex > 2, // > submitted
     },
     {
       label: 'Transmitida',
       active: visualStatus === 'finished',
-      completed: visualStatus === 'finished'
+      completed: visualStatus === 'finished',
     },
     {
       label: 'Pagamento Honorários',
       active: visualStatus === 'finished' && declaration?.paymentStatus !== 'paid',
-      completed: declaration?.paymentStatus === 'paid'
+      completed: declaration?.paymentStatus === 'paid',
     },
   ]
 
   const currentStatus = statusMapper[visualStatus] || statusMapper.pending
-
 
   return {
     id: declaration?.id,
@@ -113,29 +116,32 @@ const clientData = computed(() => {
     currentYear: selectedTaxYear.value,
     status: {
       ...currentStatus,
-      steps
+      steps,
     },
     payment: {
       status: declaration?.paymentStatus || 'pending',
       pixKey: tenant.value?.pixKey,
-      value: declaration?.serviceValue || 0
+      value: declaration?.serviceValue || 0,
     },
     refund: {
       value: declaration?.resultValue || 0,
-      status: declaration?.result === 'refund' ? 'A Receber' : declaration?.result === 'pay' ? 'A Pagar' : null
+      status: declaration?.result === 'refund' ? 'A Receber' : declaration?.result === 'pay' ? 'A Pagar' : null,
     },
-    accountant: declaration?.assignedTo ? {
-      name: declaration.assignedTo.name,
-      photo: declaration.assignedTo.photo,
-      phone: declaration.assignedTo.phone
-    } : null,
+    accountant: declaration?.assignedTo
+      ? {
+          name: declaration.assignedTo.name,
+          photo: declaration.assignedTo.photo,
+          phone: declaration.assignedTo.phone,
+        }
+      : null,
     hasPendingDocs: declaration?.status === 'pending',
-    pixKey: rawClient.value?.pixKey
+    pixKey: rawClient.value?.pixKey,
   }
 })
 
 async function handleReportPayment() {
-  if (!rawDeclaration.value?.id) return
+  if (!rawDeclaration.value?.id)
+    return
 
   // Simular clique em "Já Paguei"
   // Em uma implementação real, abriríamos um modal para upload opcional
@@ -143,15 +149,17 @@ async function handleReportPayment() {
   try {
     isReportingPayment.value = true
     const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
-      method: 'POST'
+      method: 'POST',
     })
 
     if (res.success) {
       await loadData()
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao reportar pagamento:', error)
-  } finally {
+  }
+  finally {
     isReportingPayment.value = false
   }
 }
@@ -163,7 +171,8 @@ function handleUploadReceipt() {
   input.accept = 'image/*,application/pdf'
   input.onchange = async (e: any) => {
     const file = e.target.files[0]
-    if (!file) return
+    if (!file)
+      return
 
     const formData = new FormData()
     formData.append('file', file)
@@ -172,15 +181,17 @@ function handleUploadReceipt() {
       isReportingPayment.value = true
       const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
         method: 'POST',
-        body: formData
+        body: formData,
       })
 
       if (res.success) {
         await loadData()
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Erro ao subir comprovante:', error)
-    } finally {
+    }
+    finally {
       isReportingPayment.value = false
     }
   }
@@ -188,7 +199,8 @@ function handleUploadReceipt() {
 }
 
 function copyPixKey() {
-  if (!clientData.value.payment.pixKey) return
+  if (!clientData.value.payment.pixKey)
+    return
   navigator.clipboard.writeText(clientData.value.payment.pixKey)
   // Toast opcional
 }
@@ -204,26 +216,31 @@ function openWhatsApp(phone: string) {
 
 <template>
   <div class="space-y-10 pb-24">
-
     <div v-if="isLoading" class="px-4 space-y-4">
       <BasePlaceload v-for="i in 2" :key="i" class="h-30 w-full rounded-2xl" />
     </div>
 
     <!-- Welcome Section -->
     <section v-if="!isLoading" class="pt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-      <BaseParagraph size="sm" class="text-muted-500 mb-1">Olá, {{ clientData.name }} 👋</BaseParagraph>
+      <BaseParagraph size="sm" class="text-muted-500 mb-1">
+        Olá, {{ clientData.name }} 👋
+      </BaseParagraph>
       <BaseHeading as="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white leading-tight">
         Seu IRPF {{ clientData.currentYear }}
       </BaseHeading>
     </section>
     <!-- Pending Documents Alert -->
-    <section v-if="!isLoading && clientData.hasPendingDocs"
-      class="mt-4 animate-in fade-in slide-in-from-top-4 duration-500 delay-150">
+    <section
+      v-if="!isLoading && clientData.hasPendingDocs"
+      class="mt-4 animate-in fade-in slide-in-from-top-4 duration-500 delay-150"
+    >
       <BaseCard
-        class="p-5 border-2 border-warning-500/20 bg-warning-500/5 dark:bg-warning-500/10 shadow-sm shadow-warning-500/10">
+        class="p-5 border-2 border-warning-500/20 bg-warning-500/5 dark:bg-warning-500/10 shadow-sm shadow-warning-500/10"
+      >
         <div class="flex items-center gap-4">
           <div
-            class="size-12 rounded-2xl bg-warning-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-warning-500/30">
+            class="size-12 rounded-2xl bg-warning-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-warning-500/30"
+          >
             <Icon name="solar:document-add-bold" class="size-6" />
           </div>
           <div class="flex-1">
@@ -234,9 +251,11 @@ function openWhatsApp(phone: string) {
               Você possui pendências no IRPF {{ clientData.currentYear }}. Envie seus documentos agora para iniciarmos.
             </BaseParagraph>
           </div>
-          <BaseButton variant="none" rounded="lg" size="sm"
+          <BaseButton
+            variant="none" rounded="lg" size="sm"
             class="h-10 px-4 font-bold shadow-sm text-white bg-warning-500 hover:bg-warning-500/20"
-            @click="navigateTo('/client/documentos')">
+            @click="navigateTo('/client/documentos')"
+          >
             Enviar Agora
           </BaseButton>
         </div>
@@ -275,28 +294,36 @@ function openWhatsApp(phone: string) {
         <div class="space-y-4">
           <div v-for="(step, index) in clientData.status.steps" :key="index" class="flex gap-4">
             <div class="relative flex flex-col items-center">
-              <div class="size-6 rounded-full flex items-center justify-center z-10 transition-colors duration-300"
+              <div
+                class="size-6 rounded-full flex items-center justify-center z-10 transition-colors duration-300"
                 :class="[
-                  step.completed ? 'bg-success-500 text-white' :
-                    step.active ? 'bg-primary-500 text-white ring-4 ring-primary-500/20' :
-                      'bg-muted-200 dark:bg-muted-800 text-muted-400'
-                ]">
+                  step.completed ? 'bg-success-500 text-white'
+                  : step.active ? 'bg-primary-500 text-white ring-4 ring-primary-500/20'
+                    : 'bg-muted-200 dark:bg-muted-800 text-muted-400',
+                ]"
+              >
                 <Icon v-if="step.completed" name="solar:check-read-bold" class="size-4" />
                 <span v-else class="text-[10px] font-bold">{{ Number(index) + 1 }}</span>
               </div>
-              <div v-if="Number(index) < clientData.status.steps.length - 1"
+              <div
+                v-if="Number(index) < clientData.status.steps.length - 1"
                 class="w-0.5 h-full absolute top-6 transition-colors duration-300"
-                :class="step.completed ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"></div>
+                :class="step.completed ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"
+              />
             </div>
             <div class="pt-0.5 flex-1">
-              <BaseHeading as="h4" size="xs" weight="bold"
-                :class="step.active || step.completed ? 'text-muted-800 dark:text-muted-100' : 'text-muted-400'">
+              <BaseHeading
+                as="h4" size="xs" weight="bold"
+                :class="step.active || step.completed ? 'text-muted-800 dark:text-muted-100' : 'text-muted-400'"
+              >
                 {{ step.label }}
               </BaseHeading>
 
               <!-- Minimalist Payment Section (REFINED) -->
-              <div v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
-                class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+              <div
+                v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
+                class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2"
+              >
                 <div class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
                   <div class="flex items-center gap-2">
                     <Icon name="fa6-brands:pix" class="size-3 text-emerald-500" />
@@ -304,53 +331,71 @@ function openWhatsApp(phone: string) {
                       {{ clientData.payment.pixKey }}
                     </BaseText>
                   </div>
-                  <button @click="copyPixKey"
-                    class="text-[10px] font-bold text-primary-500 hover:text-primary-600 uppercase tracking-wider">
+                  <button
+                    class="text-[10px] font-bold text-primary-500 hover:text-primary-600 uppercase tracking-wider"
+                    @click="copyPixKey"
+                  >
                     Copiar
                   </button>
                 </div>
 
                 <div class="flex items-center justify-between">
-                  <BaseText size="xs" class="text-muted-500">Valor do Honorário</BaseText>
+                  <BaseText size="xs" class="text-muted-500">
+                    Valor do Honorário
+                  </BaseText>
                   <BaseText size="xs" weight="bold" class="text-muted-800 dark:text-white">
                     {{ formatCurrency(clientData.payment.value) }}
                   </BaseText>
                 </div>
 
                 <div class="flex gap-2 pt-1">
-                  <BaseButton variant="primary" rounded="lg" size="sm" :loading="isReportingPayment"
-                    class="flex-1 h-8 font-bold text-[10px] uppercase tracking-wider" @click="handleReportPayment">
+                  <BaseButton
+                    variant="primary" rounded="lg" size="sm" :loading="isReportingPayment"
+                    class="flex-1 h-8 font-bold text-[10px] uppercase tracking-wider" @click="handleReportPayment"
+                  >
                     Já Paguei
                   </BaseButton>
-                  <BaseButton variant="none" rounded="lg" size="sm" :disabled="isReportingPayment"
+                  <BaseButton
+                    variant="none" rounded="lg" size="sm" :disabled="isReportingPayment"
                     class="flex-1 h-8 border border-muted-200 dark:border-muted-800 text-muted-500 hover:text-primary-500 font-bold text-[10px] uppercase tracking-wider"
-                    @click="handleUploadReceipt">
+                    @click="handleUploadReceipt"
+                  >
                     Comprovante
                   </BaseButton>
                 </div>
               </div>
 
               <!-- Awaiting Verification Status (NEW) -->
-              <div v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
-                class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2">
+              <div
+                v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
+                class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2"
+              >
                 <div class="flex items-center gap-3">
                   <div class="size-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
                     <Icon name="solar:clock-circle-bold-duotone" class="size-5" />
                   </div>
                   <div class="leading-tight">
-                    <BaseText size="xs" weight="bold" class="text-orange-600 dark:text-orange-400 block">Confirmação
-                      Pendente</BaseText>
-                    <BaseText size="xs" class="text-muted-500 text-[10px]">Já recebemos seu aviso. Nossa equipe
-                      confirmará o pagamento em breve.</BaseText>
+                    <BaseText size="xs" weight="bold" class="text-orange-600 dark:text-orange-400 block">
+                      Confirmação
+                      Pendente
+                    </BaseText>
+                    <BaseText size="xs" class="text-muted-500 text-[10px]">
+                      Já recebemos seu aviso. Nossa equipe
+                      confirmará o pagamento em breve.
+                    </BaseText>
                   </div>
                 </div>
               </div>
 
               <!-- Paid Confirmation (REFINED) -->
-              <div v-if="index === 4 && step.completed"
-                class="mt-2 flex items-center gap-2 text-success-500 animate-in fade-in">
+              <div
+                v-if="index === 4 && step.completed"
+                class="mt-2 flex items-center gap-2 text-success-500 animate-in fade-in"
+              >
                 <Icon name="solar:verified-check-bold" class="size-4" />
-                <BaseText size="xs" weight="bold">Pagamento Confirmado</BaseText>
+                <BaseText size="xs" weight="bold">
+                  Pagamento Confirmado
+                </BaseText>
               </div>
             </div>
           </div>
@@ -360,65 +405,84 @@ function openWhatsApp(phone: string) {
       <!-- Results & Payment Card (Refund/Pay/Fees) -->
       <BaseCard
         v-if="clientData.refund.status || clientData.status.steps[3].completed || clientData.status.steps[4].active || clientData.status.steps[4].completed"
-        rounded="lg" class="border-none shadow-xl relative overflow-hidden group">
-
+        rounded="lg" class="border-none shadow-xl relative overflow-hidden group"
+      >
         <!-- Premium Background Effects -->
         <div class="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none">
-          <div class="absolute -top-24 -right-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/40'"></div>
-          <div class="absolute -bottom-24 -left-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/20'"></div>
+          <div
+            class="absolute -top-24 -right-24 size-64 rounded-full blur-3xl transition-colors duration-500"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/40'"
+          />
+          <div
+            class="absolute -bottom-24 -left-24 size-64 rounded-full blur-3xl transition-colors duration-500"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/20'"
+          />
         </div>
 
         <div class="relative flex flex-col h-full">
           <!-- Result Header -->
           <div class="p-8 border-b border-muted-100 dark:border-muted-800">
             <div class="flex items-center justify-between mb-8">
-              <BaseHeading as="h4" size="xs" weight="medium" lead="none"
-                class="text-muted-400 uppercase tracking-widest">
+              <BaseHeading
+                as="h4" size="xs" weight="medium" lead="none"
+                class="text-muted-400 uppercase tracking-widest"
+              >
                 Resultado Oficial
               </BaseHeading>
-              <div class="size-10 rounded-xl flex items-center justify-center shadow-lg"
-                :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'">
+              <div
+                class="size-10 rounded-xl flex items-center justify-center shadow-lg"
+                :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'"
+              >
                 <Icon
                   :name="clientData.refund.status === 'A Receber' ? 'solar:hand-stars-bold-duotone' : 'solar:bill-list-bold-duotone'"
-                  class="size-6" />
+                  class="size-6"
+                />
               </div>
             </div>
 
             <div v-if="clientData.refund.status" class="space-y-4">
               <div class="flex items-baseline gap-2">
                 <!-- <span class="text-2xl font-light text-muted-400">R$</span> -->
-                <BaseHeading as="h2" size="5xl" weight="bold" class="tracking-tight leading-none"
-                  :class="clientData.refund.status === 'A Receber' ? 'text-green-500' : 'text-red-500'">
+                <BaseHeading
+                  as="h2" size="5xl" weight="bold" class="tracking-tight leading-none"
+                  :class="clientData.refund.status === 'A Receber' ? 'text-green-500' : 'text-red-500'"
+                >
                   {{ clientData.refund.status }}
                 </BaseHeading>
               </div>
 
               <div class="flex items-center gap-2">
-                <BaseTag :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
-                  rounded="full" class="px-4 py-1.5 font-bold text-[10px] uppercase tracking-wider">
+                <BaseTag
+                  :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
+                  rounded="full" class="px-4 py-1.5 font-bold text-[10px] uppercase tracking-wider"
+                >
                   {{ clientData.refund.status }}
                 </BaseTag>
                 <BaseText size="xs" class="text-muted-500 font-medium">
-                  {{ clientData.refund.status === 'A Receber' ?
-                    'A ser depositado em sua conta' : 'Valor a ser pago à Receita' }}
+                  {{ clientData.refund.status === 'A Receber'
+                    ? 'A ser depositado em sua conta' : 'Valor a ser pago à Receita' }}
                 </BaseText>
               </div>
             </div>
 
             <div v-else class="py-4">
-              <BasePlaceholderMinimal title="Aguardando Transmissão"
-                subtitle="O resultado oficial aparecerá aqui após a entrega." class="!bg-transparent" />
+              <BasePlaceholderMinimal
+                title="Aguardando Transmissão"
+                subtitle="O resultado oficial aparecerá aqui após a entrega." class="!bg-transparent"
+              />
             </div>
           </div>
 
           <!-- Quick Access / Documents (only if transmitted) -->
-          <div v-if="clientData.status.steps[3].completed || clientData.status.steps[4].completed"
-            class="p-6 bg-muted-50/50 dark:bg-muted-900/50">
-            <BaseButton variant="none" rounded="lg" size="lg"
+          <div
+            v-if="clientData.status.steps[3].completed || clientData.status.steps[4].completed"
+            class="p-6 bg-muted-50/50 dark:bg-muted-900/50"
+          >
+            <BaseButton
+              variant="none" rounded="lg" size="lg"
               class="w-full justify-between group h-14 bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-800 shadow-sm"
-              @click="navigateTo('/client/documents')">
+              @click="navigateTo('/client/documents')"
+            >
               <div class="flex items-center gap-3">
                 <div class="size-10 rounded-lg bg-primary-500/10 text-primary-500 flex items-center justify-center">
                   <Icon name="solar:folder-with-files-bold-duotone" class="size-6" />
@@ -428,8 +492,10 @@ function openWhatsApp(phone: string) {
                   <span class="text-[10px] text-muted-400 font-medium">Arquivos oficiais para download</span>
                 </div>
               </div>
-              <Icon name="solar:alt-arrow-right-bold"
-                class="size-5 text-muted-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+              <Icon
+                name="solar:alt-arrow-right-bold"
+                class="size-5 text-muted-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all"
+              />
             </BaseButton>
           </div>
         </div>
@@ -443,11 +509,17 @@ function openWhatsApp(phone: string) {
         <div class="flex items-center gap-4">
           <BaseAvatar :src="clientData.accountant.photo" :text="clientData.accountant.name?.charAt(0)" size="md" />
           <div class="flex-1">
-            <BaseHeading as="h4" size="sm" weight="bold">{{ clientData.accountant.name }}</BaseHeading>
-            <BaseParagraph size="xs" class="text-muted-400">Garantindo a melhor entrega do seu IR</BaseParagraph>
+            <BaseHeading as="h4" size="sm" weight="bold">
+              {{ clientData.accountant.name }}
+            </BaseHeading>
+            <BaseParagraph size="xs" class="text-muted-400">
+              Garantindo a melhor entrega do seu IR
+            </BaseParagraph>
           </div>
-          <BaseButton v-if="clientData.accountant.phone" variant="muted" rounded="lg" size="sm" class="h-10"
-            @click="openWhatsApp(clientData.accountant.phone)">
+          <BaseButton
+            v-if="clientData.accountant.phone" variant="muted" rounded="lg" size="sm" class="h-10"
+            @click="openWhatsApp(clientData.accountant.phone)"
+          >
             <Icon name="logos:whatsapp-icon" class="size-4 mr-2" />
             Contato
           </BaseButton>
@@ -469,7 +541,9 @@ function openWhatsApp(phone: string) {
     </div>
 
     <!-- Onboarding Modal -->
-    <ClientOnboardingModal :open="showOnboarding" :client="rawClient" @close="showOnboarding = false"
-      @complete="loadData" />
+    <ClientOnboardingModal
+      :open="showOnboarding" :client="rawClient" @close="showOnboarding = false"
+      @complete="loadData"
+    />
   </div>
 </template>

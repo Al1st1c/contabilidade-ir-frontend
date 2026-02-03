@@ -1,4 +1,4 @@
-export const useClientSession = () => {
+export function useClientSession() {
   const selectedTaxYear = useState<number>('client-selected-tax-year', () => {
     // Padrão: Ano Atual (Exercício)
     return new Date().getFullYear()
@@ -11,6 +11,6 @@ export const useClientSession = () => {
 
   return {
     selectedTaxYear,
-    availableYears
+    availableYears,
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 interface Props {
   startDate: string | Date
@@ -8,7 +8,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: 180
+  size: 180,
 })
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -25,14 +25,18 @@ const start = computed(() => new Date(props.startDate))
 const end = computed(() => new Date(props.endDate))
 
 const status = computed(() => {
-  if (now.value < start.value) return NOT_STARTED
-  if (now.value > end.value) return FINISHED
+  if (now.value < start.value)
+    return NOT_STARTED
+  if (now.value > end.value)
+    return FINISHED
   return RUNNING
 })
 
 const progress = computed(() => {
-  if (status.value === NOT_STARTED) return 0
-  if (status.value === FINISHED) return 1
+  if (status.value === NOT_STARTED)
+    return 0
+  if (status.value === FINISHED)
+    return 1
   const total = end.value.getTime() - start.value.getTime()
   const elapsed = now.value.getTime() - start.value.getTime()
   return Math.min(1, Math.max(0, elapsed / total))
@@ -45,11 +49,13 @@ const remainingTime = computed(() => {
   return { days, hours }
 })
 
-const draw = () => {
+function draw() {
   const canvas = canvasRef.value
-  if (!canvas) return
+  if (!canvas)
+    return
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx)
+    return
 
   const size = props.size
   const dpr = window.devicePixelRatio || 1
@@ -97,10 +103,13 @@ const draw = () => {
 
     if (status.value === FINISHED) {
       ctx.strokeStyle = '#ef4444'
-    } else {
+    }
+    else {
       const remaining = 1 - displayedProgress
-      if (remaining > 0.5) ctx.strokeStyle = '#10b981'
-      else if (remaining > 0.2) ctx.strokeStyle = '#f59e0b'
+      if (remaining > 0.5)
+        ctx.strokeStyle = '#10b981'
+      else if (remaining > 0.2)
+        ctx.strokeStyle = '#f59e0b'
       else ctx.strokeStyle = '#ef4444'
     }
 
@@ -115,7 +124,7 @@ const draw = () => {
     ctx.moveTo(center, center)
     ctx.lineTo(
       center + Math.cos(endAngle) * (radius - 6),
-      center + Math.sin(endAngle) * (radius - 6)
+      center + Math.sin(endAngle) * (radius - 6),
     )
     ctx.strokeStyle = '#334155'
     ctx.lineWidth = 2
@@ -123,7 +132,7 @@ const draw = () => {
   }
 }
 
-const loop = () => {
+function loop() {
   now.value = new Date()
   draw()
   rafId = requestAnimationFrame(loop)
@@ -134,7 +143,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (rafId) cancelAnimationFrame(rafId)
+  if (rafId)
+    cancelAnimationFrame(rafId)
 })
 
 watch(() => props.size, draw)

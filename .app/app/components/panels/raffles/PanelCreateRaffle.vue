@@ -50,16 +50,16 @@ const zodSchema = z.object({
   endDate: z.string().optional(),
   hoursPerTicket: z.string()
     .min(1, 'Horas por bilhete é obrigatório')
-    .transform((val) => parseFloat(val))
-    .refine((val) => !isNaN(val) && val >= 0.1, 'Deve ser pelo menos 0.1 horas'),
+    .transform(val => Number.parseFloat(val))
+    .refine(val => !isNaN(val) && val >= 0.1, 'Deve ser pelo menos 0.1 horas'),
   ticketsPerCycle: z.string()
     .min(1, 'Bilhetes por ciclo é obrigatório')
-    .transform((val) => parseInt(val))
-    .refine((val) => !isNaN(val) && val >= 1 && val <= 10, 'Deve ser entre 1 e 10 bilhetes'),
+    .transform(val => Number.parseInt(val))
+    .refine(val => !isNaN(val) && val >= 1 && val <= 10, 'Deve ser entre 1 e 10 bilhetes'),
   allowMultipleWins: z.boolean(),
 })
 
-type FormInput = {
+interface FormInput {
   name: string
   description: string
   operationDayId: string
@@ -109,7 +109,8 @@ async function getOperationDays() {
       method: 'GET',
     })
     operationDays.value = data?.data || []
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar dias de operação:', error)
     toaster.add({
       title: 'Erro',
@@ -117,7 +118,8 @@ async function getOperationDays() {
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loadingOperationDays.value = false
   }
 }
@@ -194,18 +196,20 @@ const onSubmit = handleSubmit(async (values) => {
       icon: 'ph:check-circle-fill',
       progress: true,
     })
-    
+
     resetForm()
     prizes.value = [{ name: '', type: 'PHYSICAL', value: 0, quantity: 1 }]
     emits('success')
     emits('close')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao criar sorteio:', error)
-    
+
     // Verifica se é erro de validação específico
     if (error.message?.includes('nome') || error.message?.includes('já existe')) {
       setFieldError('name', error.message)
-    } else {
+    }
+    else {
       toaster.add({
         title: 'Erro',
         description: error.message || 'Erro ao criar sorteio. Tente novamente.',
@@ -366,7 +370,7 @@ onMounted(() => {
                   :key="day.id"
                   :value="day.id"
                 >
-                  {{ new Date(day.date_opened).toLocaleDateString('pt-BR') }} 
+                  {{ new Date(day.date_opened).toLocaleDateString('pt-BR') }}
                   - {{ day.user?.name }}
                   <span v-if="!day.date_closed" class="text-success-600 font-medium"> (Aberto)</span>
                   <span v-else class="text-muted-500"> (Fechado)</span>
@@ -536,7 +540,7 @@ onMounted(() => {
                   type="checkbox"
                   class="size-4 rounded border-muted-300 text-primary-600 focus:ring-primary-500"
                   @change="handleChange"
-                />
+                >
                 <span class="text-sm text-muted-600 dark:text-muted-400">
                   Permitir que um mesmo cliente ganhe mais de uma vez
                 </span>
@@ -692,7 +696,7 @@ onMounted(() => {
             <Icon name="lucide:plus" class="size-4" />
             <span>Criar Sorteio</span>
           </BaseButton>
-          
+
           <BaseButton
             type="button"
             variant="muted"

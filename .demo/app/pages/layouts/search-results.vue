@@ -61,40 +61,54 @@ const filteredResults = computed(() => {
       </div>
     </div>
     <div v-if="results === null">
-      <BasePlaceholderPage title="No matching results"
-        subtitle="Looks like we couldn't find any matching results for your search terms. Try other search terms.">
+      <BasePlaceholderPage
+        title="No matching results"
+        subtitle="Looks like we couldn't find any matching results for your search terms. Try other search terms."
+      >
         <template #image>
-          <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
-            alt="Placeholder image">
-          <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
-            alt="Placeholder image">
+          <img
+            class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
+            alt="Placeholder image"
+          >
+          <img
+            class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
+            alt="Placeholder image"
+          >
         </template>
       </BasePlaceholderPage>
     </div>
     <div v-else>
       <div class="border-muted-200 dark:border-muted-800 flex items-center gap-4 border-b font-sans">
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'all'
+        <button
+          type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'all'
             ? 'text-muted-700 dark:text-muted-100 border-primary-500'
             : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'
-          " @click="activeFilter = 'all'">
+          " @click="activeFilter = 'all'"
+        >
           All
         </button>
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'people'
+        <button
+          type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'people'
             ? 'text-muted-700 dark:text-muted-100 border-primary-500'
             : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'
-          " @click="activeFilter = 'people'">
+          " @click="activeFilter = 'people'"
+        >
           People
         </button>
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'project'
+        <button
+          type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'project'
             ? 'text-muted-700 dark:text-muted-100 border-primary-500'
             : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'
-          " @click="activeFilter = 'project'">
+          " @click="activeFilter = 'project'"
+        >
           Projects
         </button>
-        <button type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'file'
+        <button
+          type="button" class="cursor-pointer border-b-2 p-3 text-sm" :class="activeFilter === 'file'
             ? 'text-muted-700 dark:text-muted-100 border-primary-500'
             : 'border-transparent text-muted-400 hover:text-muted-700 dark:hover:text-muted-100'
-          " @click="activeFilter = 'file'">
+          " @click="activeFilter = 'file'"
+        >
           Files
         </button>
       </div>
@@ -107,26 +121,32 @@ const filteredResults = computed(() => {
               </BaseHeading>
               <ul class="space-y-4">
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.publication.new" variant="default" label="Newly added" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.publication.new" variant="default" label="Newly added" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     24
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.publication.updated" variant="default" label="Recently updated"
+                  <BaseCheckbox
+                    v-model="filters.publication.updated" variant="default" label="Recently updated"
                     :classes="{
                       label: 'text-xs',
-                    }" />
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     39
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.publication.upvoted" variant="default" label="Upvoted" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.publication.upvoted" variant="default" label="Upvoted" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     17
                   </BaseTag>
@@ -139,41 +159,51 @@ const filteredResults = computed(() => {
               </BaseHeading>
               <ul class="space-y-4">
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.topics.engineering" variant="default" label="Engineering" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.topics.engineering" variant="default" label="Engineering" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     62
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.topics.software" variant="default" label="Software" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.topics.software" variant="default" label="Software" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     148
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.topics.business" variant="default" label="Business" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.topics.business" variant="default" label="Business" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     23
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.topics.management" variant="default" label="Management" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.topics.management" variant="default" label="Management" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     8
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.topics.hr" variant="default" label="Human Resources" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.topics.hr" variant="default" label="Human Resources" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     43
                   </BaseTag>
@@ -186,25 +216,31 @@ const filteredResults = computed(() => {
               </BaseHeading>
               <ul class="space-y-4">
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.type.members" variant="default" label="Members" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.type.members" variant="default" label="Members" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     12
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.type.projects" variant="default" label="Projects" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.type.projects" variant="default" label="Projects" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     54
                   </BaseTag>
                 </li>
                 <li class="flex items-center justify-between">
-                  <BaseCheckbox v-model="filters.type.files" variant="default" label="Files" :classes="{
-                    label: 'text-xs',
-                  }" />
+                  <BaseCheckbox
+                    v-model="filters.type.files" variant="default" label="Files" :classes="{
+                      label: 'text-xs',
+                    }"
+                  />
                   <BaseTag rounded="full" size="sm">
                     31
                   </BaseTag>
@@ -220,13 +256,17 @@ const filteredResults = computed(() => {
               <BaseCard v-for="result in filteredResults" :key="result.name" rounded="md" class="p-4">
                 <div class="flex w-full items-center gap-4">
                   <BaseAvatar v-if="result.type === 'people'" :src="result.src" />
-                  <img v-else-if="result.type === 'project'"
+                  <img
+                    v-else-if="result.type === 'project'"
                     class="size-10 shrink-0 rounded-full object-cover object-center" :src="result.src"
-                    :alt="result.name">
+                    :alt="result.name"
+                  >
                   <img v-else-if="result.type === 'file'" class="size-10 shrink-0" :src="result.src" :alt="result.name">
                   <div>
-                    <BaseHeading as="h3" weight="medium" size="sm" class="text-muted-900 dark:text-muted-100"
-                      lead="tight">
+                    <BaseHeading
+                      as="h3" weight="medium" size="sm" class="text-muted-900 dark:text-muted-100"
+                      lead="tight"
+                    >
                       {{ result.name }}
                     </BaseHeading>
                     <BaseText size="xs" class="text-muted-600 dark:text-muted-400">

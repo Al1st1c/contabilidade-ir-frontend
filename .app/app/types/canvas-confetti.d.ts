@@ -19,7 +19,7 @@ declare module 'canvas-confetti' {
   }
 
   function confetti(options?: Options): Promise<void>
-  function confetti(origin: { x: number; y: number }, options?: Options): Promise<void>
+  function confetti(origin: { x: number, y: number }, options?: Options): Promise<void>
 
   export default confetti
 }

@@ -33,7 +33,8 @@ async function fetchRoles() {
     if (response?.success && response?.data) {
       availableRoles.value = response.data
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar roles:', error)
   }
 }
@@ -52,14 +53,16 @@ async function fetchMember() {
         photoPreview.value = found.photo || null
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar membro:', error)
     toaster.add({
       title: 'Erro',
       description: 'Não foi possível carregar os dados do membro',
       icon: 'ph:warning-fill',
     })
-  } finally {
+  }
+  finally {
     pending.value = false
   }
 }
@@ -74,7 +77,8 @@ async function handlePhotoChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
 
-  if (!file) return
+  if (!file)
+    return
 
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -133,10 +137,12 @@ async function uploadPhoto(file: File) {
         member.value.photo = photoUrl
         photoPreview.value = photoUrl
       }
-    } else {
+    }
+    else {
       throw new Error(data?.message || 'Erro ao enviar foto')
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao fazer upload da foto:', error)
     toaster.add({
       title: 'Erro',
@@ -145,7 +151,8 @@ async function uploadPhoto(file: File) {
     })
     // Reset preview on error
     photoPreview.value = member.value?.photo || null
-  } finally {
+  }
+  finally {
     uploadingPhoto.value = false
     // Reset input
     if (photoInput.value) {
@@ -156,7 +163,8 @@ async function uploadPhoto(file: File) {
 
 // Remove photo
 async function removePhoto() {
-  if (!confirm('Tem certeza que deseja remover a foto?')) return
+  if (!confirm('Tem certeza que deseja remover a foto?'))
+    return
 
   uploadingPhoto.value = true
   try {
@@ -175,14 +183,16 @@ async function removePhoto() {
       description: 'Foto removida com sucesso',
       icon: 'ph:check-circle-fill',
     })
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao remover foto:', error)
     toaster.add({
       title: 'Erro',
       description: 'Não foi possível remover a foto',
       icon: 'ph:warning-fill',
     })
-  } finally {
+  }
+  finally {
     uploadingPhoto.value = false
   }
 }
@@ -261,21 +271,24 @@ async function saveMember() {
     })
 
     router.push('/dashboard/settings/team')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao salvar membro:', error)
     toaster.add({
       title: 'Erro',
       description: error?.data?.message || 'Não foi possível atualizar o membro',
       icon: 'ph:warning-fill',
     })
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
 
 // Deactivate member
 async function deactivateMember() {
-  if (!confirm('Tem certeza que deseja desativar este membro?')) return
+  if (!confirm('Tem certeza que deseja desativar este membro?'))
+    return
 
   saving.value = true
   try {
@@ -290,14 +303,16 @@ async function deactivateMember() {
     })
 
     router.push('/dashboard/settings/team')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao desativar membro:', error)
     toaster.add({
       title: 'Erro',
       description: error?.data?.message || 'Não foi possível desativar o membro',
       icon: 'ph:warning-fill',
     })
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
@@ -317,14 +332,16 @@ async function reactivateMember() {
     })
 
     await fetchMember()
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao reativar membro:', error)
     toaster.add({
       title: 'Erro',
       description: error?.data?.message || 'Não foi possível reativar o membro',
       icon: 'ph:warning-fill',
     })
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
@@ -365,17 +382,20 @@ onMounted(async () => {
         <!-- Member Info Card with Photo Upload -->
         <BaseCard rounded="lg" class="p-6 mb-6">
           <!-- Hidden file input -->
-          <input ref="photoInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
-            @change="handlePhotoChange" />
+          <input
+            ref="photoInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+            @change="handlePhotoChange"
+          >
 
           <div class="flex items-start gap-6">
             <!-- Photo Upload Area -->
             <div class="relative group">
               <div
                 class="relative size-24 rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-muted-200 dark:border-muted-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
-                @click="triggerPhotoUpload">
+                @click="triggerPhotoUpload"
+              >
                 <!-- Photo or Placeholder -->
-                <img v-if="photoPreview" :src="photoPreview" :alt="member.name" class="w-full h-full object-cover" />
+                <img v-if="photoPreview" :src="photoPreview" :alt="member.name" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center bg-muted-100 dark:bg-muted-800">
                   <BaseText size="2xl" weight="semibold" class="text-muted-400">
                     {{ member.name?.charAt(0) || 'U' }}
@@ -385,16 +405,19 @@ onMounted(async () => {
                 <!-- Upload Overlay -->
                 <div
                   class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  :class="{ 'opacity-100': uploadingPhoto }">
+                  :class="{ 'opacity-100': uploadingPhoto }"
+                >
                   <Icon v-if="uploadingPhoto" name="svg-spinners:ring-resize" class="size-8 text-white" />
                   <Icon v-else name="lucide:camera" class="size-8 text-white" />
                 </div>
               </div>
 
               <!-- Remove Photo Button -->
-              <button v-if="photoPreview && !uploadingPhoto"
+              <button
+                v-if="photoPreview && !uploadingPhoto"
                 class="absolute -top-2 -right-2 size-6 rounded-full bg-danger-500 text-white flex items-center justify-center hover:bg-danger-600 transition-colors shadow-lg"
-                @click.stop="removePhoto">
+                @click.stop="removePhoto"
+              >
                 <Icon name="lucide:x" class="size-3" />
               </button>
             </div>
@@ -410,12 +433,14 @@ onMounted(async () => {
 
               <!-- Photo Upload Buttons -->
               <div class="flex items-center gap-2 mb-3">
-                <BaseButton size="sm" rounded="lg" @click="triggerPhotoUpload" :disabled="uploadingPhoto">
+                <BaseButton size="sm" rounded="lg" :disabled="uploadingPhoto" @click="triggerPhotoUpload">
                   <Icon name="lucide:upload" class="size-3.5" />
                   <span>{{ photoPreview ? 'Alterar Foto' : 'Adicionar Foto' }}</span>
                 </BaseButton>
-                <BaseButton v-if="photoPreview" size="sm" rounded="lg" color="danger" @click="removePhoto"
-                  :disabled="uploadingPhoto">
+                <BaseButton
+                  v-if="photoPreview" size="sm" rounded="lg" color="danger" :disabled="uploadingPhoto"
+                  @click="removePhoto"
+                >
                   <Icon name="lucide:trash-2" class="size-3.5" />
                   <span>Remover</span>
                 </BaseButton>
@@ -451,28 +476,34 @@ onMounted(async () => {
           </BaseParagraph>
 
           <div class="space-y-3">
-            <div v-for="role in availableRoles" :key="role.id"
+            <div
+              v-for="role in availableRoles" :key="role.id"
               class="border-2 rounded-xl p-4 cursor-pointer transition-all" :class="{
                 'border-primary-500 bg-primary-500/5 ring-2 ring-primary-500/20': selectedRoleId === role.id,
                 'border-muted-200 dark:border-muted-700 hover:border-muted-300 dark:hover:border-muted-600': selectedRoleId !== role.id,
-              }" @click="selectedRoleId = role.id">
+              }" @click="selectedRoleId = role.id"
+            >
               <div class="flex items-start gap-4">
                 <!-- Radio button -->
-                <div class="size-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0" :class="{
-                  'border-primary-500 bg-primary-500': selectedRoleId === role.id,
-                  'border-muted-300 dark:border-muted-600': selectedRoleId !== role.id,
-                }">
+                <div
+                  class="size-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0" :class="{
+                    'border-primary-500 bg-primary-500': selectedRoleId === role.id,
+                    'border-muted-300 dark:border-muted-600': selectedRoleId !== role.id,
+                  }"
+                >
                   <Icon v-if="selectedRoleId === role.id" name="lucide:check" class="size-3 text-white" />
                 </div>
 
                 <!-- Role icon -->
-                <div class="size-10 rounded-lg flex items-center justify-center shrink-0" :class="{
-                  'bg-primary-500/10 text-primary-500': role.name === 'master',
-                  'bg-info-500/10 text-info-500': role.name === 'admin',
-                  'bg-success-500/10 text-success-500': role.name === 'contador',
-                  'bg-warning-500/10 text-warning-500': role.name === 'assistente',
-                  'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(role.name),
-                }">
+                <div
+                  class="size-10 rounded-lg flex items-center justify-center shrink-0" :class="{
+                    'bg-primary-500/10 text-primary-500': role.name === 'master',
+                    'bg-info-500/10 text-info-500': role.name === 'admin',
+                    'bg-success-500/10 text-success-500': role.name === 'contador',
+                    'bg-warning-500/10 text-warning-500': role.name === 'assistente',
+                    'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(role.name),
+                  }"
+                >
                   <Icon :name="getRoleIcon(role.name)" class="size-5" />
                 </div>
 
@@ -493,34 +524,58 @@ onMounted(async () => {
                   <!-- Permissions -->
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canViewAllCards ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canViewAllCards ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Ver todos cards</BaseText>
+                      <Icon
+                        :name="role.canViewAllCards ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canViewAllCards ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Ver todos cards
+                      </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canManageTeam ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageTeam ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Gerenciar equipe</BaseText>
+                      <Icon
+                        :name="role.canManageTeam ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageTeam ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Gerenciar equipe
+                      </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canManageClients ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageClients ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Gerenciar clientes</BaseText>
+                      <Icon
+                        :name="role.canManageClients ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageClients ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Gerenciar clientes
+                      </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canManageSettings ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageSettings ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Configurações</BaseText>
+                      <Icon
+                        :name="role.canManageSettings ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageSettings ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Configurações
+                      </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canExportData ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canExportData ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Exportar dados</BaseText>
+                      <Icon
+                        :name="role.canExportData ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canExportData ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Exportar dados
+                      </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon :name="role.canDeleteRecords ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canDeleteRecords ? 'text-success-500' : 'text-muted-300'" />
-                      <BaseText size="xs" class="text-muted-500">Excluir registros</BaseText>
+                      <Icon
+                        :name="role.canDeleteRecords ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canDeleteRecords ? 'text-success-500' : 'text-muted-300'"
+                      />
+                      <BaseText size="xs" class="text-muted-500">
+                        Excluir registros
+                      </BaseText>
                     </div>
                   </div>
                 </div>
@@ -549,13 +604,15 @@ onMounted(async () => {
             Função Atual
           </BaseHeading>
           <div class="flex items-center gap-3">
-            <div class="size-12 rounded-xl flex items-center justify-center" :class="{
-              'bg-primary-500/10 text-primary-500': member.role?.name === 'master',
-              'bg-info-500/10 text-info-500': member.role?.name === 'admin',
-              'bg-success-500/10 text-success-500': member.role?.name === 'contador',
-              'bg-warning-500/10 text-warning-500': member.role?.name === 'assistente',
-              'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(member.role?.name),
-            }">
+            <div
+              class="size-12 rounded-xl flex items-center justify-center" :class="{
+                'bg-primary-500/10 text-primary-500': member.role?.name === 'master',
+                'bg-info-500/10 text-info-500': member.role?.name === 'admin',
+                'bg-success-500/10 text-success-500': member.role?.name === 'contador',
+                'bg-warning-500/10 text-warning-500': member.role?.name === 'assistente',
+                'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(member.role?.name),
+              }"
+            >
               <Icon :name="getRoleIcon(member.role?.name)" class="size-6" />
             </div>
             <div>
@@ -576,19 +633,25 @@ onMounted(async () => {
           </BaseHeading>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <BaseText size="sm" class="text-muted-400">Declarações atribuídas</BaseText>
+              <BaseText size="sm" class="text-muted-400">
+                Declarações atribuídas
+              </BaseText>
               <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
                 {{ member.assignedDeclarations || 0 }}
               </BaseText>
             </div>
             <div class="flex items-center justify-between">
-              <BaseText size="sm" class="text-muted-400">Último acesso</BaseText>
+              <BaseText size="sm" class="text-muted-400">
+                Último acesso
+              </BaseText>
               <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
                 {{ member.lastLoginAt ? new Date(member.lastLoginAt).toLocaleDateString('pt-BR') : 'Nunca' }}
               </BaseText>
             </div>
             <div class="flex items-center justify-between">
-              <BaseText size="sm" class="text-muted-400">Membro desde</BaseText>
+              <BaseText size="sm" class="text-muted-400">
+                Membro desde
+              </BaseText>
               <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
                 {{ new Date(member.createdAt).toLocaleDateString('pt-BR') }}
               </BaseText>

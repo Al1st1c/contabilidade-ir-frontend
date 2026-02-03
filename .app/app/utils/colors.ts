@@ -80,7 +80,7 @@ export const bgLightColors: Record<string, string> = {
   warning: 'bg-amber-200',
 }
 
-export const resolveBgLightColor = (color: string) => {
+export function resolveBgLightColor(color: string) {
   return bgLightColors[color] || 'bg-white'
 }
 
@@ -112,7 +112,7 @@ export const bgLight100Colors: Record<string, string> = {
   warning: 'bg-amber-100',
 }
 
-export const resolveBgLight100Color = (color: string) => {
+export function resolveBgLight100Color(color: string) {
   return bgLight100Colors[color] || 'bg-white'
 }
 
@@ -174,7 +174,7 @@ export const borderLeftColors: Record<string, string> = {
   warning: 'border-l-amber-500',
 }
 
-export const resolveColor = (color: string) => {
+export function resolveColor(color: string) {
   const map: Record<string, string> = {
     info: 'blue',
     success: 'emerald',

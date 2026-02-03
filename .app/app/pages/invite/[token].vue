@@ -21,9 +21,9 @@ const errorMessage = ref<string>('')
 
 // Dados do convite
 const inviteData = ref<{
-  user: { id: string; name: string; email: string; phone: string | null }
-  role: { id: string; name: string; description: string }
-  tenant: { id: string; name: string; tradeName: string | null; logo: string | null; primaryColor: string | null; secondaryColor: string | null }
+  user: { id: string, name: string, email: string, phone: string | null }
+  role: { id: string, name: string, description: string }
+  tenant: { id: string, name: string, tradeName: string | null, logo: string | null, primaryColor: string | null, secondaryColor: string | null }
   expiresAt: string | null
 } | null>(null)
 
@@ -45,9 +45,9 @@ const passwordValidation = computed(() => ({
 }))
 
 const isPasswordValid = computed(() =>
-  passwordValidation.value.minLength &&
-  passwordValidation.value.hasNumber &&
-  passwordValidation.value.matches
+  passwordValidation.value.minLength
+  && passwordValidation.value.hasNumber
+  && passwordValidation.value.matches,
 )
 
 // Shades para as cores do whitelabel
@@ -55,7 +55,8 @@ const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '9
 
 // Aplicar cores do whitelabel dinamicamente
 function applyWhitelabelColors(primaryColor: string | null, secondaryColor: string | null) {
-  if (!process.client) return
+  if (!process.client)
+    return
 
   const root = document.documentElement
   const primary = primaryColor || 'amber'
@@ -65,7 +66,7 @@ function applyWhitelabelColors(primaryColor: string | null, secondaryColor: stri
   for (const shade of shades) {
     root.style.setProperty(
       `--color-primary-${shade}`,
-      `var(--color-${primary}-${shade})`
+      `var(--color-${primary}-${shade})`,
     )
   }
 
@@ -73,7 +74,7 @@ function applyWhitelabelColors(primaryColor: string | null, secondaryColor: stri
   for (const shade of shades) {
     root.style.setProperty(
       `--color-muted-${shade}`,
-      `var(--color-${secondary}-${shade})`
+      `var(--color-${secondary}-${shade})`,
     )
   }
 }
@@ -95,24 +96,27 @@ async function validateToken() {
       // Aplicar whitelabel do tenant ANTES de mostrar o conteúdo
       applyWhitelabelColors(
         data.data.tenant?.primaryColor,
-        data.data.tenant?.secondaryColor
+        data.data.tenant?.secondaryColor,
       )
 
       // Pequeno delay para garantir que as cores foram aplicadas
       await new Promise(resolve => setTimeout(resolve, 100))
 
       step.value = 'welcome'
-    } else {
+    }
+    else {
       errorType.value = data.error || 'UNKNOWN'
       errorMessage.value = data.message || 'Erro ao validar convite'
       step.value = 'error'
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao validar token:', error)
     errorType.value = 'NETWORK_ERROR'
     errorMessage.value = 'Erro de conexão. Tente novamente.'
     step.value = 'error'
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -124,7 +128,8 @@ function goToPasswordStep() {
 
 // Completar primeiro acesso
 async function completeFirstAccess() {
-  if (!isPasswordValid.value) return
+  if (!isPasswordValid.value)
+    return
 
   submitting.value = true
 
@@ -146,13 +151,16 @@ async function completeFirstAccess() {
       setTimeout(() => {
         router.push('/auth?firstAccess=true')
       }, 3000)
-    } else {
+    }
+    else {
       errorMessage.value = data.message || 'Erro ao ativar conta'
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao completar primeiro acesso:', error)
     errorMessage.value = 'Erro de conexão. Tente novamente.'
-  } finally {
+  }
+  finally {
     submitting.value = false
   }
 }
@@ -162,7 +170,8 @@ function formatPhone(value: string): string {
   const cleanValue = value.replace(/\D/g, '')
   if (cleanValue.length === 11) {
     return cleanValue.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-  } else if (cleanValue.length === 10) {
+  }
+  else if (cleanValue.length === 10) {
     return cleanValue.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
   }
   return value
@@ -188,7 +197,7 @@ onMounted(() => {
       <div class="flex size-full items-center justify-center p-12">
         <!-- Whitelabel: Logo do Tenant -->
         <div v-if="inviteData?.tenant?.logo" class="flex flex-col items-center">
-          <img :src="inviteData.tenant.logo" :alt="inviteData.tenant.name" class="max-h-48 max-w-md object-contain" />
+          <img :src="inviteData.tenant.logo" :alt="inviteData.tenant.name" class="max-h-48 max-w-md object-contain">
         </div>
         <!-- Fallback logo -->
         <!-- <div v-else class="flex flex-col items-center">
@@ -204,14 +213,18 @@ onMounted(() => {
         <!-- Loading State -->
         <div v-if="step === 'loading'" class="flex flex-col items-center justify-center py-12">
           <BaseLoader class="mb-4 size-12 text-primary-500" />
-          <BaseParagraph class="text-muted-500">Validando seu convite...</BaseParagraph>
+          <BaseParagraph class="text-muted-500">
+            Validando seu convite...
+          </BaseParagraph>
         </div>
 
         <!-- Error State -->
         <div v-else-if="step === 'error'" class="flex flex-col items-center justify-center py-8">
           <div class="bg-danger-100 dark:bg-danger-900/30 mb-4 flex size-20 items-center justify-center rounded-full">
-            <Icon :name="errorType === 'TOKEN_EXPIRED' ? 'lucide:clock' : 'lucide:alert-triangle'"
-              class="text-danger-500 size-10" />
+            <Icon
+              :name="errorType === 'TOKEN_EXPIRED' ? 'lucide:clock' : 'lucide:alert-triangle'"
+              class="text-danger-500 size-10"
+            />
           </div>
           <BaseHeading as="h3" size="xl" weight="semibold" class="mb-2 text-center">
             {{ errorType === 'TOKEN_EXPIRED' ? 'Link Expirado' : 'Link Inválido' }}
@@ -228,15 +241,18 @@ onMounted(() => {
         <div v-else-if="step === 'welcome'" class="space-y-6">
           <!-- Mobile Logo -->
           <div class="flex justify-center lg:hidden">
-            <img v-if="inviteData?.tenant?.logo" :src="inviteData.tenant.logo" :alt="inviteData?.tenant?.name"
-              class="max-h-16 object-contain" />
-            <img v-else src="/img/logo.png" alt="Sistema" class="max-h-12 object-contain" />
+            <img
+              v-if="inviteData?.tenant?.logo" :src="inviteData.tenant.logo" :alt="inviteData?.tenant?.name"
+              class="max-h-16 object-contain"
+            >
+            <img v-else src="/img/logo.png" alt="Sistema" class="max-h-12 object-contain">
           </div>
 
           <!-- Welcome Message -->
           <div class="text-center">
             <div
-              class="bg-primary-100 dark:bg-primary-900/30 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              class="bg-primary-100 dark:bg-primary-900/30 mx-auto mb-4 flex size-16 items-center justify-center rounded-full"
+            >
               <Icon name="lucide:party-popper" class="text-primary-500 size-8" />
             </div>
             <BaseHeading as="h2" size="2xl" weight="bold" class="mb-2">
@@ -254,21 +270,27 @@ onMounted(() => {
               <Icon name="lucide:user" class="text-muted-400 size-5" />
               <div>
                 <label class="text-muted-400 text-xs">Nome</label>
-                <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData?.user?.name }}</p>
+                <p class="text-muted-800 dark:text-muted-100 font-medium">
+                  {{ inviteData?.user?.name }}
+                </p>
               </div>
             </div>
             <div class="flex items-center gap-3">
               <Icon name="lucide:mail" class="text-muted-400 size-5" />
               <div>
                 <label class="text-muted-400 text-xs">Email</label>
-                <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData?.user?.email }}</p>
+                <p class="text-muted-800 dark:text-muted-100 font-medium">
+                  {{ inviteData?.user?.email }}
+                </p>
               </div>
             </div>
             <div class="flex items-center gap-3">
               <Icon name="lucide:briefcase" class="text-muted-400 size-5" />
               <div>
                 <label class="text-muted-400 text-xs">Cargo</label>
-                <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData?.role?.name }}</p>
+                <p class="text-muted-800 dark:text-muted-100 font-medium">
+                  {{ inviteData?.role?.name }}
+                </p>
               </div>
             </div>
           </div>
@@ -292,14 +314,17 @@ onMounted(() => {
         <div v-else-if="step === 'password'" class="space-y-6">
           <!-- Mobile Logo -->
           <div class="flex justify-center lg:hidden">
-            <img v-if="inviteData?.tenant?.logo" :src="inviteData.tenant.logo" :alt="inviteData?.tenant?.name"
-              class="max-h-16 object-contain" />
-            <img v-else src="/img/logo.png" alt="Sistema" class="max-h-12 object-contain" />
+            <img
+              v-if="inviteData?.tenant?.logo" :src="inviteData.tenant.logo" :alt="inviteData?.tenant?.name"
+              class="max-h-16 object-contain"
+            >
+            <img v-else src="/img/logo.png" alt="Sistema" class="max-h-12 object-contain">
           </div>
 
           <div class="text-center">
             <div
-              class="bg-primary-100 dark:bg-primary-900/30 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              class="bg-primary-100 dark:bg-primary-900/30 mx-auto mb-4 flex size-16 items-center justify-center rounded-full"
+            >
               <Icon name="lucide:lock" class="text-primary-500 size-8" />
             </div>
             <BaseHeading as="h2" size="2xl" weight="bold" class="mb-2">
@@ -311,14 +336,18 @@ onMounted(() => {
           </div>
 
           <!-- Password Form -->
-          <form @submit.prevent="completeFirstAccess" class="space-y-4">
+          <form class="space-y-4" @submit.prevent="completeFirstAccess">
             <BaseField label="Nova Senha">
               <div class="relative">
-                <BaseInput v-model="form.password" :type="showPassword ? 'text' : 'password'"
-                  placeholder="Digite sua senha" :disabled="submitting" />
-                <button type="button"
+                <BaseInput
+                  v-model="form.password" :type="showPassword ? 'text' : 'password'"
+                  placeholder="Digite sua senha" :disabled="submitting"
+                />
+                <button
+                  type="button"
                   class="text-muted-400 hover:text-muted-600 absolute right-3 top-1/2 -translate-y-1/2"
-                  @click="showPassword = !showPassword">
+                  @click="showPassword = !showPassword"
+                >
                   <Icon :name="showPassword ? 'lucide:eye-off' : 'lucide:eye'" class="size-5" />
                 </button>
               </div>
@@ -326,11 +355,15 @@ onMounted(() => {
 
             <BaseField label="Confirmar Senha">
               <div class="relative">
-                <BaseInput v-model="form.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
-                  placeholder="Confirme sua senha" :disabled="submitting" />
-                <button type="button"
+                <BaseInput
+                  v-model="form.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                  placeholder="Confirme sua senha" :disabled="submitting"
+                />
+                <button
+                  type="button"
                   class="text-muted-400 hover:text-muted-600 absolute right-3 top-1/2 -translate-y-1/2"
-                  @click="showConfirmPassword = !showConfirmPassword">
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
                   <Icon :name="showConfirmPassword ? 'lucide:eye-off' : 'lucide:eye'" class="size-5" />
                 </button>
               </div>
@@ -338,26 +371,38 @@ onMounted(() => {
 
             <!-- Password Requirements -->
             <div class="space-y-2">
-              <p class="text-muted-500 text-sm font-medium">Requisitos da senha:</p>
+              <p class="text-muted-500 text-sm font-medium">
+                Requisitos da senha:
+              </p>
               <div class="space-y-1">
-                <div class="flex items-center gap-2 text-sm"
-                  :class="passwordValidation.minLength ? 'text-success-500' : 'text-muted-400'">
+                <div
+                  class="flex items-center gap-2 text-sm"
+                  :class="passwordValidation.minLength ? 'text-success-500' : 'text-muted-400'"
+                >
                   <Icon :name="passwordValidation.minLength ? 'lucide:check-circle' : 'lucide:circle'" class="size-4" />
                   Mínimo 8 caracteres
                 </div>
-                <div class="flex items-center gap-2 text-sm"
-                  :class="passwordValidation.hasNumber ? 'text-success-500' : 'text-muted-400'">
+                <div
+                  class="flex items-center gap-2 text-sm"
+                  :class="passwordValidation.hasNumber ? 'text-success-500' : 'text-muted-400'"
+                >
                   <Icon :name="passwordValidation.hasNumber ? 'lucide:check-circle' : 'lucide:circle'" class="size-4" />
                   Pelo menos 1 número
                 </div>
-                <div class="flex items-center gap-2 text-sm"
-                  :class="passwordValidation.hasSpecial ? 'text-success-500' : 'text-muted-400'">
-                  <Icon :name="passwordValidation.hasSpecial ? 'lucide:check-circle' : 'lucide:circle'"
-                    class="size-4" />
+                <div
+                  class="flex items-center gap-2 text-sm"
+                  :class="passwordValidation.hasSpecial ? 'text-success-500' : 'text-muted-400'"
+                >
+                  <Icon
+                    :name="passwordValidation.hasSpecial ? 'lucide:check-circle' : 'lucide:circle'"
+                    class="size-4"
+                  />
                   Caractere especial (opcional)
                 </div>
-                <div class="flex items-center gap-2 text-sm"
-                  :class="passwordValidation.matches ? 'text-success-500' : 'text-muted-400'">
+                <div
+                  class="flex items-center gap-2 text-sm"
+                  :class="passwordValidation.matches ? 'text-success-500' : 'text-muted-400'"
+                >
                   <Icon :name="passwordValidation.matches ? 'lucide:check-circle' : 'lucide:circle'" class="size-4" />
                   Senhas coincidem
                 </div>
@@ -366,7 +411,9 @@ onMounted(() => {
 
             <!-- Error message -->
             <div v-if="errorMessage" class="bg-danger-50 dark:bg-danger-900/20 rounded-lg p-3">
-              <p class="text-danger-600 dark:text-danger-400 text-sm">{{ errorMessage }}</p>
+              <p class="text-danger-600 dark:text-danger-400 text-sm">
+                {{ errorMessage }}
+              </p>
             </div>
 
             <!-- Submit -->
@@ -375,8 +422,10 @@ onMounted(() => {
                 <Icon name="lucide:arrow-left" class="mr-1 size-4" />
                 Voltar
               </BaseButton>
-              <BaseButton type="submit" variant="primary" class="w-2/3" :loading="submitting"
-                :disabled="!isPasswordValid || submitting">
+              <BaseButton
+                type="submit" variant="primary" class="w-2/3" :loading="submitting"
+                :disabled="!isPasswordValid || submitting"
+              >
                 <Icon v-if="!submitting" name="lucide:check" class="mr-2 size-5" />
                 {{ submitting ? 'Ativando...' : 'Ativar Minha Conta' }}
               </BaseButton>
@@ -393,11 +442,11 @@ onMounted(() => {
             Conta Ativada! 🎉
           </BaseHeading>
           <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mb-4 text-center">
-            Sua conta foi ativada com sucesso.<br />
+            Sua conta foi ativada com sucesso.<br>
             Você será redirecionado para o login em instantes...
           </BaseParagraph>
           <div class="text-primary-500 flex items-center gap-2 text-sm">
-            <div class="border-primary-500 size-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+            <div class="border-primary-500 size-4 animate-spin rounded-full border-2 border-t-transparent" />
             Redirecionando...
           </div>
         </div>

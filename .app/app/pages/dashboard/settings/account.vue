@@ -28,8 +28,33 @@ const form = ref({
 
 // UF options
 const states = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
 ]
 
 // Masks
@@ -57,9 +82,11 @@ async function fetchTenant() {
         zipCode: source.zipCode || '',
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar dados da empresa:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -70,23 +97,25 @@ async function saveSettings() {
   try {
     const { data } = await useCustomFetch<any>('/tenant', {
       method: 'PUT',
-      body: form.value
+      body: form.value,
     })
 
     if (data.success || data) {
       toaster.add({
         title: 'Sucesso',
         description: 'Dados da empresa atualizados!',
-        icon: 'solar:check-circle-linear'
+        icon: 'solar:check-circle-linear',
       })
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao salvar dados',
-      icon: 'solar:danger-circle-linear'
+      icon: 'solar:danger-circle-linear',
     })
-  } finally {
+  }
+  finally {
     isSaving.value = false
   }
 }
@@ -99,7 +128,7 @@ onMounted(fetchTenant)
     <!-- Skeleton loading -->
     <AppPageLoading v-if="isLoading" message="Carregando dados da conta..." />
 
-    <form v-else @submit.prevent="saveSettings" class="space-y-20">
+    <form v-else class="space-y-20" @submit.prevent="saveSettings">
       <!-- Section: Basic Info -->
       <div class="grid grid-cols-12 gap-8 lg:gap-12">
         <div class="col-span-12 lg:col-span-4">
@@ -117,8 +146,10 @@ onMounted(fetchTenant)
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="Razão Social" required>
-                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
-                    icon="solar:buildings-linear" />
+                  <TairoInput
+                    v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
+                    icon="solar:buildings-linear"
+                  />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
@@ -128,8 +159,10 @@ onMounted(fetchTenant)
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="CNPJ">
-                  <TairoInput v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
-                    icon="solar:document-text-linear" />
+                  <TairoInput
+                    v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
+                    icon="solar:document-text-linear"
+                  />
                 </BaseField>
               </div>
             </div>
@@ -154,20 +187,26 @@ onMounted(fetchTenant)
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="E-mail de Contato">
-                  <TairoInput v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
-                    icon="solar:letter-linear" />
+                  <TairoInput
+                    v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
+                    icon="solar:letter-linear"
+                  />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="WhatsApp (Oficial)">
-                  <TairoInput v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
-                    icon="fa6-brands:whatsapp" />
+                  <TairoInput
+                    v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                    icon="fa6-brands:whatsapp"
+                  />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="Telefone Fixo">
-                  <TairoInput v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
-                    icon="solar:phone-rounded-linear" />
+                  <TairoInput
+                    v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
+                    icon="solar:phone-rounded-linear"
+                  />
                 </BaseField>
               </div>
             </div>
@@ -198,14 +237,18 @@ onMounted(fetchTenant)
               <div class="col-span-12 md:col-span-4">
                 <BaseField label="Estado">
                   <TairoSelect v-model="form.state" icon="solar:earth-linear">
-                    <BaseSelectItem v-for="uf in states" :key="uf" :value="uf">{{ uf }}</BaseSelectItem>
+                    <BaseSelectItem v-for="uf in states" :key="uf" :value="uf">
+                      {{ uf }}
+                    </BaseSelectItem>
                   </TairoSelect>
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-4">
                 <BaseField label="CEP">
-                  <TairoInput v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
-                    icon="solar:streets-navigation-linear" />
+                  <TairoInput
+                    v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
+                    icon="solar:streets-navigation-linear"
+                  />
                 </BaseField>
               </div>
             </div>
@@ -238,24 +281,38 @@ onMounted(fetchTenant)
                   Seu escritório tem acesso total às funcionalidades até o limite de contratado.
                 </BaseParagraph>
               </div>
-              <BaseButton variant="none"
-                class="bg-primary-500/20 text-primary-500 hover:bg-primary-500/30 transition-colors">Alterar Plano
+              <BaseButton
+                variant="none"
+                class="bg-primary-500/20 text-primary-500 hover:bg-primary-500/30 transition-colors"
+              >
+                Alterar Plano
               </BaseButton>
             </div>
 
             <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-muted-200 dark:border-muted-800">
               <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.users || 0 }}</div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">Usuários</div>
-              </div>
-              <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.clients || 0 }}</div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">Clientes</div>
-              </div>
-              <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">{{ tenant?._count?.taxDeclarations || 0 }}
+                <div class="text-xl font-bold text-muted-800 dark:text-white">
+                  {{ tenant?._count?.users || 0 }}
                 </div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">Declarações</div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">
+                  Usuários
+                </div>
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-bold text-muted-800 dark:text-white">
+                  {{ tenant?._count?.clients || 0 }}
+                </div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">
+                  Clientes
+                </div>
+              </div>
+              <div class="text-center">
+                <div class="text-xl font-bold text-muted-800 dark:text-white">
+                  {{ tenant?._count?.taxDeclarations || 0 }}
+                </div>
+                <div class="text-[10px] uppercase text-muted-400 font-semibold">
+                  Declarações
+                </div>
               </div>
             </div>
           </BaseCard>

@@ -1,5 +1,5 @@
-import { format, isDate, parseISO } from '~/utils/bundles/date-fns'
 import { ptBR } from 'date-fns/locale'
+import { format, isDate, parseISO } from '~/utils/bundles/date-fns'
 
 const DateFormats = {
   Short: 'dd/MM/yyyy',

@@ -68,13 +68,15 @@ onMounted(async () => {
       // Verificar cargo e redirecionar apropriadamente
       const roleName = userData?.role?.name
       const mobileRoles = ['Operador', 'Caixa', 'Portaria']
-      
+
       if (mobileRoles.includes(roleName)) {
         router.push('/mobile')
-      } else {
+      }
+      else {
         router.push('/dashboard')
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Erro ao buscar dados do usuário:', error)
       router.push('/dashboard')
     }
@@ -142,7 +144,7 @@ async function validateCode(code: string) {
 
   try {
     console.log('Validando código 2FA:', code)
-    
+
     const result = await verifyTwoFactor({
       code,
       email: email.value,
@@ -191,7 +193,7 @@ async function validateCode(code: string) {
       // Verificar cargo e redirecionar apropriadamente
       const roleName = userData?.role?.name
       const mobileRoles = ['Operador', 'Caixa', 'Portaria']
-      
+
       if (mobileRoles.includes(roleName)) {
         toaster.add({
           title: 'Sucesso',
@@ -199,23 +201,25 @@ async function validateCode(code: string) {
           icon: 'ph:user-circle-fill',
           progress: true,
         })
-        
+
         setTimeout(() => {
           router.push('/mobile')
         }, 1000)
-      } else {
+      }
+      else {
         toaster.add({
           title: 'Sucesso',
           description: 'Bem vindo ao seu centro de controle!',
           icon: 'ph:user-circle-fill',
           progress: true,
         })
-        
+
         setTimeout(() => {
           router.push('/dashboard')
         }, 1000)
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Erro ao buscar dados do usuário:', error)
       // Se falhar, redirecionar para dashboard por padrão
       toaster.add({
@@ -224,7 +228,7 @@ async function validateCode(code: string) {
         icon: 'ph:user-circle-fill',
         progress: true,
       })
-      
+
       setTimeout(() => {
         router.push('/dashboard')
       }, 1000)
@@ -317,7 +321,7 @@ async function resendCode() {
     await getRecaptcha()
 
     console.log('Reenviando código 2FA...')
-    
+
     const result = await login({
       email: email.value,
       password: password.value,
@@ -411,7 +415,7 @@ const onSubmit = handleSubmit(async (values) => {
       email.value = values.email
       password.value = values.senha
       isTwoFactor.value = true
-      
+
       // Mostrar telefone mascarado se disponível
       if (retorno.phone) {
         toaster.add({
@@ -421,7 +425,6 @@ const onSubmit = handleSubmit(async (values) => {
           progress: true,
         })
       }
-      return
     }
   }
   catch (error: any) {

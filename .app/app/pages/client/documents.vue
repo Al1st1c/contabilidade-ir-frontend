@@ -12,7 +12,8 @@ const rawDeclaration = ref<any>(null)
 const documents = ref<any[]>([])
 
 async function loadData() {
-  if (!user.value?.id) return
+  if (!user.value?.id)
+    return
 
   try {
     isLoading.value = true
@@ -30,9 +31,11 @@ async function loadData() {
         }
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao carregar documentos:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -42,7 +45,8 @@ const downloadingDocs = ref<Set<string>>(new Set())
 // Download handler
 // Download handler
 async function downloadAttachment(attachment: any) {
-  if (!rawDeclaration.value?.id) return
+  if (!rawDeclaration.value?.id)
+    return
 
   downloadingDocs.value.add(attachment.id)
   try {
@@ -62,9 +66,11 @@ async function downloadAttachment(attachment: any) {
       link.click()
       document.body.removeChild(link)
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao baixar documento:', error)
-  } finally {
+  }
+  finally {
     downloadingDocs.value.delete(attachment.id)
   }
 }
@@ -82,19 +88,24 @@ const officialDocs = computed(() => {
 })
 
 function getIcon(mimeType: string) {
-  if (mimeType.includes('pdf')) return 'vscode-icons:file-type-pdf2'
-  if (mimeType.includes('image')) return 'vscode-icons:file-type-image'
-  if (mimeType.includes('excel') || mimeType.includes('sheet')) return 'vscode-icons:file-type-excel'
-  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'vscode-icons:file-type-zip'
+  if (mimeType.includes('pdf'))
+    return 'vscode-icons:file-type-pdf2'
+  if (mimeType.includes('image'))
+    return 'vscode-icons:file-type-image'
+  if (mimeType.includes('excel') || mimeType.includes('sheet'))
+    return 'vscode-icons:file-type-excel'
+  if (mimeType.includes('zip') || mimeType.includes('compressed'))
+    return 'vscode-icons:file-type-zip'
   return 'vscode-icons:default-file'
 }
 
 function formatSize(bytes: number) {
-  if (bytes === 0) return '0 Bytes'
+  if (bytes === 0)
+    return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 </script>
 
@@ -136,17 +147,19 @@ function formatSize(bytes: number) {
       <!-- Official Documents Section -->
       <section>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <BaseCard v-for="doc in officialDocs" :key="doc.id"
+          <BaseCard
+            v-for="doc in officialDocs" :key="doc.id"
             class="group p-4 flex items-center gap-4 cursor-pointer hover:border-primary-500/50 transition-all shadow-sm hover:shadow-md"
-            @click="downloadAttachment(doc)">
-
+            @click="downloadAttachment(doc)"
+          >
             <div class="size-10 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
               <Icon :name="getIcon(doc.mimeType)" class="size-6" />
             </div>
 
             <div class="flex-1 min-w-0">
               <h4
-                class="font-medium text-sm text-muted-800 dark:text-muted-100 truncate group-hover:text-primary-600 transition-colors">
+                class="font-medium text-sm text-muted-800 dark:text-muted-100 truncate group-hover:text-primary-600 transition-colors"
+              >
                 {{ doc.fileName }}
               </h4>
               <p class="text-xs text-muted-400 mt-0.5">
@@ -154,10 +167,14 @@ function formatSize(bytes: number) {
               </p>
             </div>
 
-            <BaseButton size="icon-sm" variant="muted" class="transition-opacity"
-              :class="downloadingDocs.has(doc.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'">
-              <Icon v-if="downloadingDocs.has(doc.id)" name="svg-spinners:ring-resize"
-                class="size-4 text-primary-500" />
+            <BaseButton
+              size="icon-sm" variant="muted" class="transition-opacity"
+              :class="downloadingDocs.has(doc.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+            >
+              <Icon
+                v-if="downloadingDocs.has(doc.id)" name="svg-spinners:ring-resize"
+                class="size-4 text-primary-500"
+              />
               <Icon v-else name="lucide:download" class="size-4" />
             </BaseButton>
           </BaseCard>

@@ -20,20 +20,20 @@ const smsTemplates = [
     id: 1,
     icon: 'solar:document-add-linear',
     title: 'Urgência',
-    message: 'Ola [NOME], precisamos dos seus documentos para o IR [ANO] urgentemente para evitar multas. Envie aqui: [LINK]. ConsTar.'
+    message: 'Ola [NOME], precisamos dos seus documentos para o IR [ANO] urgentemente para evitar multas. Envie aqui: [LINK]. ConsTar.',
   },
   {
     id: 2,
     icon: 'solar:alarm-linear',
     title: 'Lembrete',
-    message: 'Ola [NOME], passando para lembrar dos documentos pendentes para seu IR [ANO]. Voce pode subir por aqui: [LINK]. Obrigado.'
+    message: 'Ola [NOME], passando para lembrar dos documentos pendentes para seu IR [ANO]. Voce pode subir por aqui: [LINK]. Obrigado.',
   },
   {
     id: 3,
     icon: 'solar:chat-round-dots-linear',
     title: 'Simples',
-    message: 'Oi [NOME], falta pouco para entregarmos seu IR [ANO]! So falta os documentos deste link: [LINK].'
-  }
+    message: 'Oi [NOME], falta pouco para entregarmos seu IR [ANO]! So falta os documentos deste link: [LINK].',
+  },
 ]
 
 function getFormattedMessage(card: any, linkUrl: string) {
@@ -41,7 +41,8 @@ function getFormattedMessage(card: any, linkUrl: string) {
   const firstName = card.client?.name?.split(' ')[0] || 'Cliente'
   const taxYear = card.taxYear || new Date().getFullYear()
 
-  if (!template) return ''
+  if (!template)
+    return ''
 
   return template.message
     .replace('[NOME]', firstName)
@@ -55,7 +56,7 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
     toaster.add({
       title: 'Erro',
       description: 'Cliente sem telefone cadastrado',
-      icon: 'ph:warning-circle-fill'
+      icon: 'ph:warning-circle-fill',
     })
     return
   }
@@ -67,7 +68,7 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
     // 1. Gerar o Link de Coleta
     const { data } = await useCustomFetch<any>(`/declarations/${card.id}/collection-link`, {
       method: 'POST',
-      body: { title: `Documentos para IR ${card.taxYear}` }
+      body: { title: `Documentos para IR ${card.taxYear}` },
     })
 
     // No Nuxt 3 useFetch, o data vem como Ref ou o objeto direto dependendo da implementação do wrapper
@@ -85,8 +86,8 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
       await useCustomFetch<any>(`/declarations/${card.id}/send-sms`, {
         method: 'POST',
         body: {
-          message: message.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x00-\x7F]/g, '')
-        }
+          message: message.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/[^\x00-\x7F]/g, ''),
+        },
       })
       toaster.add({ title: 'Sucesso', description: 'SMS enviado!', icon: 'ph:check-circle-fill' })
     }
@@ -99,15 +100,16 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
       await navigator.clipboard.writeText(fullUrl)
       toaster.add({ title: 'Copiado', description: 'Link na área de transferência!', icon: 'ph:copy-fill' })
     }
-
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Action Error:', error)
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao processar ação',
-      icon: 'ph:warning-circle-fill'
+      icon: 'ph:warning-circle-fill',
     })
-  } finally {
+  }
+  finally {
     isLoading.value[actionKey] = false
   }
 }
@@ -115,16 +117,20 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-2xl shadow-2xl flex flex-col h-screen overflow-hidden">
+    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-2xl shadow-2xl flex flex-col h-screen overflow-hidden"
+  >
     <!-- Header -->
     <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 bg-white dark:bg-muted-900">
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 bg-white dark:bg-muted-900"
+    >
       <BaseHeading as="h3" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
         Cobrar Documentos Pendentes
       </BaseHeading>
-      <button type="button"
+      <button
+        type="button"
         class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-500 rounded-full p-2 transition-colors duration-300"
-        @click="emit('close')">
+        @click="emit('close')"
+      >
         <Icon name="lucide:x" class="size-5" />
       </button>
     </div>
@@ -149,24 +155,30 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
           Selecione o Template
         </BaseHeading>
         <div class="grid grid-cols-3 gap-3">
-          <button v-for="template in smsTemplates" :key="template.id"
+          <button
+            v-for="template in smsTemplates" :key="template.id"
             class="flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-300 text-center gap-2"
             :class="selectedTemplateId === template.id ? 'border-primary-500 bg-primary-500/5' : 'border-muted-200 dark:border-muted-800 hover:border-muted-300 dark:hover:border-muted-700'"
-            @click="selectedTemplateId = template.id">
-            <div class="size-8 rounded-full flex items-center justify-center pointer-events-none"
-              :class="selectedTemplateId === template.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
+            @click="selectedTemplateId = template.id"
+          >
+            <div
+              class="size-8 rounded-full flex items-center justify-center pointer-events-none"
+              :class="selectedTemplateId === template.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'"
+            >
               <Icon :name="template.icon" class="size-5" />
             </div>
-            <span class="text-[10px] font-bold"
-              :class="selectedTemplateId === template.id ? 'text-primary-700 dark:text-primary-400' : 'text-muted-500'">
+            <span
+              class="text-[10px] font-bold"
+              :class="selectedTemplateId === template.id ? 'text-primary-700 dark:text-primary-400' : 'text-muted-500'"
+            >
               {{ template.title }}
             </span>
           </button>
         </div>
         <div class="bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 rounded-lg p-3">
           <BaseParagraph size="xs" class="text-muted-500 italic line-clamp-2">
-            "{{smsTemplates.find(t => t.id === selectedTemplateId)?.message.replace('[NOME]',
-              'Cliente').replace('[ANO]', '2024').replace('[LINK]', '...')}}"
+            "{{ smsTemplates.find(t => t.id === selectedTemplateId)?.message.replace('[NOME]',
+                                                                                     'Cliente').replace('[ANO]', '2024').replace('[LINK]', '...') }}"
           </BaseParagraph>
         </div>
       </div>
@@ -176,19 +188,25 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
           Clientes Pendentes ({{ cards.length }})
         </BaseHeading>
 
-        <div v-for="card in cards" :key="card.id"
-          class="group p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-900 hover:border-primary-500/50 transition-all duration-300">
+        <div
+          v-for="card in cards" :key="card.id"
+          class="group p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-900 hover:border-primary-500/50 transition-all duration-300"
+        >
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-              <BaseAvatar :text="card.client?.name?.charAt(0)" size="sm"
-                class="bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-400" />
+              <BaseAvatar
+                :text="card.client?.name?.charAt(0)" size="sm"
+                class="bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-400"
+              />
               <div>
                 <BaseHeading as="h4" size="sm" weight="semibold" class="text-muted-800 dark:text-muted-100">
                   {{ card.client?.name }}
                 </BaseHeading>
                 <div class="flex items-center gap-2 mt-0.5">
-                  <BaseTag rounded="full" color="primary" variant="muted" size="sm" class="px-2 py-0">IR {{ card.taxYear
-                    }}</BaseTag>
+                  <BaseTag rounded="full" color="primary" variant="muted" size="sm" class="px-2 py-0">
+                    IR {{ card.taxYear
+                    }}
+                  </BaseTag>
                   <span class="text-[10px] text-muted-400 font-mono">{{ card.client?.phone || 'Sem número' }}</span>
                 </div>
               </div>
@@ -196,25 +214,31 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
 
             <div class="flex items-center gap-2">
               <BaseTooltip content="Enviar SMS">
-                <BaseButton size="sm" rounded="md" variant="muted"
-                  class="size-10 p-0 hover:bg-primary-500/10 hover:text-primary-500" @click="handleAction(card, 'sms')"
-                  :loading="isLoading[`sms-${card.id}`]">
+                <BaseButton
+                  size="sm" rounded="md" variant="muted"
+                  class="size-10 p-0 hover:bg-primary-500/10 hover:text-primary-500" :loading="isLoading[`sms-${card.id}`]"
+                  @click="handleAction(card, 'sms')"
+                >
                   <Icon name="solar:text-field-focus-bold" class="size-5" />
                 </BaseButton>
               </BaseTooltip>
 
               <BaseTooltip content="Chamar no WhatsApp">
-                <BaseButton size="sm" rounded="md" variant="muted"
-                  class="size-10 p-0 text-success-500 hover:bg-success-500/10" @click="handleAction(card, 'whatsapp')"
-                  :loading="isLoading[`whatsapp-${card.id}`]">
+                <BaseButton
+                  size="sm" rounded="md" variant="muted"
+                  class="size-10 p-0 text-success-500 hover:bg-success-500/10" :loading="isLoading[`whatsapp-${card.id}`]"
+                  @click="handleAction(card, 'whatsapp')"
+                >
                   <Icon name="solar:whatsapp-bold" class="size-5" />
                 </BaseButton>
               </BaseTooltip>
 
               <BaseTooltip content="Copiar Link">
-                <BaseButton size="sm" rounded="md" variant="muted"
-                  class="size-10 p-0 hover:bg-primary-500/10 hover:text-primary-500" @click="handleAction(card, 'copy')"
-                  :loading="isLoading[`copy-${card.id}`]">
+                <BaseButton
+                  size="sm" rounded="md" variant="muted"
+                  class="size-10 p-0 hover:bg-primary-500/10 hover:text-primary-500" :loading="isLoading[`copy-${card.id}`]"
+                  @click="handleAction(card, 'copy')"
+                >
                   <Icon name="solar:link-bold" class="size-5" />
                 </BaseButton>
               </BaseTooltip>
@@ -224,10 +248,13 @@ async function handleAction(card: any, type: 'sms' | 'whatsapp' | 'copy') {
 
         <div v-if="cards.length === 0" class="py-20 text-center">
           <div
-            class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center mx-auto mb-4 text-muted-400">
+            class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center mx-auto mb-4 text-muted-400"
+          >
             <Icon name="solar:document-list-bold-duotone" class="size-8" />
           </div>
-          <BaseHeading as="h4" size="sm" weight="medium">Nenhuma pendência crítica</BaseHeading>
+          <BaseHeading as="h4" size="sm" weight="medium">
+            Nenhuma pendência crítica
+          </BaseHeading>
           <BaseParagraph size="xs" class="text-muted-400 max-w-[240px] mx-auto mt-2">
             Todos os documentos solicitados estão em dia!
           </BaseParagraph>

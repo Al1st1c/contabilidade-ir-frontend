@@ -39,12 +39,13 @@ const form = ref({
   pixKey: '',
   notes: '',
   isActive: true,
-  tags: [] as string[]
+  tags: [] as string[],
 })
 
 // Fetch client data
-const fetchClient = async () => {
-  if (!clientId) return
+async function fetchClient() {
+  if (!clientId)
+    return
   loading.value = true
   try {
     const { data: response } = await useCustomFetch<any>(`/clients/${clientId}`)
@@ -77,21 +78,23 @@ const fetchClient = async () => {
       pixKey: clientData.pixKey || '',
       notes: clientData.notes || '',
       isActive: clientData.isActive,
-      tags: clientData.tags || []
+      tags: clientData.tags || [],
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar cliente:', error)
     toaster.add({
       title: 'Erro',
       description: 'Não foi possível carregar os dados do cliente.',
       icon: 'ph:warning-circle-fill',
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 
-const saveClient = async () => {
+async function saveClient() {
   saving.value = true
   try {
     await useCustomFetch(`/clients/${clientId}`, {
@@ -106,14 +109,16 @@ const saveClient = async () => {
     })
 
     router.push('/dashboard/clients')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao salvar cliente:', error)
     toaster.add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao salvar alterações.',
       icon: 'ph:warning-circle-fill',
     })
-  } finally {
+  }
+  finally {
     saving.value = false
   }
 }
@@ -140,8 +145,10 @@ onMounted(fetchClient)
               <Icon name="lucide:arrow-left" class="size-4" />
               <span>Voltar</span>
             </BaseButton>
-            <BaseButton variant="primary" :loading="saving" @click="saveClient"
-              class="w-full sm:w-auto justify-center shadow-lg shadow-primary-500/20">
+            <BaseButton
+              variant="primary" :loading="saving" class="w-full sm:w-auto justify-center shadow-lg shadow-primary-500/20"
+              @click="saveClient"
+            >
               <Icon name="lucide:save" class="size-4" />
               <span>Salvar Alterações</span>
             </BaseButton>
@@ -156,14 +163,15 @@ onMounted(fetchClient)
 
       <!-- Content -->
       <div v-else-if="client" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
         <!-- Left Column: Profile & Stats -->
         <div class="lg:col-span-4 space-y-6">
           <!-- Profile Card -->
           <BaseCard rounded="lg" class="p-6 flex flex-col items-center text-center">
             <div class="relative mb-4">
-              <BaseAvatar size="2xl" :text="form.name.charAt(0).toUpperCase()" rounded="full"
-                class="bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400 ring-4 ring-white dark:ring-muted-900" />
+              <BaseAvatar
+                size="2xl" :text="form.name.charAt(0).toUpperCase()" rounded="full"
+                class="bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400 ring-4 ring-white dark:ring-muted-900"
+              />
               <div class="absolute bottom-0 right-0 p-1 bg-white dark:bg-muted-900 rounded-full">
                 <Icon name="solar:shield-check-bold" class="size-6 text-emerald-500" />
               </div>
@@ -179,8 +187,10 @@ onMounted(fetchClient)
             <div class="w-full grid grid-cols-2 gap-4 border-t border-muted-200 dark:border-muted-800 pt-4 mt-2">
               <div class="flex flex-col">
                 <span class="text-xs text-muted-500 uppercase font-medium">Status</span>
-                <BaseTag size="sm" :variant="form.isActive ? 'none' : 'muted'" rounded="full" class="mx-auto mt-1"
-                  :class="form.isActive ? 'bg-emerald-500/10 text-emerald-600' : ''">
+                <BaseTag
+                  size="sm" :variant="form.isActive ? 'none' : 'muted'" rounded="full" class="mx-auto mt-1"
+                  :class="form.isActive ? 'bg-emerald-500/10 text-emerald-600' : ''"
+                >
                   {{ form.isActive ? 'Ativo' : 'Inativo' }}
                 </BaseTag>
               </div>
@@ -198,23 +208,30 @@ onMounted(fetchClient)
             <div class="flex items-center justify-between pb-4 border-b border-muted-200 dark:border-muted-800">
               <div class="flex items-center gap-3">
                 <div
-                  class="flex items-center justify-center size-10 rounded-lg bg-orange-100 dark:bg-orange-500/10 text-orange-500">
+                  class="flex items-center justify-center size-10 rounded-lg bg-orange-100 dark:bg-orange-500/10 text-orange-500"
+                >
                   <Icon name="solar:document-text-bold-duotone" class="size-5" />
                 </div>
                 <div>
-                  <p class="text-xs text-muted-500 font-medium uppercase">Declarações</p>
+                  <p class="text-xs text-muted-500 font-medium uppercase">
+                    Declarações
+                  </p>
                   <p class="text-lg font-bold text-muted-800 dark:text-white leading-none">
                     {{ client.declarationsCount }}
                   </p>
                 </div>
               </div>
-              <BaseButton size="sm" rounded="full" variant="ghost"
-                class="size-8 p-0 flex items-center justify-center hover:bg-muted-100 dark:hover:bg-muted-800">
+              <BaseButton
+                size="sm" rounded="full" variant="ghost"
+                class="size-8 p-0 flex items-center justify-center hover:bg-muted-100 dark:hover:bg-muted-800"
+              >
                 <Icon name="lucide:arrow-right" class="size-4" />
               </BaseButton>
             </div>
-            <BaseButton variant="primary" class="w-full shadow-lg shadow-primary-500/20"
-              :to="{ path: '/dashboard/ir', query: { newFor: client.id } }">
+            <BaseButton
+              variant="primary" class="w-full shadow-lg shadow-primary-500/20"
+              :to="{ path: '/dashboard/ir', query: { newFor: client.id } }"
+            >
               <Icon name="solar:file-add-bold-duotone" class="size-4 mr-2" />
               Nova Declaração
             </BaseButton>
@@ -222,23 +239,31 @@ onMounted(fetchClient)
 
           <!-- Contact Info Read-only Summary -->
           <BaseCard rounded="lg" class="p-5">
-            <BaseHeading as="h4" size="sm" weight="medium"
-              class="mb-4 text-muted-500 uppercase tracking-wider text-[11px]">
+            <BaseHeading
+              as="h4" size="sm" weight="medium"
+              class="mb-4 text-muted-500 uppercase tracking-wider text-[11px]"
+            >
               Contato Rápido
             </BaseHeading>
             <div class="space-y-3">
-              <a v-if="form.email" :href="`mailto:${form.email}`"
-                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group">
+              <a
+                v-if="form.email" :href="`mailto:${form.email}`"
+                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group"
+              >
                 <Icon name="lucide:mail" class="size-4 text-muted-400 group-hover:text-primary-500" />
                 <span class="text-sm text-muted-600 dark:text-muted-300 truncate">{{ form.email }}</span>
               </a>
-              <a v-if="form.whatsapp" :href="`https://wa.me/55${form.whatsapp.replace(/\D/g, '')}`" target="_blank"
-                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group">
+              <a
+                v-if="form.whatsapp" :href="`https://wa.me/55${form.whatsapp.replace(/\D/g, '')}`" target="_blank"
+                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group"
+              >
                 <Icon name="logos:whatsapp-icon" class="size-4 opacity-80 group-hover:opacity-100" />
                 <span class="text-sm text-muted-600 dark:text-muted-300">{{ form.whatsapp }}</span>
               </a>
-              <a v-else-if="form.phone" :href="`tel:${form.phone}`"
-                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group">
+              <a
+                v-else-if="form.phone" :href="`tel:${form.phone}`"
+                class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-800 transition-colors group"
+              >
                 <Icon name="lucide:phone" class="size-4 text-muted-400 group-hover:text-primary-500" />
                 <span class="text-sm text-muted-600 dark:text-muted-300">{{ form.phone }}</span>
               </a>
@@ -248,8 +273,7 @@ onMounted(fetchClient)
 
         <!-- Right Column: Form -->
         <div class="lg:col-span-8 space-y-6">
-          <form @submit.prevent="saveClient" class="space-y-6">
-
+          <form class="space-y-6" @submit.prevent="saveClient">
             <!-- Personal Data -->
             <BaseCard rounded="lg" class="p-6 md:p-8">
               <div class="flex items-center gap-2 mb-6 border-b border-muted-200 dark:border-muted-800 pb-4">
@@ -264,8 +288,10 @@ onMounted(fetchClient)
                   <BaseInput v-model="form.name" icon="lucide:user" />
                 </BaseField>
                 <BaseField label="CPF" required>
-                  <BaseInput v-model="form.cpf" icon="lucide:fingerprint" disabled
-                    class="opacity-70 bg-muted-50 dark:bg-muted-900" />
+                  <BaseInput
+                    v-model="form.cpf" icon="lucide:fingerprint" disabled
+                    class="opacity-70 bg-muted-50 dark:bg-muted-900"
+                  />
                 </BaseField>
                 <BaseField label="Data de Nascimento">
                   <BaseInput v-model="form.birthDate" type="date" />
@@ -346,8 +372,10 @@ onMounted(fetchClient)
                 </BaseField>
                 <BaseField label="Chave PIX (Restituição)" class="md:col-span-2">
                   <BaseInput v-model="form.pixKey" icon="logos:pix" placeholder="CPF, Email, Telefone..." />
-                  <p class="text-[11px] text-muted-400 mt-1">Usada prioritariamente para informar a conta de
-                    restituição.</p>
+                  <p class="text-[11px] text-muted-400 mt-1">
+                    Usada prioritariamente para informar a conta de
+                    restituição.
+                  </p>
                 </BaseField>
                 <div class="md:col-span-2">
                   <BaseField label="Dados Bancários (Opcional)">
@@ -369,13 +397,13 @@ onMounted(fetchClient)
                   Anotações Internas
                 </BaseHeading>
               </div>
-              <BaseTextarea v-model="form.notes" rows="4" placeholder="Observações específicas sobre este cliente..."
-                class="bg-muted-50/50 dark:bg-muted-900/50 focus:bg-white dark:focus:bg-muted-950" />
+              <BaseTextarea
+                v-model="form.notes" rows="4" placeholder="Observações específicas sobre este cliente..."
+                class="bg-muted-50/50 dark:bg-muted-900/50 focus:bg-white dark:focus:bg-muted-950"
+              />
             </BaseCard>
-
           </form>
         </div>
-
       </div>
     </TairoContentWrapper>
   </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { FocusTrap } from '@headlessui/vue'
+import { useApi } from '~/composables/useAuth'
 
 interface Payload {
   userId: string
@@ -41,7 +42,6 @@ const emits = defineEmits<{
 // Composables
 const { close } = usePanels()
 const toaster = useNuiToasts()
-import { useApi } from '~/composables/useAuth'
 const { useCustomFetch } = useApi()
 
 // Reactive state
@@ -69,10 +69,11 @@ async function fetchAvailableFunds() {
   isLoadingFunds.value = true
   try {
     const { data } = await useCustomFetch<any>('/transactions/available-funds', {
-      method: 'GET'
+      method: 'GET',
     })
     fundSources.value = data
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar fundos:', error)
     toaster.add({
       title: 'Erro!',
@@ -80,41 +81,42 @@ async function fetchAvailableFunds() {
       icon: 'ph:warning-circle-fill',
       duration: 4000,
     })
-  } finally {
+  }
+  finally {
     isLoadingFunds.value = false
   }
 }
 
 // Validation rules
-const validateForm = (): boolean => {
+function validateForm(): boolean {
   const newErrors: FormErrors = {}
-  
+
   // Valor obrigatório
   if (!payload.value.amount || payload.value.amount <= 0) {
     newErrors.amount = 'Valor deve ser maior que zero'
   }
-  
+
   // Tipo obrigatório
   if (!payload.value.type) {
     newErrors.type = 'Tipo da transação é obrigatório'
   }
-  
+
   // Fundo obrigatório
   if (!payload.value.fundId) {
     newErrors.fundId = 'Fonte do fundo é obrigatória'
   }
-  
+
   // Multiplicador de rollover se rollover estiver ativo
   if (payload.value.rollover && (!payload.value.rolloverMultiplier || payload.value.rolloverMultiplier <= 0)) {
     newErrors.rolloverMultiplier = 'Multiplicador de rollover é obrigatório quando rollover está ativo'
   }
-  
+
   errors.value = newErrors
   return Object.keys(newErrors).length === 0
 }
 
 // Reset form
-const resetForm = () => {
+function resetForm() {
   payload.value = {
     userId: props.data?.id || '',
     amount: 0,
@@ -129,14 +131,13 @@ const resetForm = () => {
 }
 
 // Clear specific error
-const clearError = (field: keyof FormErrors) => {
+function clearError(field: keyof FormErrors) {
   if (errors.value[field]) {
     delete errors.value[field]
   }
 }
 
-
-const showToast = (title: string, description: string, type: 'error' | 'success' = 'error') => {
+function showToast(title: string, description: string, type: 'error' | 'success' = 'error') {
   toaster.add({
     title,
     description,
@@ -145,17 +146,18 @@ const showToast = (title: string, description: string, type: 'error' | 'success'
   })
 }
 
-const completeValidation = async () => {
-  if (isLoading.value) return
-  
+async function completeValidation() {
+  if (isLoading.value)
+    return
+
   // Validate form before proceeding
   if (!validateForm()) {
     showToast('Erro de Validação', 'Por favor, corrija os erros no formulário', 'error')
     return
   }
-  
+
   isLoading.value = true
-  
+
   try {
     // Prepare payload
     const cleanPayload: Payload = {
@@ -171,7 +173,7 @@ const completeValidation = async () => {
 
     const { data } = await useCustomFetch<any>('/transactions', {
       method: 'POST',
-      body: cleanPayload
+      body: cleanPayload,
     })
 
     if (data.id) {
@@ -179,13 +181,16 @@ const completeValidation = async () => {
       emits('save', cleanPayload)
       resetForm()
       close()
-    } else {
+    }
+    else {
       throw new Error(data.message || 'Erro ao criar transação')
     }
-  } catch (err: any) {
+  }
+  catch (err: any) {
     console.error('Erro ao criar transação:', err)
     showToast('Erro!', err.message || 'Ocorreu um erro ao salvar a transação', 'error')
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -196,7 +201,6 @@ onKeyStroke('Escape', close)
 onMounted(() => {
   fetchAvailableFunds()
 })
-
 </script>
 
 <template>
@@ -208,7 +212,7 @@ onMounted(() => {
           Adicionar Nova Transação
         </BaseHeading>
 
-        <button 
+        <button
           type="button"
           class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
           @click="close"
@@ -226,9 +230,9 @@ onMounted(() => {
               <BaseHeading as="h4" size="sm" weight="semibold" class="text-muted-600 dark:text-muted-300">
                 Informações da Transação
               </BaseHeading>
-              
-              <BaseField 
-                label="Valor (R$)" 
+
+              <BaseField
+                label="Valor (R$)"
                 :error="errors.amount"
                 required
               >
@@ -243,9 +247,9 @@ onMounted(() => {
                   @input="clearError('amount')"
                 />
               </BaseField>
-              
-              <BaseField 
-                label="Tipo da Transação" 
+
+              <BaseField
+                label="Tipo da Transação"
                 :error="errors.type"
                 required
               >
@@ -274,32 +278,33 @@ onMounted(() => {
                 </BaseSelect>
               </BaseField>
 
-              <BaseField 
-                label="ROLLOVER"
+              <BaseField
                 v-if="payload.type === 'DEPOSIT' || payload.type === 'CORRECTION'"
+                label="ROLLOVER"
               >
                 <BaseCheckbox v-model="payload.rollover" label="Ativar rollover" />
               </BaseField>
-              <BaseField v-if="payload.rollover" 
-                label="Multiplicador de ROLLOVER" 
+              <BaseField
+                v-if="payload.rollover"
+                label="Multiplicador de ROLLOVER"
                 :error="errors.rolloverMultiplier"
                 required
               >
-                <BaseInput 
-                  v-model="payload.rolloverMultiplier" 
+                <BaseInput
+                  v-model="payload.rolloverMultiplier"
                   type="number"
                   min="1"
                   max="100"
-                  rounded="md" 
-                  placeholder="Digite o multiplicador de ROLLOVER" 
-                  :error="!!errors.rolloverMultiplier" 
-                  @input="clearError('rolloverMultiplier')" 
+                  rounded="md"
+                  placeholder="Digite o multiplicador de ROLLOVER"
+                  :error="!!errors.rolloverMultiplier"
+                  @input="clearError('rolloverMultiplier')"
                 />
               </BaseField>
 
-              <BaseField 
-                label="Método de Pagamento" 
+              <BaseField
                 v-if="payload.type === 'DEPOSIT' || payload.type === 'CORRECTION'"
+                label="Método de Pagamento"
               >
                 <BaseSelect
                   v-model="payload.referenceId"
@@ -321,10 +326,10 @@ onMounted(() => {
                 </BaseSelect>
               </BaseField>
 
-              <BaseField 
-                label="Fonte do Fundo" 
-                :error="errors.fundId"
+              <BaseField
                 v-if="payload.type === 'DEPOSIT' || payload.type === 'CORRECTION'"
+                label="Fonte do Fundo"
+                :error="errors.fundId"
                 required
               >
                 <BaseSelect
@@ -335,13 +340,13 @@ onMounted(() => {
                   :disabled="isLoadingFunds"
                   @input="clearError('fundId')"
                 >
-                  <BaseSelectItem 
-                    v-for="fund in fundSources" 
-                    :key="fund.id" 
+                  <BaseSelectItem
+                    v-for="fund in fundSources"
+                    :key="fund.id"
                     :value="fund.id"
                   >
                     <span>
-                      {{ fund.name }} ({{ fund.type }}) - 
+                      {{ fund.name }} ({{ fund.type }}) -
                       <span :class="fund.availableAmount < 0 ? 'text-red-500' : ''">
                         R$ {{ fund.availableAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
                       </span>
@@ -353,50 +358,49 @@ onMounted(() => {
                 </div>
               </BaseField>
 
-              <BaseField 
-                label="Observações" 
+              <BaseField
+                label="Observações"
                 :error="errors.observations"
               >
-                <BaseTextarea 
-                  v-model="payload.observations" 
-                  rounded="md" 
-                  placeholder="Digite as observações" 
-                  :error="!!errors.observations" 
-                  @input="clearError('observations')" 
+                <BaseTextarea
+                  v-model="payload.observations"
+                  rounded="md"
+                  placeholder="Digite as observações"
+                  :error="!!errors.observations"
+                  @input="clearError('observations')"
                 />
               </BaseField>
             </div>
-
           </div>
           <!-- Actions -->
           <div class="flex justify-between items-center pt-6 border-t border-muted-200 dark:border-muted-700">
-            <BaseButton 
-              variant="muted" 
-              size="sm" 
-              @click="resetForm"
+            <BaseButton
+              variant="muted"
+              size="sm"
               :disabled="isLoading"
+              @click="resetForm"
             >
               <Icon name="lucide:refresh-cw" class="size-4 me-2" />
               Limpar
             </BaseButton>
-            
+
             <div class="flex gap-3">
-              <BaseButton 
-                variant="muted" 
-                size="sm" 
-                @click="close"
+              <BaseButton
+                variant="muted"
+                size="sm"
                 :disabled="isLoading"
+                @click="close"
               >
                 <Icon name="lucide:x" class="size-4 me-2" />
                 Cancelar
               </BaseButton>
-              
-              <BaseButton 
-                variant="primary" 
-                size="sm" 
-                @click="completeValidation"
+
+              <BaseButton
+                variant="primary"
+                size="sm"
                 :loading="isLoading"
                 :disabled="isLoading"
+                @click="completeValidation"
               >
                 <Icon name="lucide:plus" class="size-4 me-2" />
                 {{ isLoading ? 'Processando...' : 'Adicionar Transação' }}
@@ -408,4 +412,3 @@ onMounted(() => {
     </FocusTrap>
   </div>
 </template>
-

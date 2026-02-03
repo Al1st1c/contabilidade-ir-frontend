@@ -1,4 +1,4 @@
-export const useWhitelabel = () => {
+export function useWhitelabel() {
   const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'] as const
   const settings = useCookie<any>('whitelabel-settings', {
     maxAge: 60 * 60 * 24 * 30, // 30 days
@@ -15,7 +15,7 @@ export const useWhitelabel = () => {
       for (const shade of shades) {
         root.style.setProperty(
           `--color-primary-${shade}`,
-          `var(--color-${primaryColor}-${shade})`
+          `var(--color-${primaryColor}-${shade})`,
         )
       }
 
@@ -23,7 +23,7 @@ export const useWhitelabel = () => {
       for (const shade of shades) {
         root.style.setProperty(
           `--color-muted-${shade}`,
-          `var(--color-${secondaryColor}-${shade})`
+          `var(--color-${secondaryColor}-${shade})`,
         )
       }
     }
@@ -32,12 +32,12 @@ export const useWhitelabel = () => {
     // We ignore 'updatedAt' in the comparison to break potential loops
     if (persist) {
       const current = settings.value || {}
-      const hasChanged =
-        current.primaryColor !== primaryColor ||
-        current.secondaryColor !== secondaryColor ||
-        (logo !== undefined && current.logo !== logo) ||
-        (name !== undefined && current.name !== name) ||
-        (tradeName !== undefined && current.tradeName !== tradeName)
+      const hasChanged
+        = current.primaryColor !== primaryColor
+          || current.secondaryColor !== secondaryColor
+          || (logo !== undefined && current.logo !== logo)
+          || (name !== undefined && current.name !== name)
+          || (tradeName !== undefined && current.tradeName !== tradeName)
 
       if (hasChanged) {
         settings.value = {
@@ -47,7 +47,7 @@ export const useWhitelabel = () => {
           ...(logo !== undefined ? { logo } : {}),
           ...(name !== undefined ? { name } : {}),
           ...(tradeName !== undefined ? { tradeName } : {}),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         }
       }
     }

@@ -27,7 +27,8 @@ function switchMuted(color: (typeof mutedPresets)[number]) {
       <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-50" />
 
       <DialogContent
-        class="p-2 fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] text-sm rounded-lg overflow-hidden border border-white dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[100] transition-discrete transition-all duration-200 ease-out flex flex-col">
+        class="p-2 fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] text-sm rounded-lg overflow-hidden border border-white dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[100] transition-discrete transition-all duration-200 ease-out flex flex-col"
+      >
         <div class="flex w-full items-center justify-between p-4 md:p-6">
           <DialogTitle class="font-heading text-muted-900 text-lg font-medium leading-6 dark:text-white">
             Theme configuration
@@ -53,13 +54,15 @@ function switchMuted(color: (typeof mutedPresets)[number]) {
               <div class="space-y-1">
                 <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                   <div v-for="color in primaryPresets" :key="color.name">
-                    <button type="button"
+                    <button
+                      type="button"
                       class="hover:bg-muted-100 dark:hover:bg-muted-700/70 group flex w-full items-center gap-3 rounded-lg p-2 transition-colors duration-200"
                       :class="[
                         currentPrimary === color.name
                           ? 'ring-primary-500 relative z-10 ring-1'
                           : 'ring-0',
-                      ]" @click="() => switchPrimary(color)">
+                      ]" @click="() => switchPrimary(color)"
+                    >
                       <span class="block size-6 shrink-0 rounded-lg" :class="color.class" />
                       <BaseText size="sm">
                         {{ color.label }}
@@ -80,14 +83,18 @@ function switchMuted(color: (typeof mutedPresets)[number]) {
                       Pick a shade
                     </BaseText>
                     <div class="ms-auto flex items-center justify-end gap-2">
-                      <BaseTooltip v-for="color in mutedPresets" :key="color.name" :content="color.label"
-                        :bindings="{ portal: { disabled: true } }">
-                        <button type="button" class="block size-6 rounded-full" :class="[
-                          color.class,
-                          currentMuted === color.name
-                            ? 'ring-primary-500 ring-1'
-                            : 'ring-0',
-                        ]" @click="() => switchMuted(color)" />
+                      <BaseTooltip
+                        v-for="color in mutedPresets" :key="color.name" :content="color.label"
+                        :bindings="{ portal: { disabled: true } }"
+                      >
+                        <button
+                          type="button" class="block size-6 rounded-full" :class="[
+                            color.class,
+                            currentMuted === color.name
+                              ? 'ring-primary-500 ring-1'
+                              : 'ring-0',
+                          ]" @click="() => switchMuted(color)"
+                        />
                       </BaseTooltip>
                     </div>
                   </div>

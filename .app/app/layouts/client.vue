@@ -39,17 +39,20 @@ const menuItems = [
       <BaseIconBox size="xl" shape="full" variant="primary" mask="blob" class="animate-pulse">
         <TairoLogo class="size-10" />
       </BaseIconBox>
-      <BaseText size="sm" weight="medium" class="text-muted-400 animate-pulse">Carregando...</BaseText>
+      <BaseText size="sm" weight="medium" class="text-muted-400 animate-pulse">
+        Carregando...
+      </BaseText>
     </div>
   </div>
 
   <div v-else class="min-h-screen bg-muted-50 dark:bg-muted-950 pb-20">
     <!-- Header/Logo -->
     <header
-      class="sticky top-0 z-30 bg-white/80 dark:bg-muted-900/80 backdrop-blur-md border-b border-muted-200 dark:border-muted-800 px-4 py-3">
+      class="sticky top-0 z-30 bg-white/80 dark:bg-muted-900/80 backdrop-blur-md border-b border-muted-200 dark:border-muted-800 px-4 py-3"
+    >
       <div class="flex items-center justify-between max-w-lg mx-auto">
         <div class="flex items-center gap-3">
-          <img v-if="tenant?.logo" :src="tenant.logo" class="size-8 object-contain" alt="Logo" />
+          <img v-if="tenant?.logo" :src="tenant.logo" class="size-8 object-contain" alt="Logo">
           <TairoLogo v-else class="size-8 text-primary-500" />
           <div class="flex flex-col">
             <BaseHeading as="h1" size="xs" weight="bold" class="text-muted-800 dark:text-muted-100 leading-none">
@@ -59,8 +62,10 @@ const menuItems = [
             <!-- Year Selector -->
             <div class="flex items-center gap-1 mt-1">
               <span class="text-[10px] uppercase font-bold text-muted-400">Exercício</span>
-              <select v-model="selectedTaxYear"
-                class="bg-transparent text-[10px] font-bold text-primary-500 border-none p-0 focus:ring-0 cursor-pointer outline-none">
+              <select
+                v-model="selectedTaxYear"
+                class="bg-transparent text-[10px] font-bold text-primary-500 border-none p-0 focus:ring-0 cursor-pointer outline-none"
+              >
                 <option v-for="year in availableYears" :key="year" :value="year">
                   IR {{ year }} (Ano-Calendário {{ year - 1 }})
                 </option>
@@ -76,21 +81,27 @@ const menuItems = [
 
     <!-- Main Content -->
     <main
-      class="max-w-lg mx-auto p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 text-muted-800 dark:text-muted-200">
+      class="max-w-lg mx-auto p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 text-muted-800 dark:text-muted-200"
+    >
       <slot />
     </main>
 
     <!-- Bottom Navigation -->
     <nav
-      class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-muted-900 border-t border-muted-200 dark:border-muted-800 px-2 py-1 safe-area-pb">
+      class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-muted-900 border-t border-muted-200 dark:border-muted-800 px-2 py-1 safe-area-pb"
+    >
       <div class="flex items-center justify-around max-w-lg mx-auto">
-        <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to"
-          class="flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 min-w-[64px]"
-          active-class="text-primary-500" v-slot="{ isActive }">
-          <div class="relative flex items-center justify-center size-10 rounded-xl transition-all duration-300"
-            :class="isActive ? 'bg-primary-500/10' : 'text-muted-400 hover:text-muted-500'">
+        <NuxtLink
+          v-for="item in menuItems" :key="item.to" v-slot="{ isActive }"
+          :to="item.to"
+          class="flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 min-w-[64px]" active-class="text-primary-500"
+        >
+          <div
+            class="relative flex items-center justify-center size-10 rounded-xl transition-all duration-300"
+            :class="isActive ? 'bg-primary-500/10' : 'text-muted-400 hover:text-muted-500'"
+          >
             <Icon :name="item.icon" class="size-6" />
-            <div v-if="isActive" class="absolute -bottom-1 size-1 rounded-full bg-primary-500"></div>
+            <div v-if="isActive" class="absolute -bottom-1 size-1 rounded-full bg-primary-500" />
           </div>
           <span class="text-[10px] font-medium leading-none" :class="isActive ? 'text-primary-500' : 'text-muted-400'">
             {{ item.label }}

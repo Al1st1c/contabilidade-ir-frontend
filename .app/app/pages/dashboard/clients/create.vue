@@ -42,7 +42,7 @@ const form = ref({
   pixKey: '',
   // Outros
   notes: '',
-  tags: [] as string[]
+  tags: [] as string[],
 })
 
 const masks = ref(['999.999.999-99'])
@@ -62,7 +62,7 @@ async function consultCpf() {
   try {
     const { data } = await useCustomFetch<any>('/clients/consult-cpf', {
       method: 'POST',
-      body: { cpf: form.value.cpf }
+      body: { cpf: form.value.cpf },
     })
 
     if (data.alreadyExists) {
@@ -88,7 +88,8 @@ async function consultCpf() {
       })
 
       step.value = 2
-    } else {
+    }
+    else {
       toaster.add({
         title: 'Não encontrado',
         description: 'Não encontramos dados para este CPF. Preencha manualmente.',
@@ -96,10 +97,12 @@ async function consultCpf() {
       })
       step.value = 2
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro na consulta:', error)
     step.value = 2
-  } finally {
+  }
+  finally {
     isLoadingCpf.value = false
   }
 }
@@ -109,7 +112,7 @@ async function saveClient() {
   try {
     const { data } = await useCustomFetch<any>('/clients', {
       method: 'POST',
-      body: form.value
+      body: form.value,
     })
 
     if (data.success) {
@@ -120,13 +123,15 @@ async function saveClient() {
       })
       router.push('/dashboard/clients')
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro ao salvar',
       description: error.data?.message || 'Verifique os dados e tente novamente.',
       icon: 'ph:warning-circle-fill',
     })
-  } finally {
+  }
+  finally {
     isSaving.value = false
   }
 }
@@ -156,10 +161,12 @@ function prevStep() {
     <BaseCard rounded="lg" class="p-6 md:p-10 shadow-sm overflow-hidden">
       <!-- Steps Indicator -->
       <div class="flex items-center justify-between mb-10 relative">
-        <div class="absolute top-1/2 left-0 w-full h-0.5 bg-muted-200 dark:bg-muted-800 -translate-y-1/2 z-0"></div>
-        <div v-for="i in 4" :key="i"
+        <div class="absolute top-1/2 left-0 w-full h-0.5 bg-muted-200 dark:bg-muted-800 -translate-y-1/2 z-0" />
+        <div
+          v-for="i in 4" :key="i"
           class="relative z-10 size-10 rounded-full flex items-center justify-center border-4 border-white dark:border-muted-900 transition-colors duration-300"
-          :class="step >= i ? 'bg-primary-500 text-white' : 'bg-muted-200 dark:bg-muted-800 text-muted-400'">
+          :class="step >= i ? 'bg-primary-500 text-white' : 'bg-muted-200 dark:bg-muted-800 text-muted-400'"
+        >
           <span class="text-xs font-bold">{{ i }}</span>
         </div>
       </div>
@@ -177,8 +184,10 @@ function prevStep() {
             </BaseParagraph>
 
             <BaseField label="CPF do Cliente">
-              <BaseInput v-model="form.cpf" placeholder="000.000.000-00" :masks="masks" size="lg"
-                @keyup.enter="consultCpf" />
+              <BaseInput
+                v-model="form.cpf" placeholder="000.000.000-00" :masks="masks" size="lg"
+                @keyup.enter="consultCpf"
+              />
             </BaseField>
 
             <div class="flex gap-3">
@@ -191,14 +200,16 @@ function prevStep() {
             </div>
           </div>
           <div class="hidden md:block w-72">
-            <img src="/img/illustrations/placeholders/flat/placeholder-search-1.svg" alt="Busca" class="w-full" />
+            <img src="/img/illustrations/placeholders/flat/placeholder-search-1.svg" alt="Busca" class="w-full">
           </div>
         </div>
       </div>
 
       <!-- Step 2: Dados Pessoais -->
       <div v-if="step === 2" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">Dados Pessoais</BaseHeading>
+        <BaseHeading as="h2" size="xl" weight="medium">
+          Dados Pessoais
+        </BaseHeading>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <BaseField label="Nome Completo">
             <BaseInput v-model="form.name" placeholder="Nome do cliente" />
@@ -214,14 +225,20 @@ function prevStep() {
           </BaseField>
         </div>
         <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">Voltar</BaseButton>
-          <BaseButton variant="primary" @click="nextStep">Continuar</BaseButton>
+          <BaseButton variant="ghost" @click="prevStep">
+            Voltar
+          </BaseButton>
+          <BaseButton variant="primary" @click="nextStep">
+            Continuar
+          </BaseButton>
         </div>
       </div>
 
       <!-- Step 3: Endereço -->
       <div v-if="step === 3" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">Endereço</BaseHeading>
+        <BaseHeading as="h2" size="xl" weight="medium">
+          Endereço
+        </BaseHeading>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <BaseField label="CEP" class="md:col-span-1">
             <BaseInput v-model="form.zipCode" placeholder="00000-000" />
@@ -243,14 +260,20 @@ function prevStep() {
           </BaseField>
         </div>
         <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">Voltar</BaseButton>
-          <BaseButton variant="primary" @click="nextStep">Continuar</BaseButton>
+          <BaseButton variant="ghost" @click="prevStep">
+            Voltar
+          </BaseButton>
+          <BaseButton variant="primary" @click="nextStep">
+            Continuar
+          </BaseButton>
         </div>
       </div>
 
       <!-- Step 4: Dados Finais -->
       <div v-if="step === 4" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">Profissional e Bancário</BaseHeading>
+        <BaseHeading as="h2" size="xl" weight="medium">
+          Profissional e Bancário
+        </BaseHeading>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <BaseField label="Profissão / Ocupação">
             <BaseInput v-model="form.occupation" placeholder="Ex: Contador" />
@@ -269,8 +292,12 @@ function prevStep() {
           </BaseField>
         </div>
         <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">Voltar</BaseButton>
-          <BaseButton variant="primary" :loading="isSaving" @click="saveClient">Finalizar Cadastro</BaseButton>
+          <BaseButton variant="ghost" @click="prevStep">
+            Voltar
+          </BaseButton>
+          <BaseButton variant="primary" :loading="isSaving" @click="saveClient">
+            Finalizar Cadastro
+          </BaseButton>
         </div>
       </div>
     </BaseCard>

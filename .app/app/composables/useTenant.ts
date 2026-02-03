@@ -1,6 +1,6 @@
 import { useApi } from '~/composables/useAuth'
 
-export const useTenant = () => {
+export function useTenant() {
   const { useCustomFetch } = useApi()
   const { applyColors, settings } = useWhitelabel()
 
@@ -12,7 +12,7 @@ export const useTenant = () => {
         secondaryColor: settings.value.secondaryColor,
         logo: settings.value.logo,
         name: settings.value.name,
-        tradeName: settings.value.tradeName
+        tradeName: settings.value.tradeName,
       }
     }
     return null
@@ -22,7 +22,8 @@ export const useTenant = () => {
 
   const fetchTenant = async () => {
     // If we have full data from API (not just cache) and not loading, we can skip
-    if ((tenant.value?.name && !isLoading.value)) return tenant.value
+    if ((tenant.value?.name && !isLoading.value))
+      return tenant.value
 
     isLoading.value = true
     try {
@@ -39,15 +40,17 @@ export const useTenant = () => {
           source.secondaryColor,
           source.logo,
           source.name,
-          source.tradeName
+          source.tradeName,
         )
       }
 
       return source
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error fetching tenant metadata:', error)
       return null
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   }
@@ -58,15 +61,16 @@ export const useTenant = () => {
     // This ensures that when applyColors is called (which updates the cookie),
     // the global tenant state also updates, reflecting changes in all components.
     watch(settings, (newSettings) => {
-      if (!newSettings) return
+      if (!newSettings)
+        return
 
       const t = tenant.value || {}
       if (
-        t.primaryColor !== newSettings.primaryColor ||
-        t.secondaryColor !== newSettings.secondaryColor ||
-        t.logo !== newSettings.logo ||
-        t.name !== newSettings.name ||
-        t.tradeName !== newSettings.tradeName
+        t.primaryColor !== newSettings.primaryColor
+        || t.secondaryColor !== newSettings.secondaryColor
+        || t.logo !== newSettings.logo
+        || t.name !== newSettings.name
+        || t.tradeName !== newSettings.tradeName
       ) {
         tenant.value = {
           ...(tenant.value || {}),
@@ -74,13 +78,13 @@ export const useTenant = () => {
           secondaryColor: newSettings.secondaryColor,
           logo: newSettings.logo,
           name: newSettings.name,
-          tradeName: newSettings.tradeName
+          tradeName: newSettings.tradeName,
         }
       }
     }, { deep: true, immediate: true })
 
     // When color or logo state changes, apply the CSS variables.
-    // We pass 'persist: false' when applying from this watcher to avoid 
+    // We pass 'persist: false' when applying from this watcher to avoid
     // circular updates back to the cookie if it was the cookie that triggered this change.
     watch(
       [
@@ -88,19 +92,19 @@ export const useTenant = () => {
         () => tenant.value?.secondaryColor,
         () => tenant.value?.logo,
         () => tenant.value?.name,
-        () => tenant.value?.tradeName
+        () => tenant.value?.tradeName,
       ],
       ([p, s, l, n, tn]) => {
         if (p && s) {
           applyColors(p, s, l, n, tn, false) // Apply to DOM but don't re-save to cookie
         }
-      }
+      },
     )
   }
 
   return {
     tenant,
     isLoading,
-    fetchTenant
+    fetchTenant,
   }
 }

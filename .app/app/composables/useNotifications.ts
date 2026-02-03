@@ -1,22 +1,25 @@
-import { ref, watch, onMounted } from 'vue'
+import { ref } from 'vue'
 
 const dismissedIds = ref<string[]>([])
 
-export const useNotifications = () => {
+export function useNotifications() {
   const loadDismissed = () => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined')
+      return
     const saved = localStorage.getItem('dismissed_notifications')
     if (saved) {
       try {
         dismissedIds.value = JSON.parse(saved)
-      } catch (e) {
+      }
+      catch (e) {
         console.error('Failed to parse dismissed notifications', e)
       }
     }
   }
 
   const saveDismissed = () => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined')
+      return
     localStorage.setItem('dismissed_notifications', JSON.stringify(dismissedIds.value))
   }
 

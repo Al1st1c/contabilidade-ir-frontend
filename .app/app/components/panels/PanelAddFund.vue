@@ -28,7 +28,7 @@ const zodSchema = z.object({
     .min(2, VALIDATION_TEXT.NAME_MIN)
     .max(100, VALIDATION_TEXT.NAME_MAX),
   type: z.enum(['money', 'bank'], {
-    errorMap: () => ({ message: VALIDATION_TEXT.TYPE_REQUIRED })
+    errorMap: () => ({ message: VALIDATION_TEXT.TYPE_REQUIRED }),
   }),
 })
 
@@ -74,20 +74,23 @@ const onSubmit = handleSubmit(async (values) => {
         icon: 'ph:check-circle-fill',
         progress: true,
       })
-      
+
       resetForm()
       emits('success')
       emits('close')
-    } else {
+    }
+    else {
       throw new Error(data.message || 'Erro ao criar fundo')
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao criar fundo:', error)
-    
+
     // Verifica se é erro de validação específico
     if (error.message?.includes('já existe') || error.message?.includes('nome')) {
       setFieldError('name', error.message)
-    } else {
+    }
+    else {
       toaster.add({
         title: 'Erro',
         description: error.message || 'Erro ao criar fundo. Tente novamente.',
@@ -97,7 +100,6 @@ const onSubmit = handleSubmit(async (values) => {
     }
   }
 })
-
 </script>
 
 <template>
@@ -270,7 +272,7 @@ const onSubmit = handleSubmit(async (values) => {
             <Icon name="lucide:plus" class="size-4" />
             <span>Criar Fundo</span>
           </BaseButton>
-          
+
           <BaseButton
             type="button"
             variant="muted"

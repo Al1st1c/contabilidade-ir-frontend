@@ -25,37 +25,42 @@ async function getRaffleStats() {
       method: 'GET',
     })
     stats.value = data
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar estatísticas:', error)
-  } finally {
+  }
+  finally {
     loadingStats.value = false
   }
 }
 
 // Formatar valor em reais
 function formatCurrency(value: number): string {
-  if (!value) return 'R$ 0,00'
+  if (!value)
+    return 'R$ 0,00'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value)
 }
 
 // Formatar data
 function formatDate(date: string) {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
 // Formatar duração
 function formatDuration(hours: number): string {
-  if (!hours) return '0h'
+  if (!hours)
+    return '0h'
   const h = Math.floor(hours)
   const m = Math.floor((hours - h) * 60)
   return `${h}h ${m}m`
@@ -159,7 +164,7 @@ onMounted(() => {
         <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mb-4">
           {{ raffle.description || 'Sorteio do casino' }}
         </BaseParagraph>
-        
+
         <!-- Status -->
         <span
           class="bg-muted-100 dark:bg-muted-600/10 text-muted-500 inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-sans text-xs"
@@ -377,20 +382,20 @@ onMounted(() => {
       <!-- Botões de Ação -->
       <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
         <BaseButton
-          @click="getRaffleStats"
           variant="muted"
           rounded="lg"
           class="flex-1"
           :loading="loadingStats"
+          @click="getRaffleStats"
         >
           <Icon name="lucide:refresh-cw" class="size-4" />
           <span>Atualizar</span>
         </BaseButton>
         <BaseButton
-          @click="emits('close')"
           variant="primary"
           rounded="lg"
           class="flex-1"
+          @click="emits('close')"
         >
           <Icon name="lucide:check" class="size-4" />
           <span>Fechar</span>

@@ -10,7 +10,8 @@ const isLoading = ref(true)
 const history = ref<any[]>([])
 
 async function loadHistory() {
-  if (!user.value?.id) return
+  if (!user.value?.id)
+    return
 
   try {
     isLoading.value = true
@@ -18,16 +19,19 @@ async function loadHistory() {
     if (data.success && data.data.taxDeclarations) {
       history.value = data.data.taxDeclarations.map((d: any) => ({
         year: Number(d.taxYear), // Ano do IR (Exercício)
-        status: d.status === 'submitted' ? 'Entregue' :
-          d.status === 'finished' ? 'Finalizado' : 'Em Processamento',
+        status: d.status === 'submitted'
+          ? 'Entregue'
+          : d.status === 'finished' ? 'Finalizado' : 'Em Processamento',
         result: d.result || 'neutral',
         value: Number(d.resultValue) || 0,
         date: d.submittedAt ? new Date(d.submittedAt).toLocaleDateString('pt-BR') : '-',
       }))
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao carregar histórico:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -57,27 +61,35 @@ function formatCurrency(value: number) {
 
     <!-- History List -->
     <div v-else-if="history.length > 0" class="space-y-4">
-      <BaseCard v-for="item in history" :key="item.year"
-        class="p-5 flex items-center justify-between hover:shadow-lg transition-all duration-300 border-none shadow-sm">
+      <BaseCard
+        v-for="item in history" :key="item.year"
+        class="p-5 flex items-center justify-between hover:shadow-lg transition-all duration-300 border-none shadow-sm"
+      >
         <div class="flex items-center gap-4">
           <div class="size-12 rounded-2xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
             <Icon name="solar:calendar-date-bold-duotone" class="size-6 text-primary-500" />
           </div>
           <div>
-            <BaseHeading as="h4" size="md" weight="bold">IRPF {{ item.year }}</BaseHeading>
+            <BaseHeading as="h4" size="md" weight="bold">
+              IRPF {{ item.year }}
+            </BaseHeading>
             <div class="flex items-center gap-2 mt-0.5">
-              <BaseTag color="success" rounded="full" size="sm" variant="muted">{{ item.status }}</BaseTag>
+              <BaseTag color="success" rounded="full" size="sm" variant="muted">
+                {{ item.status }}
+              </BaseTag>
               <span class="text-[10px] text-muted-400 font-medium">{{ item.date }}</span>
             </div>
           </div>
         </div>
 
         <div class="text-right">
-          <div class="text-sm font-bold" :class="[
-            item.result === 'refund' ? 'text-emerald-500' :
-              item.result === 'pay' ? 'text-rose-500' :
-                'text-muted-500'
-          ]">
+          <div
+            class="text-sm font-bold" :class="[
+              item.result === 'refund' ? 'text-emerald-500'
+              : item.result === 'pay' ? 'text-rose-500'
+                : 'text-muted-500',
+            ]"
+          >
             {{ item.result === 'refund' ? '+' : item.result === 'pay' ? '-' : '' }}
             {{ formatCurrency(item.value) }}
           </div>
@@ -91,8 +103,11 @@ function formatCurrency(value: number) {
     <!-- Empty State -->
     <div v-else class="py-20 text-center">
       <Icon name="solar:history-linear" class="size-16 text-muted-300 mb-4 mx-auto" />
-      <BaseHeading as="h3" size="md" weight="semibold" class="text-muted-400">Nenhum histórico encontrado</BaseHeading>
-      <BaseParagraph size="sm" class="text-muted-400 mt-1">Sua primeira declaração conosco aparecerá aqui.
+      <BaseHeading as="h3" size="md" weight="semibold" class="text-muted-400">
+        Nenhum histórico encontrado
+      </BaseHeading>
+      <BaseParagraph size="sm" class="text-muted-400 mt-1">
+        Sua primeira declaração conosco aparecerá aqui.
       </BaseParagraph>
     </div>
   </div>

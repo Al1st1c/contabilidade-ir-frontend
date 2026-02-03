@@ -1,8 +1,8 @@
-import { ref, watch, computed } from 'vue'
+import { ref } from 'vue'
 
 const selectedEmployeeId = ref<string>('')
 
-export const useAppState = () => {
+export function useAppState() {
   return {
     selectedEmployeeId,
   }

@@ -32,9 +32,9 @@ const stats = computed(() => {
 
 // Verificar se pode executar o sorteio
 const canExecute = computed(() => {
-  return props.raffle.status === 'ACTIVE' && 
-         props.raffle.entries?.length > 0 && 
-         props.raffle.prizes?.length > 0
+  return props.raffle.status === 'ACTIVE'
+    && props.raffle.entries?.length > 0
+    && props.raffle.prizes?.length > 0
 })
 
 // Executar sorteio
@@ -46,8 +46,8 @@ async function executeRaffle() {
     const { data } = await useCustomFetch<any>(`/raffles/${props.raffle.id}/execute`, {
       method: 'POST',
       body: {
-        notes: 'Sorteio executado via interface administrativa'
-      }
+        notes: 'Sorteio executado via interface administrativa',
+      },
     })
 
     executionResult.value = data
@@ -59,7 +59,8 @@ async function executeRaffle() {
     })
 
     emits('success')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao executar sorteio:', error)
     toaster.add({
       title: 'Erro',
@@ -67,7 +68,8 @@ async function executeRaffle() {
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     isExecuting.value = false
   }
 }
@@ -84,22 +86,24 @@ function cancelExecution() {
 
 // Formatar valor em reais
 function formatCurrency(value: number): string {
-  if (!value) return 'R$ 0,00'
+  if (!value)
+    return 'R$ 0,00'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value)
 }
 
 // Formatar data
 function formatDate(date: string) {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 </script>
@@ -186,10 +190,10 @@ function formatDate(date: string) {
 
         <div class="flex gap-3">
           <BaseButton
-            @click="emits('close')"
             variant="primary"
             rounded="lg"
             class="flex-1"
+            @click="emits('close')"
           >
             <Icon name="lucide:check" class="size-4" />
             <span>Concluir</span>
@@ -262,7 +266,7 @@ function formatDate(date: string) {
                 Atenção
               </BaseHeading>
               <BaseParagraph size="xs" class="text-destructive-500 dark:text-destructive-400">
-                Após a execução, o sorteio será finalizado e não poderá ser editado. 
+                Após a execução, o sorteio será finalizado e não poderá ser editado.
                 Certifique-se de que todas as configurações estão corretas.
               </BaseParagraph>
             </div>
@@ -271,20 +275,20 @@ function formatDate(date: string) {
 
         <div class="flex gap-3">
           <BaseButton
-            @click="executeRaffle"
             :loading="isExecuting"
             variant="destructive"
             rounded="lg"
             class="flex-1"
+            @click="executeRaffle"
           >
             <Icon name="lucide:play" class="size-4" />
             <span>Executar Sorteio</span>
           </BaseButton>
           <BaseButton
-            @click="cancelExecution"
             variant="muted"
             rounded="lg"
             class="flex-1"
+            @click="cancelExecution"
           >
             <Icon name="lucide:x" class="size-4" />
             <span>Cancelar</span>
@@ -445,19 +449,19 @@ function formatDate(date: string) {
         <div class="flex gap-3">
           <BaseButton
             v-if="canExecute"
-            @click="confirmExecution"
             variant="primary"
             rounded="lg"
             class="flex-1"
+            @click="confirmExecution"
           >
             <Icon name="lucide:play" class="size-4" />
             <span>Executar Sorteio</span>
           </BaseButton>
           <BaseButton
-            @click="emits('close')"
             variant="muted"
             rounded="lg"
             class="flex-1"
+            @click="emits('close')"
           >
             <Icon name="lucide:x" class="size-4" />
             <span>Cancelar</span>

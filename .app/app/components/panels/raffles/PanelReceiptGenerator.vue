@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { useApi } from '~/composables/useAuth'
 
-const { useCustomFetch } = useApi()
-const toaster = useNuiToasts()
-
 const props = defineProps<{
   raffle: any
 }>()
-
 const emits = defineEmits<{
   close: []
 }>()
+const { useCustomFetch } = useApi()
+const toaster = useNuiToasts()
 
 const loading = ref(false)
 const selectedWinner = ref<any>(null)
@@ -31,7 +29,7 @@ const companyData = ref({
   phone: '(11) 99999-9999',
   email: 'contato@casinoroyal.com.br',
   website: 'www.casinoroyal.com.br',
-  logo: null as string | null
+  logo: null as string | null,
 })
 
 // Configurações do comprovante
@@ -50,7 +48,7 @@ const receiptConfig = ref({
     label: string
     value: string
     position: 'header' | 'footer' | 'after-winner' | 'after-prize'
-  }>
+  }>,
 })
 
 // Templates pré-definidos removidos - mantendo apenas configuração padrão
@@ -67,11 +65,11 @@ onMounted(() => {
 function loadSavedConfig() {
   const savedCompany = localStorage.getItem('receipt-company-data')
   const savedConfig = localStorage.getItem('receipt-config')
-  
+
   if (savedCompany) {
     companyData.value = { ...companyData.value, ...JSON.parse(savedCompany) }
   }
-  
+
   if (savedConfig) {
     receiptConfig.value = { ...receiptConfig.value, ...JSON.parse(savedConfig) }
   }
@@ -81,7 +79,7 @@ function loadSavedConfig() {
 function saveConfig() {
   localStorage.setItem('receipt-company-data', JSON.stringify(companyData.value))
   localStorage.setItem('receipt-config', JSON.stringify(receiptConfig.value))
-  
+
   toaster.add({
     title: 'Sucesso',
     description: 'Configurações salvas com sucesso!',
@@ -98,7 +96,7 @@ function addCustomField() {
     id: `custom-${Date.now()}`,
     label: 'Campo Personalizado',
     value: '',
-    position: 'footer' as const
+    position: 'footer' as const,
   }
   receiptConfig.value.customFields.push(newField)
 }
@@ -126,7 +124,7 @@ function handleLogoUpload(event: Event) {
       })
       return
     }
-    
+
     // Validar tamanho do arquivo (máximo 2MB)
     const maxSize = 2 * 1024 * 1024 // 2MB
     if (file.size > maxSize) {
@@ -138,7 +136,7 @@ function handleLogoUpload(event: Event) {
       })
       return
     }
-    
+
     const reader = new FileReader()
     reader.onload = (e) => {
       companyData.value.logo = e.target?.result as string
@@ -166,7 +164,7 @@ async function detectPrinters() {
   try {
     printerStatus.value = 'connecting'
     availablePrinters.value = []
-    
+
     // Tentar detectar impressoras USB via Web Serial API (para impressoras térmicas/fiscais)
     if ('serial' in navigator) {
       try {
@@ -174,31 +172,32 @@ async function detectPrinters() {
         const port = await (navigator as any).serial.requestPort({
           filters: [
             // Filtros comuns para impressoras térmicas/fiscais
-            { usbVendorId: 0x04b8 }, // EPSON
+            { usbVendorId: 0x04B8 }, // EPSON
             { usbVendorId: 0x0483 }, // Bematech
             { usbVendorId: 0x0519 }, // Elgin
-            { usbVendorId: 0x0fe6 }, // Daruma
-            { usbVendorId: 0x0dd4 }, // Diebold
-          ]
+            { usbVendorId: 0x0FE6 }, // Daruma
+            { usbVendorId: 0x0DD4 }, // Diebold
+          ],
         })
-        
+
         const info = port.getInfo()
         availablePrinters.value.push({
           id: `usb-${info.usbVendorId}-${info.usbProductId}`,
           name: `Impressora Fiscal USB (${info.usbVendorId ? `VID: ${info.usbVendorId.toString(16)}` : 'Desconhecida'})`,
           type: 'usb',
-          port: port
+          port,
         })
-        
+
         toaster.add({
           title: 'Impressora detectada',
           description: 'Impressora USB conectada com sucesso',
           icon: 'ph:check-circle-fill',
           duration: 3000,
         })
-      } catch (error: any) {
+      }
+      catch (error: any) {
         console.log('Web Serial API - Usuário cancelou ou erro:', error)
-        
+
         if (error.name !== 'NotFoundError') {
           toaster.add({
             title: 'Aviso',
@@ -208,7 +207,8 @@ async function detectPrinters() {
           })
         }
       }
-    } else {
+    }
+    else {
       toaster.add({
         title: 'Não suportado',
         description: 'Seu navegador não suporta conexão USB. Use Chrome, Edge ou Opera.',
@@ -216,7 +216,7 @@ async function detectPrinters() {
         duration: 5000,
       })
     }
-    
+
     // Tentar detectar impressoras Bluetooth (para impressoras portáteis)
     if ('bluetooth' in navigator && availablePrinters.value.length === 0) {
       try {
@@ -228,33 +228,35 @@ async function detectPrinters() {
             { namePrefix: 'EPSON' },
             { namePrefix: 'Bematech' },
             { namePrefix: 'Elgin' },
-            { namePrefix: 'Daruma' }
+            { namePrefix: 'Daruma' },
           ],
-          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'],
         })
-        
+
         availablePrinters.value.push({
           id: `bluetooth-${device.id}`,
           name: device.name || 'Impressora Bluetooth',
           type: 'bluetooth',
-          device: device
+          device,
         })
-        
+
         toaster.add({
           title: 'Impressora detectada',
           description: 'Impressora Bluetooth conectada com sucesso',
           icon: 'ph:check-circle-fill',
           duration: 3000,
         })
-      } catch (error) {
+      }
+      catch (error) {
         console.log('Bluetooth - Usuário cancelou ou erro:', error)
       }
     }
-    
+
     if (availablePrinters.value.length > 0) {
       printerStatus.value = 'connected'
       selectedPrinter.value = availablePrinters.value[0]
-    } else {
+    }
+    else {
       printerStatus.value = 'disconnected'
       toaster.add({
         title: 'Nenhuma impressora',
@@ -263,8 +265,8 @@ async function detectPrinters() {
         duration: 4000,
       })
     }
-    
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao detectar impressoras:', error)
     printerStatus.value = 'error'
     toaster.add({
@@ -290,7 +292,7 @@ async function generateReceiptPDF() {
 
   try {
     loading.value = true
-    
+
     // Preparar dados completos em JSON
     const receiptData = {
       // Dados do sorteio
@@ -299,7 +301,7 @@ async function generateReceiptPDF() {
         name: props.raffle.name,
         description: props.raffle.description,
         drawDate: props.raffle.drawDate,
-        status: props.raffle.status
+        status: props.raffle.status,
       },
       // Dados do ganhador
       winner: {
@@ -308,17 +310,17 @@ async function generateReceiptPDF() {
         user: {
           name: selectedWinner.value.user?.name || 'Ganhador',
           document: selectedWinner.value.user?.document || 'N/A',
-          phone: selectedWinner.value.user?.phone || 'N/A'
+          phone: selectedWinner.value.user?.phone || 'N/A',
         },
         prize: {
           name: selectedWinner.value.prize?.name || 'Prêmio',
           description: selectedWinner.value.prize?.description || '',
-          value: selectedWinner.value.prize?.value || 0
+          value: selectedWinner.value.prize?.value || 0,
         },
         entry: {
           ticket: selectedWinner.value.entry?.ticket || 'N/A',
-          purchaseDate: selectedWinner.value.entry?.createdAt
-        }
+          purchaseDate: selectedWinner.value.entry?.createdAt,
+        },
       },
       // Dados da empresa
       company: {
@@ -329,7 +331,7 @@ async function generateReceiptPDF() {
         phone: companyData.value.phone,
         email: companyData.value.email,
         website: companyData.value.website,
-        logo: companyData.value.logo
+        logo: companyData.value.logo,
       },
       // Configurações do comprovante
       config: {
@@ -338,17 +340,17 @@ async function generateReceiptPDF() {
         showLegalText: receiptConfig.value.showLegalText,
         showTimestamp: receiptConfig.value.showTimestamp,
         language: receiptConfig.value.language,
-        customFields: receiptConfig.value.customFields
+        customFields: receiptConfig.value.customFields,
       },
       // Metadados
       generatedAt: new Date().toISOString(),
-      receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     }
 
     // Gerar PDF do comprovante
     const { data } = await useCustomFetch<any>('/raffles/generate-receipt', {
       method: 'POST',
-      body: receiptData
+      body: receiptData,
     })
 
     // Abrir PDF em nova aba
@@ -360,15 +362,16 @@ async function generateReceiptPDF() {
       icon: 'ph:check-circle-fill',
       progress: true,
     })
-
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao gerar comprovante',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -397,7 +400,7 @@ async function printReceipt() {
 
   try {
     loading.value = true
-    
+
     // Gerar dados do comprovante para impressão ESC/POS
     const receiptData = {
       raffle: props.raffle,
@@ -405,7 +408,7 @@ async function printReceipt() {
       company: companyData.value,
       config: receiptConfig.value,
       generatedAt: new Date().toISOString(),
-      receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     }
 
     // Enviar para impressão
@@ -414,8 +417,8 @@ async function printReceipt() {
       body: {
         ...receiptData,
         printerType: selectedPrinter.value.type,
-        printerId: selectedPrinter.value.id
-      }
+        printerId: selectedPrinter.value.id,
+      },
     })
 
     toaster.add({
@@ -424,30 +427,32 @@ async function printReceipt() {
       icon: 'ph:check-circle-fill',
       progress: true,
     })
-
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao imprimir comprovante',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 
 // Preview do comprovante
 const receiptPreview = computed(() => {
-  if (!selectedWinner.value) return null
-  
+  if (!selectedWinner.value)
+    return null
+
   return {
     company: companyData.value,
     raffle: props.raffle,
     winner: selectedWinner.value,
     config: receiptConfig.value,
     generatedAt: new Date(),
-    receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    receiptId: `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   }
 })
 </script>
@@ -488,23 +493,23 @@ const receiptPreview = computed(() => {
       <div class="mb-6">
         <div class="flex border-b border-muted-200 dark:border-muted-700">
           <button
-            @click="activeTab = 'preview'"
             class="px-4 py-2 text-sm font-medium transition-colors"
             :class="{
               'text-primary-600 border-b-2 border-primary-600': activeTab === 'preview',
-              'text-muted-500 hover:text-muted-700 dark:text-muted-400 dark:hover:text-muted-300': activeTab !== 'preview'
+              'text-muted-500 hover:text-muted-700 dark:text-muted-400 dark:hover:text-muted-300': activeTab !== 'preview',
             }"
+            @click="activeTab = 'preview'"
           >
             <Icon name="lucide:eye" class="size-4 mr-2" />
             Preview
           </button>
           <button
-            @click="activeTab = 'customize'"
             class="px-4 py-2 text-sm font-medium transition-colors"
             :class="{
               'text-primary-600 border-b-2 border-primary-600': activeTab === 'customize',
-              'text-muted-500 hover:text-muted-700 dark:text-muted-400 dark:hover:text-muted-300': activeTab !== 'customize'
+              'text-muted-500 hover:text-muted-700 dark:text-muted-400 dark:hover:text-muted-300': activeTab !== 'customize',
             }"
+            @click="activeTab = 'customize'"
           >
             <Icon name="lucide:settings" class="size-4 mr-2" />
             Personalizar
@@ -529,264 +534,296 @@ const receiptPreview = computed(() => {
           </BaseParagraph>
         </div>
 
-      <!-- Seleção do Ganhador -->
-      <div class="mb-6">
-        <BaseHeading
-          as="h5"
-          size="sm"
-          weight="medium"
-          class="text-muted-700 dark:text-muted-300 mb-3"
-        >
-          Selecionar Ganhador
-        </BaseHeading>
-        
-        <div class="space-y-3">
-          <div
-            v-for="winner in raffle.winners"
-            :key="winner.id"
-            class="border rounded-lg p-4 transition-colors cursor-pointer"
-            :class="{
-              'border-primary-500 bg-primary-50 dark:bg-primary-900/20': selectedWinner?.id === winner.id,
-              'border-muted-200 dark:border-muted-700 hover:bg-muted-50 dark:hover:bg-muted-800': selectedWinner?.id !== winner.id
-            }"
-            @click="selectedWinner = winner"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div 
-                  class="size-4 rounded-full border-2"
-                  :class="{
-                    'border-primary-500 bg-primary-500': selectedWinner?.id === winner.id,
-                    'border-muted-300': selectedWinner?.id !== winner.id
-                  }"
-                >
-                  <Icon 
-                    v-if="selectedWinner?.id === winner.id"
-                    name="lucide:check" 
-                    class="size-3 text-white"
-                  />
-                </div>
-                <div>
-                  <div class="font-medium text-muted-700 dark:text-muted-300">
-                    {{ winner.user?.name || 'Ganhador' }}
-                  </div>
-                  <div class="text-sm text-muted-500">
-                    {{ winner.user?.document || 'Sem documento' }} • Bilhete: {{ winner.entry?.ticket || 'N/A' }}
-                  </div>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-sm font-medium text-success-600 dark:text-success-400">
-                  {{ winner.prize?.name || 'Prêmio' }}
-                </div>
-                <div class="text-xs text-muted-500">
-                  {{ winner.prize?.value ? `R$ ${winner.prize.value}` : 'Sem valor' }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Configuração da Impressora -->
-      <div class="mb-6">
-        <BaseHeading
-          as="h5"
-          size="sm"
-          weight="medium"
-          class="text-muted-700 dark:text-muted-300 mb-3"
-        >
-          Impressora
-        </BaseHeading>
-        
-        <div class="space-y-3">
-          <!-- Status da Impressora -->
-          <div class="flex items-center gap-3">
-            <div 
-              class="size-3 rounded-full"
-              :class="{
-                'bg-success-500': printerStatus === 'connected',
-                'bg-warning-500': printerStatus === 'connecting',
-                'bg-destructive-500': printerStatus === 'error',
-                'bg-muted-400': printerStatus === 'disconnected'
-              }"
-            />
-            <span class="text-sm text-muted-600 dark:text-muted-400">
-              {{ 
-                printerStatus === 'connected' ? 'Conectada' :
-                printerStatus === 'connecting' ? 'Conectando...' :
-                printerStatus === 'error' ? 'Erro na conexão' :
-                'Desconectada'
-              }}
-            </span>
-          </div>
-
-          <!-- Botão para detectar impressoras -->
-          <BaseButton
-            @click="detectPrinters"
-            variant="default"
+        <!-- Seleção do Ganhador -->
+        <div class="mb-6">
+          <BaseHeading
+            as="h5"
             size="sm"
-            rounded="lg"
-            :disabled="printerStatus === 'connecting'"
+            weight="medium"
+            class="text-muted-700 dark:text-muted-300 mb-3"
           >
-            <Icon name="lucide:search" class="size-3" />
-            <span>Detectar Impressoras</span>
-          </BaseButton>
+            Selecionar Ganhador
+          </BaseHeading>
 
-          <!-- Lista de impressoras disponíveis -->
-          <div v-if="availablePrinters.length > 0" class="space-y-2">
+          <div class="space-y-3">
             <div
-              v-for="printer in availablePrinters"
-              :key="printer.id"
-              class="border rounded-lg p-3 transition-colors cursor-pointer"
+              v-for="winner in raffle.winners"
+              :key="winner.id"
+              class="border rounded-lg p-4 transition-colors cursor-pointer"
               :class="{
-                'border-primary-500 bg-primary-50 dark:bg-primary-900/20': selectedPrinter?.id === printer.id,
-                'border-muted-200 dark:border-muted-700 hover:bg-muted-50 dark:hover:bg-muted-800': selectedPrinter?.id !== printer.id
+                'border-primary-500 bg-primary-50 dark:bg-primary-900/20': selectedWinner?.id === winner.id,
+                'border-muted-200 dark:border-muted-700 hover:bg-muted-50 dark:hover:bg-muted-800': selectedWinner?.id !== winner.id,
               }"
-              @click="selectedPrinter = printer"
+              @click="selectedWinner = winner"
             >
-              <div class="flex items-center gap-3">
-                <Icon 
-                  :name="printer.type === 'usb' ? 'lucide:usb' : 'lucide:bluetooth'" 
-                  class="size-4 text-muted-500"
-                />
-                <div>
-                  <div class="font-medium text-sm text-muted-700 dark:text-muted-300">
-                    {{ printer.name }}
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-4 rounded-full border-2"
+                    :class="{
+                      'border-primary-500 bg-primary-500': selectedWinner?.id === winner.id,
+                      'border-muted-300': selectedWinner?.id !== winner.id,
+                    }"
+                  >
+                    <Icon
+                      v-if="selectedWinner?.id === winner.id"
+                      name="lucide:check"
+                      class="size-3 text-white"
+                    />
+                  </div>
+                  <div>
+                    <div class="font-medium text-muted-700 dark:text-muted-300">
+                      {{ winner.user?.name || 'Ganhador' }}
+                    </div>
+                    <div class="text-sm text-muted-500">
+                      {{ winner.user?.document || 'Sem documento' }} • Bilhete: {{ winner.entry?.ticket || 'N/A' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-medium text-success-600 dark:text-success-400">
+                    {{ winner.prize?.name || 'Prêmio' }}
                   </div>
                   <div class="text-xs text-muted-500">
-                    {{ printer.type === 'usb' ? 'USB' : 'Bluetooth' }}
+                    {{ winner.prize?.value ? `R$ ${winner.prize.value}` : 'Sem valor' }}
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Preview do Comprovante -->
-      <div v-if="receiptPreview" class="mb-6">
-        <BaseHeading
-          as="h5"
-          size="sm"
-          weight="medium"
-          class="text-muted-700 dark:text-muted-300 mb-3"
-        >
-          Preview do Comprovante
-        </BaseHeading>
-        
-        <div class="border rounded-lg p-4 bg-white dark:bg-muted-900">
-          <!-- Logo da empresa -->
-          <div v-if="receiptPreview.company.logo && receiptConfig.showLogo" class="text-center mb-4">
-            <img 
-              :src="receiptPreview.company.logo" 
-              alt="Logo da empresa" 
-              class="mx-auto h-16 object-contain"
-            />
-          </div>
-          
-          <!-- Campos personalizados do cabeçalho -->
-          <div v-if="receiptConfig.customFields.filter(f => f.position === 'header').length > 0" class="mb-4">
-            <div 
-              v-for="field in receiptConfig.customFields.filter(f => f.position === 'header')" 
-              :key="field.id"
-              class="text-sm text-center mb-1"
+        <!-- Configuração da Impressora -->
+        <div class="mb-6">
+          <BaseHeading
+            as="h5"
+            size="sm"
+            weight="medium"
+            class="text-muted-700 dark:text-muted-300 mb-3"
+          >
+            Impressora
+          </BaseHeading>
+
+          <div class="space-y-3">
+            <!-- Status da Impressora -->
+            <div class="flex items-center gap-3">
+              <div
+                class="size-3 rounded-full"
+                :class="{
+                  'bg-success-500': printerStatus === 'connected',
+                  'bg-warning-500': printerStatus === 'connecting',
+                  'bg-destructive-500': printerStatus === 'error',
+                  'bg-muted-400': printerStatus === 'disconnected',
+                }"
+              />
+              <span class="text-sm text-muted-600 dark:text-muted-400">
+                {{
+                  printerStatus === 'connected' ? 'Conectada'
+                  : printerStatus === 'connecting' ? 'Conectando...'
+                    : printerStatus === 'error' ? 'Erro na conexão'
+                      : 'Desconectada'
+                }}
+              </span>
+            </div>
+
+            <!-- Botão para detectar impressoras -->
+            <BaseButton
+              variant="default"
+              size="sm"
+              rounded="lg"
+              :disabled="printerStatus === 'connecting'"
+              @click="detectPrinters"
             >
-              <strong>{{ field.label }}:</strong> {{ field.value }}
+              <Icon name="lucide:search" class="size-3" />
+              <span>Detectar Impressoras</span>
+            </BaseButton>
+
+            <!-- Lista de impressoras disponíveis -->
+            <div v-if="availablePrinters.length > 0" class="space-y-2">
+              <div
+                v-for="printer in availablePrinters"
+                :key="printer.id"
+                class="border rounded-lg p-3 transition-colors cursor-pointer"
+                :class="{
+                  'border-primary-500 bg-primary-50 dark:bg-primary-900/20': selectedPrinter?.id === printer.id,
+                  'border-muted-200 dark:border-muted-700 hover:bg-muted-50 dark:hover:bg-muted-800': selectedPrinter?.id !== printer.id,
+                }"
+                @click="selectedPrinter = printer"
+              >
+                <div class="flex items-center gap-3">
+                  <Icon
+                    :name="printer.type === 'usb' ? 'lucide:usb' : 'lucide:bluetooth'"
+                    class="size-4 text-muted-500"
+                  />
+                  <div>
+                    <div class="font-medium text-sm text-muted-700 dark:text-muted-300">
+                      {{ printer.name }}
+                    </div>
+                    <div class="text-xs text-muted-500">
+                      {{ printer.type === 'usb' ? 'USB' : 'Bluetooth' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div v-if="receiptConfig.showCompanyInfo" class="text-center mb-4">
-            <div class="font-bold text-lg">{{ receiptPreview.company.name }}</div>
-            <div class="text-sm text-muted-600">{{ receiptPreview.company.cnpj }}</div>
-            <div class="text-sm text-muted-600">{{ receiptPreview.company.address }}</div>
-            <div class="text-sm text-muted-600">{{ receiptPreview.company.city }}</div>
-          </div>
-          
-          <div class="border-t pt-4 mb-4">
-            <div class="text-center font-bold text-lg mb-2">COMPROVANTE DE SORTEIO</div>
-            <div class="text-sm text-muted-600 mb-2">Sorteio: {{ receiptPreview.raffle.name }}</div>
-            <div class="text-sm text-muted-600 mb-2">Data: {{ receiptPreview.generatedAt.toLocaleDateString('pt-BR') }}</div>
-            <div class="text-sm text-muted-600 mb-4">ID: {{ receiptPreview.receiptId }}</div>
-          </div>
-          
-          <div class="border-t pt-4 mb-4">
-            <div class="font-bold text-center mb-2">GANHADOR</div>
-            <div class="text-sm mb-1"><strong>Nome:</strong> {{ receiptPreview.winner.user?.name || 'Ganhador' }}</div>
-            <div class="text-sm mb-1"><strong>Documento:</strong> {{ receiptPreview.winner.user?.document || 'N/A' }}</div>
-            <div class="text-sm mb-1"><strong>Bilhete:</strong> {{ receiptPreview.winner.entry?.ticket || 'N/A' }}</div>
-            <div class="text-sm mb-1"><strong>Prêmio:</strong> {{ receiptPreview.winner.prize?.name || 'Prêmio' }}</div>
-            <div class="text-sm mb-1"><strong>Valor:</strong> {{ receiptPreview.winner.prize?.value ? `R$ ${receiptPreview.winner.prize.value}` : 'Sem valor' }}</div>
-            
-            <!-- Campos personalizados após ganhador -->
-            <div v-if="receiptConfig.customFields.filter(f => f.position === 'after-winner').length > 0" class="mt-3 pt-3 border-t border-muted-200">
-              <div 
-                v-for="field in receiptConfig.customFields.filter(f => f.position === 'after-winner')" 
+        </div>
+
+        <!-- Preview do Comprovante -->
+        <div v-if="receiptPreview" class="mb-6">
+          <BaseHeading
+            as="h5"
+            size="sm"
+            weight="medium"
+            class="text-muted-700 dark:text-muted-300 mb-3"
+          >
+            Preview do Comprovante
+          </BaseHeading>
+
+          <div class="border rounded-lg p-4 bg-white dark:bg-muted-900">
+            <!-- Logo da empresa -->
+            <div v-if="receiptPreview.company.logo && receiptConfig.showLogo" class="text-center mb-4">
+              <img
+                :src="receiptPreview.company.logo"
+                alt="Logo da empresa"
+                class="mx-auto h-16 object-contain"
+              >
+            </div>
+
+            <!-- Campos personalizados do cabeçalho -->
+            <div v-if="receiptConfig.customFields.filter(f => f.position === 'header').length > 0" class="mb-4">
+              <div
+                v-for="field in receiptConfig.customFields.filter(f => f.position === 'header')"
+                :key="field.id"
+                class="text-sm text-center mb-1"
+              >
+                <strong>{{ field.label }}:</strong> {{ field.value }}
+              </div>
+            </div>
+
+            <div v-if="receiptConfig.showCompanyInfo" class="text-center mb-4">
+              <div class="font-bold text-lg">
+                {{ receiptPreview.company.name }}
+              </div>
+              <div class="text-sm text-muted-600">
+                {{ receiptPreview.company.cnpj }}
+              </div>
+              <div class="text-sm text-muted-600">
+                {{ receiptPreview.company.address }}
+              </div>
+              <div class="text-sm text-muted-600">
+                {{ receiptPreview.company.city }}
+              </div>
+            </div>
+
+            <div class="border-t pt-4 mb-4">
+              <div class="text-center font-bold text-lg mb-2">
+                COMPROVANTE DE SORTEIO
+              </div>
+              <div class="text-sm text-muted-600 mb-2">
+                Sorteio: {{ receiptPreview.raffle.name }}
+              </div>
+              <div class="text-sm text-muted-600 mb-2">
+                Data: {{ receiptPreview.generatedAt.toLocaleDateString('pt-BR') }}
+              </div>
+              <div class="text-sm text-muted-600 mb-4">
+                ID: {{ receiptPreview.receiptId }}
+              </div>
+            </div>
+
+            <div class="border-t pt-4 mb-4">
+              <div class="font-bold text-center mb-2">
+                GANHADOR
+              </div>
+              <div class="text-sm mb-1">
+                <strong>Nome:</strong> {{ receiptPreview.winner.user?.name || 'Ganhador' }}
+              </div>
+              <div class="text-sm mb-1">
+                <strong>Documento:</strong> {{ receiptPreview.winner.user?.document || 'N/A' }}
+              </div>
+              <div class="text-sm mb-1">
+                <strong>Bilhete:</strong> {{ receiptPreview.winner.entry?.ticket || 'N/A' }}
+              </div>
+              <div class="text-sm mb-1">
+                <strong>Prêmio:</strong> {{ receiptPreview.winner.prize?.name || 'Prêmio' }}
+              </div>
+              <div class="text-sm mb-1">
+                <strong>Valor:</strong> {{ receiptPreview.winner.prize?.value ? `R$ ${receiptPreview.winner.prize.value}` : 'Sem valor' }}
+              </div>
+
+              <!-- Campos personalizados após ganhador -->
+              <div v-if="receiptConfig.customFields.filter(f => f.position === 'after-winner').length > 0" class="mt-3 pt-3 border-t border-muted-200">
+                <div
+                  v-for="field in receiptConfig.customFields.filter(f => f.position === 'after-winner')"
+                  :key="field.id"
+                  class="text-sm mb-1"
+                >
+                  <strong>{{ field.label }}:</strong> {{ field.value }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos personalizados após prêmio -->
+            <div v-if="receiptConfig.customFields.filter(f => f.position === 'after-prize').length > 0" class="border-t pt-4 mb-4">
+              <div
+                v-for="field in receiptConfig.customFields.filter(f => f.position === 'after-prize')"
                 :key="field.id"
                 class="text-sm mb-1"
               >
                 <strong>{{ field.label }}:</strong> {{ field.value }}
               </div>
             </div>
-          </div>
-          
-          <!-- Campos personalizados após prêmio -->
-          <div v-if="receiptConfig.customFields.filter(f => f.position === 'after-prize').length > 0" class="border-t pt-4 mb-4">
-            <div 
-              v-for="field in receiptConfig.customFields.filter(f => f.position === 'after-prize')" 
-              :key="field.id"
-              class="text-sm mb-1"
-            >
-              <strong>{{ field.label }}:</strong> {{ field.value }}
-            </div>
-          </div>
-          
-          <div class="border-t pt-4 text-center text-xs text-muted-500">
-            <!-- Campos personalizados do rodapé -->
-            <div v-if="receiptConfig.customFields.filter(f => f.position === 'footer').length > 0" class="mb-3">
-              <div 
-                v-for="field in receiptConfig.customFields.filter(f => f.position === 'footer')" 
-                :key="field.id"
-                class="text-xs mb-1"
-              >
-                <strong>{{ field.label }}:</strong> {{ field.value }}
+
+            <div class="border-t pt-4 text-center text-xs text-muted-500">
+              <!-- Campos personalizados do rodapé -->
+              <div v-if="receiptConfig.customFields.filter(f => f.position === 'footer').length > 0" class="mb-3">
+                <div
+                  v-for="field in receiptConfig.customFields.filter(f => f.position === 'footer')"
+                  :key="field.id"
+                  class="text-xs mb-1"
+                >
+                  <strong>{{ field.label }}:</strong> {{ field.value }}
+                </div>
+              </div>
+
+              <div v-if="receiptConfig.showTimestamp">
+                Comprovante gerado em: {{ receiptPreview.generatedAt.toLocaleString('pt-BR') }}
+              </div>
+              <div class="mt-2">
+                Este documento comprova a participação e vitória no sorteio
               </div>
             </div>
-            
-            <div v-if="receiptConfig.showTimestamp">Comprovante gerado em: {{ receiptPreview.generatedAt.toLocaleString('pt-BR') }}</div>
-            <div class="mt-2">Este documento comprova a participação e vitória no sorteio</div>
           </div>
         </div>
-      </div>
 
-      <!-- Botões de Ação -->
-      <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
-        <BaseButton
-          @click="generateReceiptPDF"
-          :disabled="!selectedWinner || loading"
-          variant="default"
-          size="lg"
-          rounded="lg"
-          :loading="loading"
-          class="flex-1"
-        >
-          <Icon name="lucide:download" class="size-4" />
-          <span>Gerar PDF</span>
-        </BaseButton>
+        <!-- Botões de Ação -->
+        <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
+          <BaseButton
+            :disabled="!selectedWinner || loading"
+            variant="default"
+            size="lg"
+            rounded="lg"
+            :loading="loading"
+            class="flex-1"
+            @click="generateReceiptPDF"
+          >
+            <Icon name="lucide:download" class="size-4" />
+            <span>Gerar PDF</span>
+          </BaseButton>
 
-        <BaseButton
-          @click="printReceipt"
-          :disabled="!selectedWinner || !selectedPrinter || loading"
-          variant="primary"
-          size="lg"
-          rounded="lg"
-          :loading="loading"
-          class="flex-1"
-        >
-          <Icon name="lucide:printer" class="size-4" />
-          <span>Imprimir</span>
-        </BaseButton>
-      </div>
+          <BaseButton
+            :disabled="!selectedWinner || !selectedPrinter || loading"
+            variant="primary"
+            size="lg"
+            rounded="lg"
+            :loading="loading"
+            class="flex-1"
+            @click="printReceipt"
+          >
+            <Icon name="lucide:printer" class="size-4" />
+            <span>Imprimir</span>
+          </BaseButton>
+        </div>
 
         <!-- Aviso Legal -->
         <div class="mt-4 p-4 bg-info-50 dark:bg-info-900/20 rounded-lg">
@@ -797,7 +834,7 @@ const receiptPreview = computed(() => {
                 Informação Legal
               </div>
               <div class="text-sm text-info-600 dark:text-info-400">
-                Este comprovante é um documento oficial que comprova a participação e vitória no sorteio. 
+                Este comprovante é um documento oficial que comprova a participação e vitória no sorteio.
                 Mantenha-o em local seguro para futuras verificações.
               </div>
             </div>
@@ -871,28 +908,28 @@ const receiptPreview = computed(() => {
             <BaseField label="Logo">
               <div class="flex items-center gap-4">
                 <input
+                  ref="logoInput"
                   type="file"
                   accept="image/*"
-                  @change="handleLogoUpload"
                   class="hidden"
-                  ref="logoInput"
-                />
+                  @change="handleLogoUpload"
+                >
                 <BaseButton
-                  @click="logoInput?.click()"
                   variant="default"
                   size="sm"
                   rounded="lg"
+                  @click="logoInput?.click()"
                 >
                   <Icon name="lucide:upload" class="size-3" />
                   <span>Upload Logo</span>
                 </BaseButton>
                 <div v-if="companyData.logo" class="flex items-center gap-2">
-                  <img :src="companyData.logo" alt="Logo" class="size-8 object-contain" />
+                  <img :src="companyData.logo" alt="Logo" class="size-8 object-contain">
                   <BaseButton
-                    @click="companyData.logo = null"
                     variant="destructive"
                     size="sm"
                     rounded="lg"
+                    @click="companyData.logo = null"
                   >
                     <Icon name="lucide:x" class="size-3" />
                   </BaseButton>
@@ -916,31 +953,53 @@ const receiptPreview = computed(() => {
             <div class="grid grid-cols-2 gap-4">
               <BaseField label="Tamanho da Fonte">
                 <BaseSelect v-model="receiptConfig.fontSize">
-                  <BaseSelectItem value="small">Pequena</BaseSelectItem>
-                  <BaseSelectItem value="normal">Normal</BaseSelectItem>
-                  <BaseSelectItem value="large">Grande</BaseSelectItem>
+                  <BaseSelectItem value="small">
+                    Pequena
+                  </BaseSelectItem>
+                  <BaseSelectItem value="normal">
+                    Normal
+                  </BaseSelectItem>
+                  <BaseSelectItem value="large">
+                    Grande
+                  </BaseSelectItem>
                 </BaseSelect>
               </BaseField>
               <BaseField label="Largura do Papel">
                 <BaseSelect v-model="receiptConfig.paperWidth">
-                  <BaseSelectItem value="58mm">58mm (Padrão)</BaseSelectItem>
-                  <BaseSelectItem value="80mm">80mm (Grande)</BaseSelectItem>
+                  <BaseSelectItem value="58mm">
+                    58mm (Padrão)
+                  </BaseSelectItem>
+                  <BaseSelectItem value="80mm">
+                    80mm (Grande)
+                  </BaseSelectItem>
                 </BaseSelect>
               </BaseField>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <BaseField label="Margens">
                 <BaseSelect v-model="receiptConfig.margins">
-                  <BaseSelectItem value="small">Pequenas</BaseSelectItem>
-                  <BaseSelectItem value="normal">Normais</BaseSelectItem>
-                  <BaseSelectItem value="large">Grandes</BaseSelectItem>
+                  <BaseSelectItem value="small">
+                    Pequenas
+                  </BaseSelectItem>
+                  <BaseSelectItem value="normal">
+                    Normais
+                  </BaseSelectItem>
+                  <BaseSelectItem value="large">
+                    Grandes
+                  </BaseSelectItem>
                 </BaseSelect>
               </BaseField>
               <BaseField label="Idioma">
                 <BaseSelect v-model="receiptConfig.language">
-                  <BaseSelectItem value="pt-BR">Português (BR)</BaseSelectItem>
-                  <BaseSelectItem value="en-US">English (US)</BaseSelectItem>
-                  <BaseSelectItem value="es-ES">Español (ES)</BaseSelectItem>
+                  <BaseSelectItem value="pt-BR">
+                    Português (BR)
+                  </BaseSelectItem>
+                  <BaseSelectItem value="en-US">
+                    English (US)
+                  </BaseSelectItem>
+                  <BaseSelectItem value="es-ES">
+                    Español (ES)
+                  </BaseSelectItem>
                 </BaseSelect>
               </BaseField>
             </div>
@@ -993,10 +1052,10 @@ const receiptPreview = computed(() => {
               Campos Personalizados
             </BaseHeading>
             <BaseButton
-              @click="addCustomField"
               variant="default"
               size="sm"
               rounded="lg"
+              @click="addCustomField"
             >
               <Icon name="lucide:plus" class="size-3" />
               <span>Adicionar</span>
@@ -1018,18 +1077,26 @@ const receiptPreview = computed(() => {
                   placeholder="Valor do campo"
                 />
                 <BaseSelect v-model="field.position">
-                  <BaseSelectItem value="header">Cabeçalho</BaseSelectItem>
-                  <BaseSelectItem value="after-winner">Após Ganhador</BaseSelectItem>
-                  <BaseSelectItem value="after-prize">Após Prêmio</BaseSelectItem>
-                  <BaseSelectItem value="footer">Rodapé</BaseSelectItem>
+                  <BaseSelectItem value="header">
+                    Cabeçalho
+                  </BaseSelectItem>
+                  <BaseSelectItem value="after-winner">
+                    Após Ganhador
+                  </BaseSelectItem>
+                  <BaseSelectItem value="after-prize">
+                    Após Prêmio
+                  </BaseSelectItem>
+                  <BaseSelectItem value="footer">
+                    Rodapé
+                  </BaseSelectItem>
                 </BaseSelect>
               </div>
               <div class="flex justify-end">
                 <BaseButton
-                  @click="removeCustomField(field.id)"
                   variant="destructive"
                   size="sm"
                   rounded="lg"
+                  @click="removeCustomField(field.id)"
                 >
                   <Icon name="lucide:trash-2" class="size-3" />
                   <span>Remover</span>
@@ -1042,11 +1109,11 @@ const receiptPreview = computed(() => {
         <!-- Botões de Ação -->
         <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
           <BaseButton
-            @click="saveConfig"
             variant="primary"
             size="lg"
             rounded="lg"
             class="flex-1"
+            @click="saveConfig"
           >
             <Icon name="lucide:save" class="size-4" />
             <span>Salvar Configurações</span>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useApi } from '~/composables/useAuth'
 import { PanelsPanelDeclarationDetails } from '#components'
+import { useApi } from '~/composables/useAuth'
 
 const props = defineProps<{
   onClose?: () => void
@@ -38,7 +38,7 @@ async function fetchNotifications() {
           description,
           timeLabel,
           priority,
-          updatedAt: new Date(item.updatedAt || Date.now())
+          updatedAt: new Date(item.updatedAt || Date.now()),
         })
       }
 
@@ -63,9 +63,11 @@ async function fetchNotifications() {
       // Sort by updatedAt DESC (most recent first)
       notifications.value = items.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     }
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Error fetching notifications:', e)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -88,7 +90,7 @@ function handleItemClick(notification: any) {
   setTimeout(() => {
     open(PanelsPanelDeclarationDetails, {
       declarationId: notification.id,
-      onSaved: () => fetchNotifications()
+      onSaved: () => fetchNotifications(),
     })
   }, 150)
 }
@@ -108,9 +110,12 @@ function formatTime(date: Date) {
   const hours = Math.floor(mins / 60)
   const days = Math.floor(hours / 24)
 
-  if (mins < 1) return 'Agora mesmo'
-  if (mins < 60) return `Há ${mins}m`
-  if (hours < 24) return `Há ${hours}h`
+  if (mins < 1)
+    return 'Agora mesmo'
+  if (mins < 60)
+    return `Há ${mins}m`
+  if (hours < 24)
+    return `Há ${hours}h`
   return `Há ${days}d`
 }
 </script>
@@ -134,8 +139,10 @@ function formatTime(date: Date) {
           </div>
         </div>
 
-        <button type="button" @click="close()"
-          class="flex items-center justify-center size-9 rounded-full bg-muted-100 dark:bg-muted-700 hover:bg-muted-200 dark:hover:bg-muted-600 text-muted-500 dark:text-muted-200 transition-colors">
+        <button
+          type="button" class="flex items-center justify-center size-9 rounded-full bg-muted-100 dark:bg-muted-700 hover:bg-muted-200 dark:hover:bg-muted-600 text-muted-500 dark:text-muted-200 transition-colors"
+          @click="close()"
+        >
           <Icon name="solar:close-circle-bold" class="size-5" />
         </button>
       </div>
@@ -144,19 +151,23 @@ function formatTime(date: Date) {
     <!-- Tabs Container -->
     <div class="px-4 mt-4">
       <div class="flex items-center p-1 rounded-xl bg-muted-100 dark:bg-muted-900 overflow-hidden">
-        <button v-for="tab in (['new', 'history'] as const)" :key="tab" @click="activeTab = tab"
-          class="flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all" :class="[
+        <button
+          v-for="tab in (['new', 'history'] as const)" :key="tab" class="flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all"
+          :class="[
             activeTab === tab
               ? 'bg-white dark:bg-muted-800 text-primary-600 shadow-sm border border-muted-200 dark:border-muted-700'
-              : 'text-muted-500 hover:text-muted-700 dark:hover:text-muted-300'
-          ]">
+              : 'text-muted-500 hover:text-muted-700 dark:hover:text-muted-300',
+          ]" @click="activeTab = tab"
+        >
           <span class="flex items-center justify-center gap-2">
             {{ tab === 'new' ? 'Novos' : 'Histórico' }}
-            <span class="px-1.5 py-0.5 rounded-md text-[10px]" :class="[
-              activeTab === tab
-                ? 'bg-primary-500 text-white'
-                : 'bg-muted-200 dark:bg-muted-800 text-muted-500'
-            ]">
+            <span
+              class="px-1.5 py-0.5 rounded-md text-[10px]" :class="[
+                activeTab === tab
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-muted-200 dark:bg-muted-800 text-muted-500',
+              ]"
+            >
               {{ tab === 'new' ? newCount : historyCount }}
             </span>
           </span>
@@ -180,8 +191,10 @@ function formatTime(date: Date) {
 
       <!-- Notifications List -->
       <div v-else-if="displayNotifications.length > 0" class="space-y-2">
-        <div v-for="notification in displayNotifications" :key="notification.uid" class="group relative cursor-pointer"
-          @click="handleItemClick(notification)">
+        <div
+          v-for="notification in displayNotifications" :key="notification.uid" class="group relative cursor-pointer"
+          @click="handleItemClick(notification)"
+        >
           <BaseCard rounded="lg" elevated-hover class="p-3 transition-all group-hover:border-primary-500!">
             <div class="flex items-start gap-3">
               <!-- Icon -->
@@ -195,8 +208,10 @@ function formatTime(date: Date) {
                   <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-900 dark:text-white truncate">
                     {{ notification.title }}
                   </BaseHeading>
-                  <span v-if="notification.type === 'error'"
-                    class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-danger-500 text-white rounded shrink-0">
+                  <span
+                    v-if="notification.type === 'error'"
+                    class="px-1.5 py-0.5 text-[9px] font-bold uppercase bg-danger-500 text-white rounded shrink-0"
+                  >
                     Crítico
                   </span>
                 </div>
@@ -217,20 +232,26 @@ function formatTime(date: Date) {
               <!-- Actions Area -->
               <div class="flex flex-col items-center gap-2">
                 <!-- Dismiss (X) -->
-                <button v-if="activeTab === 'new'" @click.stop="dismissNotification(notification.uid)"
-                  class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-danger-500 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Mover para histórico">
+                <button
+                  v-if="activeTab === 'new'" class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-danger-500 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Mover para histórico"
+                  @click.stop="dismissNotification(notification.uid)"
+                >
                   <Icon name="solar:close-circle-bold" class="size-5" />
                 </button>
                 <!-- Restore (History) -->
-                <button v-if="activeTab === 'history'" @click.stop="restoreNotification(notification.uid)"
-                  class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-primary-500 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Restaurar para novos">
+                <button
+                  v-if="activeTab === 'history'" class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-primary-500 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Restaurar para novos"
+                  @click.stop="restoreNotification(notification.uid)"
+                >
                   <Icon name="solar:restart-bold" class="size-5" />
                 </button>
 
-                <Icon name="solar:arrow-right-linear"
-                  class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors hidden sm:block" />
+                <Icon
+                  name="solar:arrow-right-linear"
+                  class="size-4 text-muted-300 group-hover:text-primary-500 transition-colors hidden sm:block"
+                />
               </div>
             </div>
           </BaseCard>
@@ -240,15 +261,17 @@ function formatTime(date: Date) {
       <!-- Empty State -->
       <div v-else class="py-12 text-center text-balance px-6">
         <div class="size-16 mx-auto mb-4 rounded-2xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
-          <Icon :name="activeTab === 'new' ? 'solar:check-circle-bold-duotone' : 'solar:history-bold-duotone'"
-            class="size-8 text-muted-400" />
+          <Icon
+            :name="activeTab === 'new' ? 'solar:check-circle-bold-duotone' : 'solar:history-bold-duotone'"
+            class="size-8 text-muted-400"
+          />
         </div>
         <BaseHeading as="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-1">
           {{ activeTab === 'new' ? 'Tudo em dia! 🎉' : 'Histórico limpo' }}
         </BaseHeading>
         <BaseParagraph size="sm" class="text-muted-400">
-          {{ activeTab === 'new' ? 'Não há novas pendências no momento.' :
-            'Você ainda não arquivou nenhuma notificação.' }}
+          {{ activeTab === 'new' ? 'Não há novas pendências no momento.'
+            : 'Você ainda não arquivou nenhuma notificação.' }}
         </BaseParagraph>
       </div>
     </div>

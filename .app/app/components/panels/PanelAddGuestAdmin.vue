@@ -68,24 +68,28 @@ const masks = ref({
 })
 
 // Função para buscar usuários da API
-const fetchUsers = async () => {
-  if (isLoadingUsers.value) return
-  
+async function fetchUsers() {
+  if (isLoadingUsers.value)
+    return
+
   isLoadingUsers.value = true
-  
+
   try {
     const response = await useCustomFetch<any>('/users?limit=100', {
       method: 'GET',
     })
-    
+
     if (response.data) {
       users.value = response.data.data || []
-    } else {
+    }
+    else {
       throw new Error(response.data.message || 'Erro ao carregar usuários')
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     users.value = []
-  } finally {
+  }
+  finally {
     isLoadingUsers.value = false
   }
 }
@@ -96,16 +100,17 @@ onMounted(() => {
 })
 
 // Validation rules
-const validateForm = (): boolean => {
+function validateForm(): boolean {
   const newErrors: FormErrors = {}
-  
+
   // Nome obrigatório
   if (!payload.value.name.trim()) {
     newErrors.name = 'Nome é obrigatório'
-  } else if (payload.value.name.trim().length < 2) {
+  }
+  else if (payload.value.name.trim().length < 2) {
     newErrors.name = 'Nome deve ter pelo menos 2 caracteres'
   }
-  
+
   // Documento opcional, mas se preenchido deve ter formato válido
   if (payload.value.document.trim()) {
     const cleanDoc = payload.value.document.replace(/\D/g, '')
@@ -113,18 +118,18 @@ const validateForm = (): boolean => {
       newErrors.document = 'CPF deve ter 11 dígitos quando preenchido'
     }
   }
-  
+
   // Day ID obrigatório
   if (!payload.value.day_id.trim()) {
     newErrors.invitedById = 'ID do dia é obrigatório'
   }
-  
+
   errors.value = newErrors
   return Object.keys(newErrors).length === 0
 }
 
 // Reset form
-const resetForm = () => {
+function resetForm() {
   payload.value = {
     name: '',
     document: '',
@@ -136,13 +141,13 @@ const resetForm = () => {
 }
 
 // Clear specific error
-const clearError = (field: keyof FormErrors) => {
+function clearError(field: keyof FormErrors) {
   if (errors.value[field]) {
     delete errors.value[field]
   }
 }
 
-const showToast = (title: string, description: string, type: 'error' | 'success' = 'error') => {
+function showToast(title: string, description: string, type: 'error' | 'success' = 'error') {
   toaster.add({
     title,
     description,
@@ -151,17 +156,18 @@ const showToast = (title: string, description: string, type: 'error' | 'success'
   })
 }
 
-const completeValidation = async () => {
-  if (isLoading.value) return
-  
+async function completeValidation() {
+  if (isLoading.value)
+    return
+
   // Validate form before proceeding
   if (!validateForm()) {
     showToast('Erro de Validação', 'Por favor, corrija os erros no formulário', 'error')
     return
   }
-  
+
   isLoading.value = true
-  
+
   try {
     // Prepare payload with trimmed values
     const cleanPayload: any = {
@@ -190,25 +196,27 @@ const completeValidation = async () => {
       method: 'POST',
       body: cleanPayload,
     })
-    
+
     if (response.data.success) {
       showToast('Sucesso!', 'Convidado adicionado com sucesso', 'success')
       emits('save', cleanPayload)
       resetForm()
       close()
-    } else {
+    }
+    else {
       throw new Error(response.data.message || 'Erro ao criar convidado')
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao salvar convidado:', error)
     showToast('Erro!', error.message || 'Ocorreu um erro ao salvar o convidado', 'error')
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
 // Keyboard shortcuts
 onKeyStroke('Escape', close)
-
 </script>
 
 <template>
@@ -220,7 +228,7 @@ onKeyStroke('Escape', close)
           Adicionar Convidado
         </BaseHeading>
 
-        <button 
+        <button
           type="button"
           class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
           @click="close"
@@ -238,9 +246,9 @@ onKeyStroke('Escape', close)
               <BaseHeading as="h4" size="sm" weight="semibold" class="text-muted-600 dark:text-muted-300">
                 Informações Pessoais
               </BaseHeading>
-              
-              <BaseField 
-                label="Nome Completo" 
+
+              <BaseField
+                label="Nome Completo"
                 :error="errors.name"
                 required
               >
@@ -252,9 +260,9 @@ onKeyStroke('Escape', close)
                   @input="clearError('name')"
                 />
               </BaseField>
-              
-              <BaseField 
-                label="CPF (Opcional)" 
+
+              <BaseField
+                label="CPF (Opcional)"
                 :error="errors.document"
               >
                 <BaseInput
@@ -273,9 +281,9 @@ onKeyStroke('Escape', close)
               <BaseHeading as="h4" size="sm" weight="semibold" class="text-muted-600 dark:text-muted-300">
                 Informações da Visita
               </BaseHeading>
-              
-              <BaseField 
-                label="Convidado por (Opcional)" 
+
+              <BaseField
+                label="Convidado por (Opcional)"
                 :error="errors.invitedById"
               >
                 <BaseSelect
@@ -290,27 +298,29 @@ onKeyStroke('Escape', close)
                       {{ isLoadingUsers ? 'Carregando usuários...' : 'Selecione um usuário' }}
                     </span>
                   </BaseSelectItem>
-                  <BaseSelectItem 
-                    v-for="user in users" 
-                    :key="user.id" 
+                  <BaseSelectItem
+                    v-for="user in users"
+                    :key="user.id"
                     :value="user.id"
                     class="py-2"
                   >
                     <div class="flex items-center gap-2">
-                      <BaseAvatar 
-                        :text="user.name.charAt(0).toUpperCase()" 
+                      <BaseAvatar
+                        :text="user.name.charAt(0).toUpperCase()"
                         size="xs"
                         class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
                       />
                       <div>
                         <span class="font-medium">{{ user.name }}</span>
-                        <p v-if="user.email" class="text-xs text-muted-500">{{ user.email }}</p>
+                        <p v-if="user.email" class="text-xs text-muted-500">
+                          {{ user.email }}
+                        </p>
                       </div>
                     </div>
                   </BaseSelectItem>
                 </BaseSelect>
               </BaseField>
-              
+
               <BaseField label="Observações (Opcional)">
                 <BaseTextarea
                   v-model="payload.observations"
@@ -323,33 +333,33 @@ onKeyStroke('Escape', close)
           </div>
           <!-- Actions -->
           <div class="flex justify-between items-center pt-6 border-t border-muted-200 dark:border-muted-700">
-            <BaseButton 
-              variant="muted" 
-              size="sm" 
-              @click="resetForm"
+            <BaseButton
+              variant="muted"
+              size="sm"
               :disabled="isLoading"
+              @click="resetForm"
             >
               <Icon name="lucide:refresh-cw" class="size-4 me-2" />
               Limpar
             </BaseButton>
-            
+
             <div class="flex gap-3">
-              <BaseButton 
-                variant="muted" 
-                size="sm" 
-                @click="close"
+              <BaseButton
+                variant="muted"
+                size="sm"
                 :disabled="isLoading"
+                @click="close"
               >
                 <Icon name="lucide:x" class="size-4 me-2" />
                 Cancelar
               </BaseButton>
-              
-              <BaseButton 
-                variant="primary" 
-                size="sm" 
-                @click="completeValidation"
+
+              <BaseButton
+                variant="primary"
+                size="sm"
                 :loading="isLoading"
                 :disabled="isLoading"
+                @click="completeValidation"
               >
                 <Icon name="lucide:user-plus" class="size-4 me-2" />
                 {{ isLoading ? 'Salvando...' : 'Adicionar Convidado' }}
@@ -361,4 +371,3 @@ onKeyStroke('Escape', close)
     </FocusTrap>
   </div>
 </template>
-

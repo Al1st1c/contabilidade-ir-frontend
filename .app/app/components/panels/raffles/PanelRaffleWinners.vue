@@ -34,7 +34,8 @@ async function getWinners() {
       method: 'GET',
     })
     winners.value = data || []
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar ganhadores:', error)
     toaster.add({
       title: 'Erro',
@@ -42,7 +43,8 @@ async function getWinners() {
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -51,13 +53,13 @@ async function getWinners() {
 async function updateDeliveryStatus(winnerId: string, status: string, notes?: string) {
   try {
     updatingDelivery.value = true
-    
+
     await useCustomFetch<any>(`/raffles/winners/${winnerId}/delivery`, {
       method: 'PUT',
       body: {
         deliveryStatus: status,
-        deliveryNotes: notes || undefined
-      }
+        deliveryNotes: notes || undefined,
+      },
     })
 
     toaster.add({
@@ -68,7 +70,8 @@ async function updateDeliveryStatus(winnerId: string, status: string, notes?: st
     })
 
     await getWinners()
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao atualizar status de entrega:', error)
     toaster.add({
       title: 'Erro',
@@ -76,29 +79,32 @@ async function updateDeliveryStatus(winnerId: string, status: string, notes?: st
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     updatingDelivery.value = false
   }
 }
 
 // Formatar valor em reais
 function formatCurrency(value: number): string {
-  if (!value) return 'R$ 0,00'
+  if (!value)
+    return 'R$ 0,00'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value)
 }
 
 // Formatar data
 function formatDate(date: string) {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
@@ -118,14 +124,14 @@ function getStatusLabel(status: string) {
 async function redrawPrize(prizeId: string, reason: string = 'CANCELLED_WINNER', notes?: string) {
   try {
     redrawing.value = true
-    
+
     await useCustomFetch<any>(`/raffles/${props.raffle.id}/redraw-prize`, {
       method: 'POST',
       body: {
         prizeId,
         reason,
-        notes
-      }
+        notes,
+      },
     })
 
     toaster.add({
@@ -136,7 +142,8 @@ async function redrawPrize(prizeId: string, reason: string = 'CANCELLED_WINNER',
     })
 
     await getWinners()
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao refazer sorteio:', error)
     toaster.add({
       title: 'Erro',
@@ -144,7 +151,8 @@ async function redrawPrize(prizeId: string, reason: string = 'CANCELLED_WINNER',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     redrawing.value = false
   }
 }
@@ -159,7 +167,7 @@ function canRedrawPrize(prizeId: string): boolean {
 // Obter prêmios únicos com estatísticas
 const uniquePrizes = computed(() => {
   const prizes = new Map()
-  
+
   winners.value.forEach((winner: any) => {
     const prizeId = winner.prizeId
     if (!prizes.has(prizeId)) {
@@ -171,18 +179,21 @@ const uniquePrizes = computed(() => {
         totalWinners: 0,
         delivered: 0,
         pending: 0,
-        cancelled: 0
+        cancelled: 0,
       })
     }
-    
+
     const prize = prizes.get(prizeId)
     prize.totalWinners++
-    
-    if (winner.deliveryStatus === 'DELIVERED') prize.delivered++
-    else if (winner.deliveryStatus === 'PENDING') prize.pending++
-    else if (winner.deliveryStatus === 'CANCELLED') prize.cancelled++
+
+    if (winner.deliveryStatus === 'DELIVERED')
+      prize.delivered++
+    else if (winner.deliveryStatus === 'PENDING')
+      prize.pending++
+    else if (winner.deliveryStatus === 'CANCELLED')
+      prize.cancelled++
   })
-  
+
   return Array.from(prizes.values())
 })
 
@@ -192,7 +203,7 @@ const stats = computed(() => {
   const delivered = winners.value.filter((w: any) => w.deliveryStatus === 'DELIVERED').length
   const pending = winners.value.filter((w: any) => w.deliveryStatus === 'PENDING').length
   const cancelled = winners.value.filter((w: any) => w.deliveryStatus === 'CANCELLED').length
-  
+
   return { total, delivered, pending, cancelled }
 })
 
@@ -287,11 +298,11 @@ onMounted(() => {
               </div>
               <div v-if="canRedrawPrize(prize.id)">
                 <BaseButton
-                  @click="redrawPrize(prize.id)"
                   variant="warning"
                   size="sm"
                   rounded="lg"
                   :loading="redrawing"
+                  @click="redrawPrize(prize.id)"
                 >
                   <Icon name="lucide:refresh-cw" class="size-4" />
                   <span>Refazer Sorteio</span>
@@ -419,10 +430,10 @@ onMounted(() => {
                 <div class="flex items-center gap-2">
                   <BaseSelect
                     :model-value="winner.deliveryStatus"
-                    @update:model-value="(value) => updateDeliveryStatus(winner.id, value)"
                     :disabled="updatingDelivery"
                     size="xs"
                     rounded="lg"
+                    @update:model-value="(value) => updateDeliveryStatus(winner.id, value)"
                   >
                     <BaseSelectItem
                       v-for="option in deliveryStatusOptions"
@@ -463,20 +474,20 @@ onMounted(() => {
       <!-- Botões de Ação -->
       <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
         <BaseButton
-          @click="getWinners"
           variant="muted"
           rounded="lg"
           class="flex-1"
           :loading="loading"
+          @click="getWinners"
         >
           <Icon name="lucide:refresh-cw" class="size-4" />
           <span>Atualizar</span>
         </BaseButton>
         <BaseButton
-          @click="emits('close')"
           variant="primary"
           rounded="lg"
           class="flex-1"
+          @click="emits('close')"
         >
           <Icon name="lucide:check" class="size-4" />
           <span>Fechar</span>

@@ -3,6 +3,8 @@ import { watchDebounced } from '@vueuse/core'
 import { useApi } from '~/composables/useAuth'
 import { useTenant } from '~/composables/useTenant'
 
+import { safeColors } from '~/utils/colors'
+
 definePageMeta({
   title: 'Identidade Visual',
 })
@@ -23,8 +25,6 @@ const form = ref({
   primaryColor: 'amber',
   secondaryColor: 'zinc',
 })
-
-import { safeColors } from '~/utils/colors'
 
 // Tailwind color options (now using centralized safe list)
 const primaryColors = safeColors
@@ -50,9 +50,11 @@ async function fetchTenant() {
         secondaryColor: source.secondaryColor || 'zinc',
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar dados:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
@@ -64,7 +66,8 @@ function triggerLogoUpload() { logoInput.value?.click() }
 async function handleLogoUpload(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (!file) return
+  if (!file)
+    return
 
   isUploadingLogo.value = true
   try {
@@ -72,7 +75,7 @@ async function handleLogoUpload(event: Event) {
     formData.append('logo', file)
     const { data } = await useCustomFetch<any>('/tenant/logo', {
       method: 'POST',
-      body: formData
+      body: formData,
     })
     if (data.success || data) {
       const source = data.data || data
@@ -81,11 +84,14 @@ async function handleLogoUpload(event: Event) {
       }
       toaster.add({ title: 'Sucesso', description: 'Logo atualizado!', icon: 'solar:check-circle-linear' })
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({ title: 'Erro', description: 'Erro ao enviar logo', icon: 'solar:danger-circle-linear' })
-  } finally {
+  }
+  finally {
     isUploadingLogo.value = false
-    if (target) target.value = ''
+    if (target)
+      target.value = ''
   }
 }
 
@@ -95,22 +101,24 @@ async function saveSettings() {
   try {
     const { data } = await useCustomFetch<any>('/tenant', {
       method: 'PUT',
-      body: form.value
+      body: form.value,
     })
     if (data.success || data) {
       // Update global tenant state with new settings
       if (tenant.value) {
         tenant.value = {
           ...tenant.value,
-          ...form.value
+          ...form.value,
         }
       }
       applyColors(form.value.primaryColor, form.value.secondaryColor)
       toaster.add({ title: 'Sucesso', description: 'Visual atualizado!', icon: 'solar:check-circle-linear' })
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({ title: 'Erro', description: 'Erro ao salvar', icon: 'solar:danger-circle-linear' })
-  } finally {
+  }
+  finally {
     isSaving.value = false
   }
 }
@@ -144,26 +152,34 @@ onMounted(fetchTenant)
             <div class="flex flex-col sm:flex-row items-center gap-10">
               <div class="relative group">
                 <div
-                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500">
-                  <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-4" />
+                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500"
+                >
+                  <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-4">
                   <Icon v-else name="solar:gallery-linear" class="size-16 text-muted-300" />
 
                   <div
-                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <BaseButton color="white" rounded="full" size="sm" @click="triggerLogoUpload">Alterar</BaseButton>
+                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
+                  >
+                    <BaseButton color="white" rounded="full" size="sm" @click="triggerLogoUpload">
+                      Alterar
+                    </BaseButton>
                   </div>
                 </div>
               </div>
 
               <div class="flex-1 space-y-6">
-                <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload" />
+                <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
                 <BaseField label="Nome por Extenso">
-                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva"
-                    icon="solar:buildings-bold-duotone" />
+                  <TairoInput
+                    v-model="form.name" placeholder="Ex: Contabilidade Silva"
+                    icon="solar:buildings-bold-duotone"
+                  />
                 </BaseField>
                 <BaseField label="Nome Curto (Menu)">
-                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva"
-                    icon="solar:shop-bold-duotone" />
+                  <TairoInput
+                    v-model="form.tradeName" placeholder="Ex: Contábil Silva"
+                    icon="solar:shop-bold-duotone"
+                  />
                 </BaseField>
               </div>
             </div>
@@ -189,40 +205,53 @@ onMounted(fetchTenant)
             <div class="space-y-10">
               <div>
                 <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                  Cor Primária (Marca)</BaseHeading>
+                  Cor Primária (Marca)
+                </BaseHeading>
                 <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
-                  <button v-for="c in primaryColors" :key="c.name" type="button"
+                  <button
+                    v-for="c in primaryColors" :key="c.name" type="button"
                     class="size-10 rounded-xl transition-all duration-200" :class="[
                       c.class,
-                      form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100'
-                    ]" @click="form.primaryColor = c.name" />
+                      form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100',
+                    ]" @click="form.primaryColor = c.name"
+                  />
                 </div>
               </div>
 
               <div>
                 <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                  Tom de Fundo (Muted)</BaseHeading>
+                  Tom de Fundo (Muted)
+                </BaseHeading>
                 <div class="flex flex-wrap gap-4">
-                  <button v-for="c in mutedColors" :key="c.name" type="button"
+                  <button
+                    v-for="c in mutedColors" :key="c.name" type="button"
                     class="size-14 rounded-xl border-2 transition-all duration-200" :class="[
                       c.class,
-                      form.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110' : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100'
-                    ]" @click="form.secondaryColor = c.name" />
+                      form.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110' : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
+                    ]" @click="form.secondaryColor = c.name"
+                  />
                 </div>
               </div>
 
               <div
-                class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
+                class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner"
+              >
                 <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
-                  Preview em Tempo Real</BaseHeading>
+                  Preview em Tempo Real
+                </BaseHeading>
                 <div class="flex flex-wrap items-center gap-6">
-                  <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20">Botão Principal</BaseButton>
-                  <BaseButton variant="muted">Botão Neutro</BaseButton>
+                  <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20">
+                    Botão Principal
+                  </BaseButton>
+                  <BaseButton variant="muted">
+                    Botão Neutro
+                  </BaseButton>
                   <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
-                    Status Badge</BaseTag>
+                    Status Badge
+                  </BaseTag>
                   <div class="flex gap-2">
-                    <div class="size-10 rounded-full bg-primary-500 shadow-lg"></div>
-                    <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40"></div>
+                    <div class="size-10 rounded-full bg-primary-500 shadow-lg" />
+                    <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40" />
                   </div>
                 </div>
               </div>

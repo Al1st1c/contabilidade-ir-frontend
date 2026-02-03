@@ -21,21 +21,24 @@ async function fetchTemplate() {
     if (response?.success) {
       templateItems.value = response.data
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar template:', error)
-  } finally {
+  }
+  finally {
     isLoading.value = false
   }
 }
 
 async function addItem() {
-  if (!newItemTitle.value.trim()) return
+  if (!newItemTitle.value.trim())
+    return
 
   const newItem = {
     title: newItemTitle.value,
     description: '',
     isRequired: true,
-    order: templateItems.value.length
+    order: templateItems.value.length,
   }
 
   templateItems.value.push(newItem)
@@ -51,7 +54,7 @@ async function saveTemplate() {
   try {
     const { data: response } = await useCustomFetch<any>('/declarations/templates/sync', {
       method: 'POST',
-      body: { items: templateItems.value }
+      body: { items: templateItems.value },
     })
 
     if (response?.success) {
@@ -59,27 +62,30 @@ async function saveTemplate() {
       toaster.add({
         title: 'Sucesso',
         description: 'Template de checklist atualizado com sucesso!',
-        icon: 'solar:check-circle-linear'
+        icon: 'solar:check-circle-linear',
       })
     }
-  } catch (error) {
+  }
+  catch (error) {
     toaster.add({
       title: 'Erro',
       description: 'Falha ao salvar template',
-      icon: 'solar:danger-circle-linear'
+      icon: 'solar:danger-circle-linear',
     })
-  } finally {
+  }
+  finally {
     isSaving.value = false
   }
 }
 
 async function resetToDefault() {
-  if (!confirm('Deseja realmente resetar para o padrão do sistema? Suas personalizações serão perdidas.')) return
+  if (!confirm('Deseja realmente resetar para o padrão do sistema? Suas personalizações serão perdidas.'))
+    return
 
   isResetting.value = true
   try {
     const { data: response } = await useCustomFetch<any>('/declarations/templates/reset', {
-      method: 'POST'
+      method: 'POST',
     })
 
     if (response?.success) {
@@ -87,12 +93,14 @@ async function resetToDefault() {
       toaster.add({
         title: 'Resetado',
         description: 'Template resetado para o padrão do sistema.',
-        icon: 'solar:refresh-linear'
+        icon: 'solar:refresh-linear',
       })
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao resetar:', error)
-  } finally {
+  }
+  finally {
     isResetting.value = false
   }
 }
@@ -117,7 +125,7 @@ onMounted(fetchTemplate)
             </BaseParagraph>
 
             <div class="mt-8 flex flex-col gap-3">
-              <BaseButton variant="muted" class="w-full" @click="resetToDefault" :loading="isResetting">
+              <BaseButton variant="muted" class="w-full" :loading="isResetting" @click="resetToDefault">
                 <Icon name="solar:refresh-linear" class="size-4 mr-2" />
                 Resetar para o Padrão
               </BaseButton>
@@ -130,11 +138,14 @@ onMounted(fetchTemplate)
             <div class="space-y-6">
               <!-- Add Item -->
               <div
-                class="flex gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800">
+                class="flex gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800"
+              >
                 <div class="flex-1">
                   <BaseField label="Novo Documento">
-                    <TairoInput v-model="newItemTitle" placeholder="Ex: Extrato Bancário, Escritura..."
-                      @keyup.enter="addItem" />
+                    <TairoInput
+                      v-model="newItemTitle" placeholder="Ex: Extrato Bancário, Escritura..."
+                      @keyup.enter="addItem"
+                    />
                   </BaseField>
                 </div>
                 <div class="flex items-end mb-1">
@@ -147,16 +158,23 @@ onMounted(fetchTemplate)
 
               <!-- List -->
               <div class="space-y-3 mt-8">
-                <div v-if="templateItems.length === 0"
-                  class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl">
+                <div
+                  v-if="templateItems.length === 0"
+                  class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl"
+                >
                   <Icon name="solar:document-add-linear" class="size-12 text-muted-300 mb-2 mx-auto" />
-                  <p class="text-muted-500">Nenhum documento no template padrão.</p>
+                  <p class="text-muted-500">
+                    Nenhum documento no template padrão.
+                  </p>
                 </div>
 
-                <div v-for="(item, idx) in templateItems" :key="idx"
-                  class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all group">
+                <div
+                  v-for="(item, idx) in templateItems" :key="idx"
+                  class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all group"
+                >
                   <div
-                    class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center text-muted-400 group-hover:bg-primary-500/10 group-hover:text-primary-500 transition-colors">
+                    class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center text-muted-400 group-hover:bg-primary-500/10 group-hover:text-primary-500 transition-colors"
+                  >
                     <span class="text-xs font-bold">{{ idx + 1 }}</span>
                   </div>
 
@@ -164,13 +182,15 @@ onMounted(fetchTemplate)
                     <BaseHeading weight="medium" size="sm" class="text-muted-800 dark:text-muted-100">
                       {{ item.title }}
                     </BaseHeading>
-                    <p class="text-xs text-muted-400 truncate" v-if="item.description">{{ item.description }}</p>
+                    <p v-if="item.description" class="text-xs text-muted-400 truncate">
+                      {{ item.description }}
+                    </p>
                   </div>
 
                   <div class="flex items-center gap-4">
                     <BaseCheckbox v-model="item.isRequired" label="Obrigatório" color="primary" rounded="md" />
 
-                    <button @click="removeItem(idx)" class="p-2 text-muted-400 hover:text-danger-500 transition-colors">
+                    <button class="p-2 text-muted-400 hover:text-danger-500 transition-colors" @click="removeItem(idx)">
                       <Icon name="solar:trash-bin-trash-linear" class="size-5" />
                     </button>
                   </div>

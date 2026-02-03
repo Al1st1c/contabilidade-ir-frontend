@@ -46,7 +46,9 @@ const features = [
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <Icon name="lucide:sparkles" class="h-8 w-8 text-primary-400" />
-            <h1 class="text-2xl font-bold text-white">Casino Manager</h1>
+            <h1 class="text-2xl font-bold text-white">
+              Casino Manager
+            </h1>
           </div>
           <NuxtLink
             to="/auth"
@@ -66,18 +68,18 @@ const features = [
             <Icon name="lucide:zap" class="h-4 w-4 text-primary-300" />
             <span class="text-sm font-medium text-primary-200">Sistema de Gerenciamento Profissional</span>
           </div>
-          
+
           <h2 class="mb-6 text-5xl font-bold leading-tight text-white md:text-6xl">
             Gerencie seu Casino com
             <span class="bg-gradient-to-r from-primary-300 to-primary-400 bg-clip-text text-transparent">
               Eficiência Total
             </span>
           </h2>
-          
+
           <p class="mb-10 text-xl text-primary-200 md:text-2xl">
             Plataforma completa para gestão operacional, financeira e administrativa do seu estabelecimento.
           </p>
-          
+
           <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <NuxtLink
               to="/auth"
@@ -86,7 +88,7 @@ const features = [
               <span>Começar Agora</span>
               <Icon name="lucide:arrow-right" class="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </NuxtLink>
-            
+
             <button
               class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-white/20 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 sm:w-auto"
             >

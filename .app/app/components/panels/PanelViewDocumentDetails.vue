@@ -15,7 +15,6 @@ const emits = defineEmits<{
 onKeyStroke('Escape', () => emits('close'))
 
 const detailsExpanded = ref(false)
-
 </script>
 
 <template>
@@ -57,30 +56,38 @@ const detailsExpanded = ref(false)
           </BaseHeading>
           <div class="space-y-4">
             <div>
-              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">Nome</BaseText>
+              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                Nome
+              </BaseText>
               <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100 ml-2">
                 {{ cpfData.name }}
               </BaseText>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">CPF</BaseText>
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                  CPF
+                </BaseText>
                 <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100 ml-2">
                   {{ cpfData.cpf }}
                 </BaseText>
               </div>
               <div>
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">Nasc.</BaseText>
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                  Nasc.
+                </BaseText>
                 <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100 ml-2">
                   {{ cpfData.birth || 'Não informado' }}
                 </BaseText>
               </div>
             </div>
             <div>
-              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">Situação</BaseText>
-              <BaseText 
-                size="sm" 
-                weight="medium" 
+              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                Situação
+              </BaseText>
+              <BaseText
+                size="sm"
+                weight="medium"
                 class="ml-2"
                 :class="cpfData.situation === 'REGULAR' ? 'text-success-600' : 'text-warning-600'"
               >
@@ -97,23 +104,27 @@ const detailsExpanded = ref(false)
           </BaseHeading>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">Score</BaseText>
+              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                Score
+              </BaseText>
               <div class="flex items-center gap-2">
                 <BaseText size="lg" weight="bold" class="text-primary-600">
                   {{ cpfData.score }}
                 </BaseText>
                 <div class="flex-1">
-                  <BaseProgress 
-                    :model-value="(parseInt(cpfData.score) / 1000) * 100" 
-                    size="xs" 
+                  <BaseProgress
+                    :model-value="(parseInt(cpfData.score) / 1000) * 100"
+                    size="xs"
                     variant="primary"
                   />
                 </div>
               </div>
             </div>
             <div>
-              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">Dívida Ativa da União:</BaseText>
-              <br/>
+              <BaseText size="xs" class="text-muted-500 uppercase tracking-wider mb-1">
+                Dívida Ativa da União:
+              </BaseText>
+              <br>
               <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
                 {{ cpfData.divida_ativa_da_uniao || 'Não' }}
               </BaseText>
@@ -142,14 +153,14 @@ const detailsExpanded = ref(false)
                   </BaseText>
                 </div>
                 <div class="flex gap-2">
-                  <span 
-                    v-if="phone.plan_op === 'S'" 
+                  <span
+                    v-if="phone.plan_op === 'S'"
                     class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200"
                   >
                     Pré-pago
                   </span>
-                  <span 
-                    v-if="phone.procon === 'S'" 
+                  <span
+                    v-if="phone.procon === 'S'"
                     class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200"
                   >
                     Procon

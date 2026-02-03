@@ -26,6 +26,14 @@
     "test:lint": "eslint --cache .",
     "lint": "eslint --cache --fix ."
   },
+  "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@vee-validate/zod": "^4.15.1",
+    "canvas-confetti": "^1.9.3",
+    "gsap": "^3.13.0",
+    "socket.io-client": "^4.8.1",
+    "vue3-smooth-dnd": "0.0.6"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^5.2.1",
     "@types/canvas-confetti": "^1.9.0",
@@ -51,13 +59,5 @@
     "*.(ts|vue)": [
       "eslint --fix"
     ]
-  },
-  "dependencies": {
-    "@headlessui/vue": "^1.7.23",
-    "@vee-validate/zod": "^4.15.1",
-    "canvas-confetti": "^1.9.3",
-    "gsap": "^3.13.0",
-    "socket.io-client": "^4.8.1",
-    "vue3-smooth-dnd": "0.0.6"
   }
 }

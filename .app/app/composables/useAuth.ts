@@ -1,5 +1,4 @@
 // composables/useAuth.ts
-import type { $Fetch, FetchOptions } from 'ofetch'
 import { API_CONFIG, getApiUrl } from '~/utils/config'
 
 // Tipos para autenticação
@@ -75,7 +74,8 @@ export function useAuth() {
     try {
       // Nuxt useCookie handles JSON parsing automatically
       return user.value as User | null
-    } catch (e) {
+    }
+    catch (e) {
       console.error('Error parsing user cookie:', e)
       user.value = null
       return null

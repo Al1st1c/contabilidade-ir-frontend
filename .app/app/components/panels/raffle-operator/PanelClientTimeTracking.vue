@@ -28,9 +28,11 @@ async function getTimeTrackingDetails() {
       method: 'GET',
     })
     timeTracking.value = data
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar detalhes:', error)
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -39,8 +41,9 @@ async function getTimeTrackingDetails() {
 let pollingInterval: NodeJS.Timeout | null = null
 
 function startPolling() {
-  if (pollingInterval) return
-  
+  if (pollingInterval)
+    return
+
   pollingInterval = setInterval(async () => {
     if (timeTracking.value?.isActive) {
       await getTimeTrackingDetails()
@@ -62,7 +65,8 @@ async function getSessions() {
       method: 'GET',
     })
     sessions.value = data || []
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar sessões:', error)
   }
 }
@@ -73,7 +77,7 @@ async function startSession() {
     loading.value = true
     await useCustomFetch<any>(`/raffle-operator/tracking/${props.raffle.id}/${props.client.id}`, {
       method: 'POST',
-      body: { action: 'start' }
+      body: { action: 'start' },
     })
 
     toaster.add({
@@ -86,14 +90,16 @@ async function startSession() {
     await getTimeTrackingDetails()
     await getSessions()
     emits('success')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao iniciar sessão',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -104,7 +110,7 @@ async function pauseSession() {
     loading.value = true
     await useCustomFetch<any>(`/raffle-operator/tracking/${props.raffle.id}/${props.client.id}`, {
       method: 'POST',
-      body: { action: 'pause' }
+      body: { action: 'pause' },
     })
 
     toaster.add({
@@ -117,14 +123,16 @@ async function pauseSession() {
     await getTimeTrackingDetails()
     await getSessions()
     emits('success')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao pausar sessão',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -135,7 +143,7 @@ async function resumeSession() {
     loading.value = true
     await useCustomFetch<any>(`/raffle-operator/tracking/${props.raffle.id}/${props.client.id}`, {
       method: 'POST',
-      body: { action: 'resume' }
+      body: { action: 'resume' },
     })
 
     toaster.add({
@@ -148,21 +156,24 @@ async function resumeSession() {
     await getTimeTrackingDetails()
     await getSessions()
     emits('success')
-  } catch (error: any) {
+  }
+  catch (error: any) {
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao retomar sessão',
       icon: 'ph:warning-circle-fill',
       progress: true,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 
 // Formatar tempo
 function formatTime(hours: number): string {
-  if (!hours) return '0h 0m'
+  if (!hours)
+    return '0h 0m'
   const h = Math.floor(hours)
   const m = Math.floor((hours - h) * 60)
   return `${h}h ${m}m`
@@ -170,13 +181,14 @@ function formatTime(hours: number): string {
 
 // Formatar data
 function formatDate(date: string) {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
@@ -187,7 +199,7 @@ const currentSessionTime = computed(() => {
   if (timeTracking.value?.currentDuration !== undefined) {
     return timeTracking.value.currentDuration
   }
-  
+
   // Fallback: calcular localmente se sessão está ativa
   if (timeTracking.value?.isActive && timeTracking.value?.sessionStart) {
     const startTime = new Date(timeTracking.value.sessionStart)
@@ -195,7 +207,7 @@ const currentSessionTime = computed(() => {
     const diffMs = now.getTime() - startTime.getTime()
     return diffMs / (1000 * 60 * 60) // Converter para horas
   }
-  
+
   return 0
 })
 
@@ -210,12 +222,12 @@ const nextTicketProgress = computed(() => {
   const hoursPerTicket = Number(props.raffle.hoursPerTicket)
   const currentTickets = Math.floor(totalHours / hoursPerTicket)
   const nextTicketHours = (currentTickets + 1) * hoursPerTicket
-  
+
   const progress = totalHours > 0 ? Math.min((totalHours / nextTicketHours) * 100, 100) : 0
-  
+
   return {
     progress: Math.min(progress, 100),
-    hoursToNext: timeTracking.value?.nextTicketIn || 0
+    hoursToNext: timeTracking.value?.nextTicketIn || 0,
   }
 })
 
@@ -329,20 +341,20 @@ onUnmounted(() => {
         >
           Progresso para Próximo Bilhete
         </BaseHeading>
-        
+
         <div class="space-y-3">
           <div class="flex justify-between text-sm">
             <span class="text-muted-500">Tempo atual</span>
             <span class="font-medium">{{ formatTime(timeTracking?.totalHours || 0) }}</span>
           </div>
-          
+
           <div class="w-full bg-muted-200 dark:bg-muted-700 rounded-full h-2">
             <div
               class="bg-primary-500 h-2 rounded-full transition-all duration-300"
               :style="{ width: `${nextTicketProgress.progress}%` }"
             />
           </div>
-          
+
           <div class="flex justify-between text-sm">
             <span class="text-muted-500">Faltam</span>
             <span class="font-medium">{{ formatTime(nextTicketProgress.hoursToNext) }}</span>
@@ -363,11 +375,11 @@ onUnmounted(() => {
             Sessão Ativa
           </BaseHeading>
           <div class="flex items-center gap-2 ml-auto">
-            <div class="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
+            <div class="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
             <span class="text-xs text-success-600 dark:text-success-400">Tempo Real</span>
           </div>
         </div>
-        
+
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
             <span class="text-success-600 dark:text-success-400">Iniciada em:</span>
@@ -395,7 +407,7 @@ onUnmounted(() => {
           <Icon name="lucide:shield-check" class="size-4 inline mr-2" />
           Auditoria
         </BaseHeading>
-        
+
         <div class="space-y-2 text-sm">
           <!-- Quem iniciou -->
           <div v-if="timeTracking?.startedBy" class="flex justify-between">
@@ -407,7 +419,7 @@ onUnmounted(() => {
               </span>
             </div>
           </div>
-          
+
           <!-- Quem pausou -->
           <div v-if="timeTracking?.pausedBy" class="flex justify-between">
             <span class="text-muted-500">Pausado por:</span>
@@ -418,18 +430,18 @@ onUnmounted(() => {
               </span>
             </div>
           </div>
-          
+
           <!-- Status atual -->
           <div class="flex justify-between">
             <span class="text-muted-500">Status:</span>
             <div class="flex items-center gap-2">
-              <Icon 
-                :name="timeTracking?.isActive ? 'lucide:play-circle' : 'lucide:pause-circle'" 
+              <Icon
+                :name="timeTracking?.isActive ? 'lucide:play-circle' : 'lucide:pause-circle'"
                 :class="timeTracking?.isActive ? 'size-3 text-success-500' : 'size-3 text-muted-500'"
               />
-              <span 
-                :class="timeTracking?.isActive 
-                  ? 'font-medium text-success-600 dark:text-success-400' 
+              <span
+                :class="timeTracking?.isActive
+                  ? 'font-medium text-success-600 dark:text-success-400'
                   : 'font-medium text-muted-600 dark:text-muted-400'"
               >
                 {{ timeTracking?.isActive ? 'Ativo' : 'Pausado' }}
@@ -449,16 +461,16 @@ onUnmounted(() => {
         >
           Controles
         </BaseHeading>
-        
+
         <div class="flex gap-3">
           <!-- Iniciar -->
           <BaseButton
             v-if="!timeTracking?.isActive && !timeTracking?.totalHours"
-            @click="startSession"
             :loading="loading"
             variant="primary"
             rounded="lg"
             class="flex-1"
+            @click="startSession"
           >
             <Icon name="lucide:play" class="size-4" />
             <span>Iniciar Sessão</span>
@@ -467,11 +479,11 @@ onUnmounted(() => {
           <!-- Pausar -->
           <BaseButton
             v-else-if="timeTracking?.isActive"
-            @click="pauseSession"
             :loading="loading"
             variant="warning"
             rounded="lg"
             class="flex-1"
+            @click="pauseSession"
           >
             <Icon name="lucide:pause" class="size-4" />
             <span>Pausar Sessão</span>
@@ -480,11 +492,11 @@ onUnmounted(() => {
           <!-- Retomar -->
           <BaseButton
             v-else-if="timeTracking?.totalHours > 0"
-            @click="resumeSession"
             :loading="loading"
             variant="success"
             rounded="lg"
             class="flex-1"
+            @click="resumeSession"
           >
             <Icon name="lucide:play" class="size-4" />
             <span>Retomar Sessão</span>
@@ -502,7 +514,7 @@ onUnmounted(() => {
         >
           Histórico de Sessões
         </BaseHeading>
-        
+
         <div class="space-y-2">
           <div
             v-for="session in sessions"
@@ -513,18 +525,24 @@ onUnmounted(() => {
               <div class="flex items-center gap-3">
                 <Icon name="lucide:clock" class="size-4 text-muted-400" />
                 <div>
-                  <div class="font-medium">{{ formatDate(session.sessionStart) }}</div>
+                  <div class="font-medium">
+                    {{ formatDate(session.sessionStart) }}
+                  </div>
                   <div class="text-xs text-muted-500">
                     {{ session.sessionEnd ? `Finalizada em ${formatDate(session.sessionEnd)}` : 'Em andamento' }}
                   </div>
                 </div>
               </div>
               <div class="text-right">
-                <div class="font-medium">{{ formatTime(session.duration) }}</div>
-                <div class="text-xs text-muted-500">{{ session.ticketsGenerated }} bilhetes</div>
+                <div class="font-medium">
+                  {{ formatTime(session.duration) }}
+                </div>
+                <div class="text-xs text-muted-500">
+                  {{ session.ticketsGenerated }} bilhetes
+                </div>
               </div>
             </div>
-            
+
             <!-- Informações de Auditoria da Sessão -->
             <div class="pt-2 border-t border-muted-200 dark:border-muted-700">
               <div class="flex items-center justify-between text-xs">
@@ -535,7 +553,7 @@ onUnmounted(() => {
                     <span class="text-muted-500">Iniciado por:</span>
                     <span class="font-medium text-success-600 dark:text-success-400">{{ session.startedBy.name }}</span>
                   </div>
-                  
+
                   <!-- Quem pausou -->
                   <div v-if="session.pausedBy" class="flex items-center gap-1">
                     <Icon name="lucide:user-x" class="size-3 text-warning-500" />
@@ -543,16 +561,16 @@ onUnmounted(() => {
                     <span class="font-medium text-warning-600 dark:text-warning-400">{{ session.pausedBy.name }}</span>
                   </div>
                 </div>
-                
+
                 <!-- Status da sessão -->
                 <div class="flex items-center gap-1">
-                  <Icon 
-                    :name="session.sessionEnd ? 'lucide:check-circle' : 'lucide:play-circle'" 
+                  <Icon
+                    :name="session.sessionEnd ? 'lucide:check-circle' : 'lucide:play-circle'"
                     :class="session.sessionEnd ? 'size-3 text-success-500' : 'size-3 text-primary-500'"
                   />
-                  <span 
-                    :class="session.sessionEnd 
-                      ? 'text-success-600 dark:text-success-400' 
+                  <span
+                    :class="session.sessionEnd
+                      ? 'text-success-600 dark:text-success-400'
                       : 'text-primary-600 dark:text-primary-400'"
                   >
                     {{ session.sessionEnd ? 'Finalizada' : 'Ativa' }}
@@ -574,7 +592,7 @@ onUnmounted(() => {
         >
           Informações do Sorteio
         </BaseHeading>
-        
+
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
             <span class="text-muted-500">Nome:</span>
@@ -598,20 +616,20 @@ onUnmounted(() => {
       <!-- Botões de Ação -->
       <div class="flex gap-3 pt-6 border-t border-muted-200 dark:border-muted-700">
         <BaseButton
-          @click="getTimeTrackingDetails"
           variant="muted"
           rounded="lg"
           class="flex-1"
           :loading="loading"
+          @click="getTimeTrackingDetails"
         >
           <Icon name="lucide:refresh-cw" class="size-4" />
           <span>Atualizar</span>
         </BaseButton>
         <BaseButton
-          @click="emits('close')"
           variant="primary"
           rounded="lg"
           class="flex-1"
+          @click="emits('close')"
         >
           <Icon name="lucide:check" class="size-4" />
           <span>Fechar</span>

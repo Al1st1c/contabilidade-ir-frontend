@@ -6,29 +6,32 @@ definePageMeta({
 const route = useRoute()
 
 const currentSection = computed(() => {
-  if (route.path.includes('/dashboard/settings/account')) return 'account'
-  if (route.path.includes('/dashboard/settings/team')) return 'team'
-  if (route.path.includes('/dashboard/settings/checklist')) return 'checklist'
+  if (route.path.includes('/dashboard/settings/account'))
+    return 'account'
+  if (route.path.includes('/dashboard/settings/team'))
+    return 'team'
+  if (route.path.includes('/dashboard/settings/checklist'))
+    return 'checklist'
   return 'whitelabel'
 })
 
-const sectionTitles: Record<string, { title: string; description: string }> = {
+const sectionTitles: Record<string, { title: string, description: string }> = {
   whitelabel: {
     title: 'Personalização',
-    description: 'Configure o logo e as cores do seu sistema'
+    description: 'Configure o logo e as cores do seu sistema',
   },
   account: {
     title: 'Dados da Empresa',
-    description: 'Informações cadastrais e de contato do escritório'
+    description: 'Informações cadastrais e de contato do escritório',
   },
   team: {
     title: 'Equipe',
-    description: 'Gerencie os membros do seu escritório'
+    description: 'Gerencie os membros do seu escritório',
   },
   checklist: {
     title: 'Checklist',
-    description: 'Gerencie os checklists do seu escritório'
-  }
+    description: 'Gerencie os checklists do seu escritório',
+  },
 }
 
 const tabs = [
@@ -44,7 +47,9 @@ const tabs = [
     <!-- Header -->
     <div class="px-4 md:px-6 lg:px-8 mb-6">
       <div class="flex items-center gap-2 text-sm text-muted-400 mb-2">
-        <NuxtLink to="/dashboard" class="hover:text-primary-500 transition-colors">Dashboard</NuxtLink>
+        <NuxtLink to="/dashboard" class="hover:text-primary-500 transition-colors">
+          Dashboard
+        </NuxtLink>
         <Icon name="lucide:chevron-right" class="size-4" />
         <span>Configurações</span>
         <Icon name="lucide:chevron-right" class="size-4" />
@@ -61,12 +66,14 @@ const tabs = [
     <!-- Horizontal Tab Navigation -->
     <div class="border-b border-muted-200 dark:border-muted-800 px-4 md:px-6 lg:px-8 mb-8">
       <nav class="flex gap-1 -mb-px">
-        <NuxtLink v-for="tab in tabs" :key="tab.id" :to="tab.to"
+        <NuxtLink
+          v-for="tab in tabs" :key="tab.id" :to="tab.to"
           class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors" :class="[
             currentSection === tab.id
               ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-              : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300 hover:border-muted-300 dark:hover:border-muted-600'
-          ]">
+              : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300 hover:border-muted-300 dark:hover:border-muted-600',
+          ]"
+        >
           <Icon :name="tab.icon" class="size-4" />
           {{ tab.label }}
         </NuxtLink>

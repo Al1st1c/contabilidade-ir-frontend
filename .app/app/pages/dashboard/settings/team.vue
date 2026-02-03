@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useApi } from '~/composables/useAuth'
 import PanelAddTeamUser from '~/components/panels/PanelAddTeamUser.vue'
+import { useApi } from '~/composables/useAuth'
 
 definePageMeta({
   title: 'Equipe',
@@ -73,10 +73,12 @@ async function fetchMembers() {
         total: response.data.length,
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar membros:', error)
     data.value = { data: [], total: 0 }
-  } finally {
+  }
+  finally {
     pending.value = false
   }
 }
@@ -115,7 +117,7 @@ function openAddMemberPanel() {
   open(PanelAddTeamUser, {
     onSuccess: async () => {
       await fetchMembers()
-    }
+    },
   })
 }
 </script>
@@ -147,13 +149,19 @@ function openAddMemberPanel() {
 
     <!-- Empty State -->
     <div v-else-if="!data?.data?.length" class="py-10">
-      <BasePlaceholderPage title="Nenhum membro encontrado"
-        subtitle="Você ainda não possui membros na equipe. Convide alguém para começar.">
+      <BasePlaceholderPage
+        title="Nenhum membro encontrado"
+        subtitle="Você ainda não possui membros na equipe. Convide alguém para começar."
+      >
         <template #image>
-          <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-2.svg"
-            alt="Sem membros" />
-          <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-2-dark.svg"
-            alt="Sem membros" />
+          <img
+            class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-2.svg"
+            alt="Sem membros"
+          >
+          <img
+            class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-2-dark.svg"
+            alt="Sem membros"
+          >
         </template>
         <template #action>
           <BaseButton variant="primary" @click="openAddMemberPanel">
@@ -170,21 +178,29 @@ function openAddMemberPanel() {
       <div class="col-span-12 lg:col-span-5">
         <BaseCard rounded="lg" class="p-2">
           <ul class="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-x-hidden max-h-[600px] overflow-y-auto">
-            <li v-for="member in data?.data" :key="member.id" role="button" tabindex="0"
-              @click="currentMember = member">
-              <NuxtLink :to="`/dashboard/settings/team/${member.slug}`"
+            <li
+              v-for="member in data?.data" :key="member.id" role="button" tabindex="0"
+              @click="currentMember = member"
+            >
+              <NuxtLink
+                :to="`/dashboard/settings/team/${member.slug}`"
                 class="hover:bg-muted-200/80 dark:hover:bg-muted-800/60 flex items-center gap-3 rounded-xl p-3 transition-colors"
-                :class="{ 'bg-muted-200/80 dark:bg-muted-800/60': currentMember?.id === member.id }">
+                :class="{ 'bg-muted-200/80 dark:bg-muted-800/60': currentMember?.id === member.id }"
+              >
                 <div class="relative">
                   <BaseAvatar :src="member.picture" :text="member.name?.charAt(0) || 'U'" size="sm" />
                   <!-- Pending invite indicator -->
-                  <span v-if="member.status === 'PENDING_INVITE'"
+                  <span
+                    v-if="member.status === 'PENDING_INVITE'"
                     class="absolute -top-1 -right-1 size-3 bg-warning-500 rounded-full border-2 border-white dark:border-muted-800"
-                    title="Convite pendente" />
+                    title="Convite pendente"
+                  />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <BaseHeading weight="medium" size="sm" lead="tight"
-                    class="line-clamp-1 text-muted-800 dark:text-muted-100">
+                  <BaseHeading
+                    weight="medium" size="sm" lead="tight"
+                    class="line-clamp-1 text-muted-800 dark:text-muted-100"
+                  >
                     {{ member.name }}
                   </BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 line-clamp-1">
@@ -211,8 +227,10 @@ function openAddMemberPanel() {
         <BaseCard v-else rounded="lg">
           <div class="p-6">
             <div class="py-10 text-center">
-              <Icon name="solar:users-group-rounded-bold-duotone"
-                class="size-16 text-muted-300 dark:text-muted-700 mx-auto mb-4" />
+              <Icon
+                name="solar:users-group-rounded-bold-duotone"
+                class="size-16 text-muted-300 dark:text-muted-700 mx-auto mb-4"
+              />
               <BaseHeading weight="medium" size="xl" lead="none" class="mb-2 text-muted-800 dark:text-muted-100">
                 Selecione um membro
               </BaseHeading>

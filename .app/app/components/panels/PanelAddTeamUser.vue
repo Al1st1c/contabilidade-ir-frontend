@@ -31,7 +31,7 @@ const form = ref({
   document: '',
   phone: '',
   email: '',
-  roleId: 'placeholder'
+  roleId: 'placeholder',
 })
 
 const loading = ref(false)
@@ -56,13 +56,14 @@ async function fetchRoles() {
   loadingRoles.value = true
   try {
     const { data } = await useCustomFetch<any>('/tenant/roles', {
-      method: 'GET'
+      method: 'GET',
     })
 
     if (data?.success && data?.data) {
       roles.value = data.data
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar roles:', error)
     toaster.add({
       title: 'Erro',
@@ -70,7 +71,8 @@ async function fetchRoles() {
       icon: 'lucide:alert-triangle',
       duration: 5000,
     })
-  } finally {
+  }
+  finally {
     loadingRoles.value = false
   }
 }
@@ -89,7 +91,8 @@ function validateForm(): boolean {
 
   if (!form.value.email.trim()) {
     errors.value.email = 'Email é obrigatório'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+  }
+  else if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(form.value.email)) {
     errors.value.email = 'Email deve ter um formato válido'
   }
 
@@ -111,7 +114,8 @@ function formatPhone(value: string): string {
   const cleanValue = value.replace(/\D/g, '')
   if (cleanValue.length === 11) {
     return cleanValue.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-  } else if (cleanValue.length === 10) {
+  }
+  else if (cleanValue.length === 10) {
     return cleanValue.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
   }
   return value
@@ -134,7 +138,8 @@ watch(() => form.value.phone, (newValue) => {
 
 // Salvar usuário (enviar convite)
 async function saveUser() {
-  if (!validateForm()) return
+  if (!validateForm())
+    return
 
   loading.value = true
 
@@ -146,7 +151,7 @@ async function saveUser() {
         email: form.value.email,
         phone: form.value.phone.replace(/\D/g, ''),
         roleId: form.value.roleId,
-      }
+      },
     })
 
     if (data?.success) {
@@ -175,14 +180,16 @@ async function saveUser() {
         props.onSuccess()
       }
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao criar usuário:', error)
 
     let errorMessage = 'Erro ao convidar membro'
 
     if (error.response?.data?.message) {
       errorMessage = error.response.data.message
-    } else if (error.data?.message) {
+    }
+    else if (error.data?.message) {
       errorMessage = error.data.message
     }
 
@@ -192,14 +199,16 @@ async function saveUser() {
       icon: 'lucide:alert-triangle',
       duration: 5000,
     })
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 
 // Copiar link para clipboard
 async function copyInviteLink() {
-  if (!inviteData.value?.inviteLink) return
+  if (!inviteData.value?.inviteLink)
+    return
 
   try {
     await navigator.clipboard.writeText(inviteData.value.inviteLink)
@@ -209,7 +218,8 @@ async function copyInviteLink() {
       icon: 'lucide:clipboard-check',
       duration: 3000,
     })
-  } catch (error) {
+  }
+  catch (error) {
     toaster.add({
       title: 'Erro',
       description: 'Não foi possível copiar o link.',
@@ -228,7 +238,7 @@ function inviteAnother() {
     document: '',
     phone: '',
     email: '',
-    roleId: 'placeholder'
+    roleId: 'placeholder',
   }
 }
 
@@ -253,9 +263,11 @@ onMounted(() => {
       </BaseHeading>
 
       <!-- Close button -->
-      <button type="button"
+      <button
+        type="button"
         class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
-        @click="closePanel">
+        @click="closePanel"
+      >
         <Icon name="lucide:arrow-right" class="size-4" />
       </button>
     </div>
@@ -265,12 +277,16 @@ onMounted(() => {
       <div v-if="inviteSent && inviteData" class="space-y-6">
         <!-- Ícone de sucesso -->
         <div class="flex flex-col items-center justify-center py-8">
-          <div :class="inviteData.emailSent
-            ? 'bg-success-100 dark:bg-success-900/30'
-            : 'bg-warning-100 dark:bg-warning-900/30'"
-            class="mb-4 flex size-20 items-center justify-center rounded-full">
-            <Icon :name="inviteData.emailSent ? 'lucide:mail-check' : 'lucide:mail-warning'"
-              :class="inviteData.emailSent ? 'text-success-500' : 'text-warning-500'" class="size-10" />
+          <div
+            :class="inviteData.emailSent
+              ? 'bg-success-100 dark:bg-success-900/30'
+              : 'bg-warning-100 dark:bg-warning-900/30'"
+            class="mb-4 flex size-20 items-center justify-center rounded-full"
+          >
+            <Icon
+              :name="inviteData.emailSent ? 'lucide:mail-check' : 'lucide:mail-warning'"
+              :class="inviteData.emailSent ? 'text-success-500' : 'text-warning-500'" class="size-10"
+            />
           </div>
           <BaseHeading as="h4" size="lg" weight="semibold" class="text-center">
             {{ inviteData.emailSent ? 'Convite enviado!' : 'Convite criado!' }}
@@ -286,11 +302,15 @@ onMounted(() => {
         <div class="bg-muted-50 dark:bg-muted-900/50 space-y-4 rounded-xl p-4">
           <div>
             <label class="text-muted-400 text-xs font-medium uppercase">Nome</label>
-            <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData.name }}</p>
+            <p class="text-muted-800 dark:text-muted-100 font-medium">
+              {{ inviteData.name }}
+            </p>
           </div>
           <div>
             <label class="text-muted-400 text-xs font-medium uppercase">Email</label>
-            <p class="text-muted-800 dark:text-muted-100 font-medium">{{ inviteData.email }}</p>
+            <p class="text-muted-800 dark:text-muted-100 font-medium">
+              {{ inviteData.email }}
+            </p>
           </div>
           <div>
             <label class="text-muted-400 text-xs font-medium uppercase">Validade do Convite</label>
@@ -326,13 +346,16 @@ onMounted(() => {
       </div>
 
       <!-- Formulário -->
-      <form v-else @submit.prevent="saveUser" class="space-y-6">
+      <form v-else class="space-y-6" @submit.prevent="saveUser">
         <!-- Info box -->
         <div
-          class="bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50 flex items-start gap-3 rounded-lg border p-4">
+          class="bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50 flex items-start gap-3 rounded-lg border p-4"
+        >
           <Icon name="lucide:info" class="text-info-500 mt-0.5 size-5 shrink-0" />
           <div class="text-sm">
-            <p class="text-info-700 dark:text-info-300 font-medium">Como funciona?</p>
+            <p class="text-info-700 dark:text-info-300 font-medium">
+              Como funciona?
+            </p>
             <p class="text-info-600 dark:text-info-400 mt-1">
               O membro receberá um e-mail com um link para ativar sua conta e criar sua própria senha.
             </p>
@@ -341,23 +364,29 @@ onMounted(() => {
 
         <!-- Nome -->
         <BaseField label="Nome completo *" :error="errors.name">
-          <BaseInput v-model="form.name" placeholder="Nome do funcionário" :disabled="loading" :classes="{
-            input: errors.name ? 'border-red-500' : ''
-          }" />
+          <BaseInput
+            v-model="form.name" placeholder="Nome do funcionário" :disabled="loading" :classes="{
+              input: errors.name ? 'border-red-500' : '',
+            }"
+          />
         </BaseField>
 
         <!-- Email -->
         <BaseField label="Email *" :error="errors.email">
-          <BaseInput v-model="form.email" type="email" placeholder="email@exemplo.com" :disabled="loading" :classes="{
-            input: errors.email ? 'border-red-500' : ''
-          }" />
+          <BaseInput
+            v-model="form.email" type="email" placeholder="email@exemplo.com" :disabled="loading" :classes="{
+              input: errors.email ? 'border-red-500' : '',
+            }"
+          />
         </BaseField>
 
         <!-- Telefone -->
         <BaseField label="Telefone *" :error="errors.phone">
-          <BaseInput v-model="form.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="loading" :classes="{
-            input: errors.phone ? 'border-red-500' : ''
-          }" />
+          <BaseInput
+            v-model="form.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="loading" :classes="{
+              input: errors.phone ? 'border-red-500' : '',
+            }"
+          />
         </BaseField>
 
         <!-- CPF (opcional) -->
@@ -367,8 +396,10 @@ onMounted(() => {
 
         <!-- Cargo -->
         <BaseField label="Cargo *" :error="errors.roleId">
-          <BaseSelect v-model="form.roleId" :disabled="loading || loadingRoles"
-            :class="errors.roleId ? 'border-red-500' : ''">
+          <BaseSelect
+            v-model="form.roleId" :disabled="loading || loadingRoles"
+            :class="errors.roleId ? 'border-red-500' : ''"
+          >
             <BaseSelectItem value="placeholder" disabled>
               {{ loadingRoles ? 'Carregando...' : 'Selecione um cargo' }}
             </BaseSelectItem>

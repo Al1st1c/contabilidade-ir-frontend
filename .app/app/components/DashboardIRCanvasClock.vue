@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+
+const props = withDefaults(defineProps<Props>(), {
+  size: 200,
+})
+
 const colorMode = useColorMode()
 
 interface Props {
@@ -8,15 +13,11 @@ interface Props {
   size?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  size: 200
-})
-
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const now = ref(new Date())
 let rafId: number | null = null
-let pulseScale = 1
-let pulseDir = 1
+const pulseScale = 1
+const pulseDir = 1
 
 const start = computed(() => new Date(props.startDate))
 const end = computed(() => new Date(props.endDate))
@@ -26,15 +27,18 @@ const isFinished = computed(() => now.value > end.value)
 const isRunning = computed(() => !isNotStarted.value && !isFinished.value)
 
 const progress = computed(() => {
-  if (isNotStarted.value) return 0
-  if (isFinished.value) return 1
+  if (isNotStarted.value)
+    return 0
+  if (isFinished.value)
+    return 1
   const total = end.value.getTime() - start.value.getTime()
   const elapsed = now.value.getTime() - start.value.getTime()
   return Math.min(1, Math.max(0, elapsed / total))
 })
 
 const timeRemaining = computed(() => {
-  if (isFinished.value) return { days: 0, hours: 0, minutes: 0, seconds: 0 }
+  if (isFinished.value)
+    return { days: 0, hours: 0, minutes: 0, seconds: 0 }
 
   const targetDate = isNotStarted.value ? start.value : end.value
   const diff = targetDate.getTime() - now.value.getTime()
@@ -44,19 +48,22 @@ const timeRemaining = computed(() => {
     days: Math.floor(totalSeconds / (24 * 60 * 60)),
     hours: Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60)),
     minutes: Math.floor((totalSeconds % (60 * 60)) / 60),
-    seconds: totalSeconds % 60
+    seconds: totalSeconds % 60,
   }
 })
 
 // Verifica se faltam menos de 24 horas
 const isLast24Hours = computed(() => {
-  if (isNotStarted.value || isFinished.value) return false
+  if (isNotStarted.value || isFinished.value)
+    return false
   return timeRemaining.value.days === 0
 })
 
 const percentageRemaining = computed(() => {
-  if (isNotStarted.value) return 100
-  if (isFinished.value) return 0
+  if (isNotStarted.value)
+    return 100
+  if (isFinished.value)
+    return 0
   return Math.round((1 - progress.value) * 100)
 })
 
@@ -67,7 +74,7 @@ const clockState = computed(() => {
       color: '#94a3b8',
       lightColor: '#e2e8f0',
       status: 'Aguardando',
-      glow: false
+      glow: false,
     }
   }
   if (isFinished.value) {
@@ -75,7 +82,7 @@ const clockState = computed(() => {
       color: '#dc2626',
       lightColor: '#fee2e2',
       status: 'Encerrado',
-      glow: true
+      glow: true,
     }
   }
 
@@ -87,7 +94,7 @@ const clockState = computed(() => {
       color: '#10b981',
       lightColor: '#d1fae5',
       status: 'No prazo',
-      glow: false
+      glow: false,
     }
   }
 
@@ -97,7 +104,7 @@ const clockState = computed(() => {
       color: '#f59e0b',
       lightColor: '#fef3c7',
       status: 'Atenção',
-      glow: false
+      glow: false,
     }
   }
 
@@ -106,15 +113,17 @@ const clockState = computed(() => {
     color: '#ef4444',
     lightColor: '#fee2e2',
     status: 'Urgente',
-    glow: true
+    glow: true,
   }
 })
 
-const draw = () => {
+function draw() {
   const canvas = canvasRef.value
-  if (!canvas) return
+  if (!canvas)
+    return
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx)
+    return
 
   const size = props.size
   const dpr = window.devicePixelRatio || 1
@@ -152,7 +161,8 @@ const draw = () => {
     ringGradient.addColorStop(0, '#334155')
     ringGradient.addColorStop(0.5, '#1e293b')
     ringGradient.addColorStop(1, '#0f172a')
-  } else {
+  }
+  else {
     ringGradient.addColorStop(0, '#f8fafc')
     ringGradient.addColorStop(0.5, '#cbd5e1')
     ringGradient.addColorStop(1, '#94a3b8')
@@ -213,7 +223,7 @@ const draw = () => {
 
     ctx.beginPath()
     ctx.arc(center, center, progressRadius, startAngle, endAngle)
-    ctx.strokeStyle = clockState.value.color + '40'
+    ctx.strokeStyle = `${clockState.value.color}40`
     ctx.lineWidth = 4
     ctx.lineCap = 'round'
     ctx.stroke()
@@ -243,7 +253,8 @@ const draw = () => {
       // Ponteiro de SEGUNDOS (fino) - uma volta completa em 60s
       const secondAngle = (seconds / 60) * 360 - 90
       drawHand(ctx, center, center, radius * 0.75, secondAngle, 2, '#ef4444')
-    } else {
+    }
+    else {
       // Modo normal: dias, horas, minutos
       const totalDays = timeRemaining.value.days
 
@@ -262,15 +273,7 @@ const draw = () => {
   }
 }
 
-const drawHand = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  length: number,
-  angle: number,
-  width: number,
-  color: string
-) => {
+function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, length: number, angle: number, width: number, color: string) {
   const rad = angle * Math.PI / 180
   const endX = x + Math.cos(rad) * length
   const endY = y + Math.sin(rad) * length
@@ -284,7 +287,7 @@ const drawHand = (
   ctx.stroke()
 }
 
-const animate = () => {
+function animate() {
   now.value = new Date()
   draw()
   rafId = requestAnimationFrame(animate)
@@ -295,15 +298,16 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (rafId) cancelAnimationFrame(rafId)
+  if (rafId)
+    cancelAnimationFrame(rafId)
 })
 
 watch([progress, () => props.size, () => colorMode.value], draw)
 
-const formatDate = (date: Date) => {
+function formatDate(date: Date) {
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
-    month: '2-digit'
+    month: '2-digit',
   })
 }
 const showDetails = ref(false)
@@ -318,14 +322,18 @@ const showDetails = ref(false)
       <!-- Informação Minimalista no Centro -->
       <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
         <div class="pt-8">
-          <div class="text-[10px] uppercase font-bold tracking-widest mb-0.5"
-            :style="{ color: clockState.color + '99' }">
+          <div
+            class="text-[10px] uppercase font-bold tracking-widest mb-0.5"
+            :style="{ color: `${clockState.color}99` }"
+          >
             {{ isNotStarted ? 'Início em' : isFinished ? 'Encerrado' : isLast24Hours ? 'Últimas' : 'Falta' }}
           </div>
-          <div class="text-lg font-bold tabular-nums" :style="{
-            color: clockState.color,
-            fontFamily: 'ui-monospace, monospace'
-          }">
+          <div
+            class="text-lg font-bold tabular-nums" :style="{
+              color: clockState.color,
+              fontFamily: 'ui-monospace, monospace',
+            }"
+          >
             <template v-if="isLast24Hours">
               {{ String(timeRemaining.hours).padStart(2, '0') }}:{{ String(timeRemaining.minutes).padStart(2, '0') }}
             </template>
@@ -338,26 +346,31 @@ const showDetails = ref(false)
 
       <!-- Badge de Status (pequeno, discreto) -->
       <div class="absolute top-2 right-2 pointer-events-none">
-        <div class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide" :style="{
-          backgroundColor: clockState.lightColor,
-          color: clockState.color
-        }">
+        <div
+          class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide" :style="{
+            backgroundColor: clockState.lightColor,
+            color: clockState.color,
+          }"
+        >
           {{ clockState.status }}
         </div>
       </div>
     </div>
 
     <!-- Tooltip com Detalhes (aparece no click) -->
-    <div v-if="showDetails"
-      class="absolute left-1/2 -translate-x-1/2 top-full mt-4 transition-all duration-200 ease-out z-[100] pointer-events-auto">
+    <div
+      v-if="showDetails"
+      class="absolute left-1/2 -translate-x-1/2 top-full mt-4 transition-all duration-200 ease-out z-[100] pointer-events-auto"
+    >
       <div
-        class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 min-w-[280px]">
+        class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 min-w-[280px]"
+      >
         <!-- Tempo Restante -->
         <div class="mb-4">
           <div class="text-xs font-semibold text-slate-500 mb-2 flex items-center justify-between">
             <span>{{ isNotStarted ? 'Inicia em' : isFinished ? 'Tempo esgotado' : 'Tempo restante' }}</span>
             <div class="flex items-center gap-1.5">
-              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: clockState.color }"></div>
+              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: clockState.color }" />
               <span class="text-[10px]">{{ clockState.status }}</span>
             </div>
           </div>
@@ -367,43 +380,57 @@ const showDetails = ref(false)
               <div class="text-2xl font-bold text-slate-800 dark:text-white">
                 {{ timeRemaining.days }}
               </div>
-              <div class="text-[10px] text-slate-500 mt-0.5">dias</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">
+                dias
+              </div>
             </div>
             <div class="text-center">
               <div class="text-2xl font-bold text-slate-800 dark:text-white">
                 {{ String(timeRemaining.hours).padStart(2, '0') }}
               </div>
-              <div class="text-[10px] text-slate-500 mt-0.5">hrs</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">
+                hrs
+              </div>
             </div>
             <div class="text-center">
               <div class="text-2xl font-bold text-slate-800 dark:text-white">
                 {{ String(timeRemaining.minutes).padStart(2, '0') }}
               </div>
-              <div class="text-[10px] text-slate-500 mt-0.5">min</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">
+                min
+              </div>
             </div>
             <div class="text-center">
               <div class="text-2xl font-bold text-slate-800 dark:text-white">
                 {{ String(timeRemaining.seconds).padStart(2, '0') }}
               </div>
-              <div class="text-[10px] text-slate-500 mt-0.5">seg</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">
+                seg
+              </div>
             </div>
           </div>
 
           <div v-else class="text-center py-2">
-            <div class="text-lg font-bold text-red-600">Prazo finalizado</div>
+            <div class="text-lg font-bold text-red-600">
+              Prazo finalizado
+            </div>
           </div>
         </div>
 
         <!-- Datas -->
         <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
           <div class="text-center">
-            <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">Início</div>
+            <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">
+              Início
+            </div>
             <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
               {{ formatDate(start) }}
             </div>
           </div>
           <div class="text-center">
-            <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">Término</div>
+            <div class="text-[10px] font-semibold text-slate-500 uppercase mb-1">
+              Término
+            </div>
             <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
               {{ formatDate(end) }}
             </div>
@@ -412,8 +439,8 @@ const showDetails = ref(false)
 
         <!-- Seta do tooltip -->
         <div
-          class="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-white dark:bg-slate-800 border-l border-t border-slate-200 dark:border-slate-700 rotate-45">
-        </div>
+          class="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-white dark:bg-slate-800 border-l border-t border-slate-200 dark:border-slate-700 rotate-45"
+        />
       </div>
     </div>
   </div>

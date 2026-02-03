@@ -47,9 +47,11 @@ async function fetchMember() {
         }
       }
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Erro ao buscar membro:', error)
-  } finally {
+  }
+  finally {
     pending.value = false
   }
 }
@@ -237,7 +239,8 @@ function getRoleDetails(role: string): any[] {
 
 // Format date
 function formatDate(date: string): string {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',
@@ -252,12 +255,13 @@ function editMember() {
 
 // Resend invite
 async function resendInvite() {
-  if (!member.value?.id) return
+  if (!member.value?.id)
+    return
 
   resendingInvite.value = true
   try {
     const { data } = await useCustomFetch<any>(`/tenant/members/${member.value.id}/resend-invite`, {
-      method: 'POST'
+      method: 'POST',
     })
 
     if (data?.success) {
@@ -278,12 +282,14 @@ async function resendInvite() {
             icon: 'lucide:clipboard-check',
             duration: 3000,
           })
-        } catch (e) {
+        }
+        catch (e) {
           console.log('Link:', data.data.inviteLink)
         }
       }
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Erro ao reenviar convite:', error)
     toaster.add({
       title: 'Erro',
@@ -291,7 +297,8 @@ async function resendInvite() {
       icon: 'lucide:alert-triangle',
       duration: 5000,
     })
-  } finally {
+  }
+  finally {
     resendingInvite.value = false
   }
 }
@@ -318,8 +325,10 @@ watch(slug, () => {
     <!-- Member Details -->
     <BaseCard v-else-if="member" rounded="lg">
       <!-- Pending Invite Alert -->
-      <div v-if="member.status === 'PENDING_INVITE'"
-        class="bg-warning-50 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800/50 p-4 flex items-center justify-between gap-4">
+      <div
+        v-if="member.status === 'PENDING_INVITE'"
+        class="bg-warning-50 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800/50 p-4 flex items-center justify-between gap-4"
+      >
         <div class="flex items-center gap-3">
           <Icon name="lucide:clock" class="text-warning-500 size-5" />
           <div>
@@ -331,8 +340,10 @@ watch(slug, () => {
             </BaseText>
           </div>
         </div>
-        <BaseButton size="sm" variant="muted" @click="resendInvite" :loading="resendingInvite"
-          :disabled="resendingInvite">
+        <BaseButton
+          size="sm" variant="muted" :loading="resendingInvite" :disabled="resendingInvite"
+          @click="resendInvite"
+        >
           <Icon v-if="!resendingInvite" name="lucide:send" class="size-4 mr-1" />
           {{ resendingInvite ? 'Enviando...' : 'Reenviar Convite' }}
         </BaseButton>
@@ -361,9 +372,11 @@ watch(slug, () => {
                 <BaseTag v-if="member.status === 'PENDING_INVITE'" rounded="lg" color="warning" size="sm">
                   Pendente
                 </BaseTag>
-                <BaseTag v-else rounded="lg"
+                <BaseTag
+                  v-else rounded="lg"
                   :class="member.isActive ? 'bg-success-500 text-white' : 'bg-red-500 text-white'" variant="none"
-                  size="sm">
+                  size="sm"
+                >
                   {{ member.isActive ? 'Ativo' : 'Inativo' }}
                 </BaseTag>
               </div>
@@ -380,28 +393,36 @@ watch(slug, () => {
       <div class="p-6 sm:p-8 border-b border-muted-200 dark:border-muted-800">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <BaseText size="xs" class="text-muted-400 uppercase mb-1">Telefone</BaseText>
-            <br />
+            <BaseText size="xs" class="text-muted-400 uppercase mb-1">
+              Telefone
+            </BaseText>
+            <br>
             <BaseText size="sm" class="text-muted-700 dark:text-muted-200">
               {{ member.phone || 'Não informado' }}
             </BaseText>
           </div>
           <div>
-            <BaseText size="xs" class="text-muted-400 uppercase mb-1">Membro desde</BaseText>
-            <br />
+            <BaseText size="xs" class="text-muted-400 uppercase mb-1">
+              Membro desde
+            </BaseText>
+            <br>
             <BaseText size="sm" class="text-muted-700 dark:text-muted-200">
               {{ formatDate(member.createdAt) }}
             </BaseText>
           </div>
           <div>
-            <BaseText size="xs" class="text-muted-400 uppercase mb-1">Status</BaseText> <br />
+            <BaseText size="xs" class="text-muted-400 uppercase mb-1">
+              Status
+            </BaseText> <br>
             <BaseText size="sm" class="text-muted-700 dark:text-muted-200">
               {{ member.isActive ? 'Conta ativa' : 'Conta desativada' }}
             </BaseText>
           </div>
           <div>
-            <BaseText size="xs" class="text-muted-400 uppercase mb-1">Função</BaseText>
-            <br />
+            <BaseText size="xs" class="text-muted-400 uppercase mb-1">
+              Função
+            </BaseText>
+            <br>
             <BaseText size="sm" class="text-muted-700 dark:text-muted-200">
               {{ member.role.label }}
             </BaseText>
@@ -416,8 +437,10 @@ watch(slug, () => {
         </BaseHeading>
 
         <div class="space-y-6">
-          <div v-for="roleDetail in member.role.details" :key="roleDetail.label"
-            class="border-muted-200 dark:border-muted-800 grid grid-cols-12 border-b pb-6 last:border-0">
+          <div
+            v-for="roleDetail in member.role.details" :key="roleDetail.label"
+            class="border-muted-200 dark:border-muted-800 grid grid-cols-12 border-b pb-6 last:border-0"
+          >
             <div class="col-span-12 sm:col-span-4 mb-4 sm:mb-0">
               <BaseParagraph size="sm" class="text-muted-500">
                 {{ roleDetail.label }}
@@ -429,8 +452,10 @@ watch(slug, () => {
             <div class="col-span-12 sm:col-span-8">
               <ul class="space-y-2">
                 <li v-for="permission in roleDetail.permissions" :key="permission.label" class="flex gap-2 items-start">
-                  <Icon v-if="permission.status" name="lucide:check"
-                    class="text-success-500 relative top-0.5 size-4 shrink-0" />
+                  <Icon
+                    v-if="permission.status" name="lucide:check"
+                    class="text-success-500 relative top-0.5 size-4 shrink-0"
+                  />
                   <Icon v-else name="lucide:x" class="text-danger-500 relative top-0.5 size-4 shrink-0" />
                   <BaseParagraph size="sm" class="text-muted-500">
                     {{ permission.label }}

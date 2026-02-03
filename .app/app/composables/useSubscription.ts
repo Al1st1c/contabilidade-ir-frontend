@@ -60,15 +60,19 @@ export function useSubscription() {
       const { data } = await useCustomFetch<any>('/subscriptions/plans')
       if (Array.isArray(data)) {
         plans.value = data
-      } else if (data && Array.isArray(data.data)) {
+      }
+      else if (data && Array.isArray(data.data)) {
         plans.value = data.data
-      } else {
+      }
+      else {
         plans.value = []
         console.error('Formato de resposta de planos inválido:', data)
       }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.message || 'Erro ao carregar planos'
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -80,12 +84,15 @@ export function useSubscription() {
       const { data } = await useCustomFetch<any>('/subscriptions/my-subscription')
       if (data && data.data) {
         currentSubscription.value = data.data
-      } else {
+      }
+      else {
         currentSubscription.value = data
       }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.message || 'Erro ao carregar sua assinatura'
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -96,24 +103,26 @@ export function useSubscription() {
     try {
       const { data } = await useCustomFetch<Subscription>('/subscriptions/start-trial', {
         method: 'POST',
-        body: { planSlug }
+        body: { planSlug },
       })
       currentSubscription.value = data
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.message || 'Erro ao iniciar período de teste'
       return { success: false, error: error.value }
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
 
   const subscribe = async (params: {
-    planSlug: string;
-    billingPeriod: string;
-    paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO';
-    customLimits?: any;
-    customPrice?: number;
+    planSlug: string
+    billingPeriod: string
+    paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO'
+    customLimits?: any
+    customPrice?: number
   }) => {
     loading.value = true
     error.value = null
@@ -123,10 +132,12 @@ export function useSubscription() {
         body: params,
       })
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.data?.message || err.message || 'Erro ao processar assinatura'
       return { success: false, error: error.value }
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -138,10 +149,12 @@ export function useSubscription() {
         method: 'POST',
       })
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.message || 'Erro ao selecionar plano gratuito'
       return { success: false, error: error.value }
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -150,7 +163,8 @@ export function useSubscription() {
     try {
       const { data } = await useCustomFetch<any>(`/payments/${paymentId}/status`)
       return { success: true, status: data.status }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       return { success: false, error: err.message }
     }
   }
@@ -159,7 +173,8 @@ export function useSubscription() {
     try {
       const { data } = await useCustomFetch<any>('/subscriptions/prepaid/balance')
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       return { success: false, error: err.message }
     }
   }
@@ -170,13 +185,15 @@ export function useSubscription() {
     try {
       const { data } = await useCustomFetch<any>('/subscriptions/prepaid/purchase', {
         method: 'POST',
-        body: { amount, paymentMethod }
+        body: { amount, paymentMethod },
       })
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       error.value = err.message || 'Erro ao comprar créditos'
       return { success: false, error: error.value }
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -188,14 +205,17 @@ export function useSubscription() {
       const query = amount ? `?code=${code}&amount=${amount}` : `?code=${code}`
       const { data } = await useCustomFetch<any>(`/subscriptions/coupons/validate${query}`)
       return { success: true, data }
-    } catch (err: any) {
+    }
+    catch (err: any) {
       if (err.statusCode === 404 || err.status === 404 || err.message?.includes('404')) {
         error.value = 'Cupom não encontrado ou inválido'
-      } else {
+      }
+      else {
         error.value = err.data?.message || err.message || 'Erro ao validar cupom'
       }
       return { success: false, error: error.value }
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -213,6 +233,6 @@ export function useSubscription() {
     getPaymentStatus,
     getPrepaidBalance,
     purchaseCredits,
-    validateCoupon
+    validateCoupon,
   }
 }

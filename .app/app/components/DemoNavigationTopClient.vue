@@ -21,11 +21,11 @@ const props = withDefaults(
           {{ props.title }}
         </BaseHeading>
       </div>
-      
+
       <!-- Botão de voltar à direita -->
       <div class="flex items-center">
-        <NuxtLink 
-          :to="props.closeTo" 
+        <NuxtLink
+          :to="props.closeTo"
           class="group flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-all duration-300 border border-muted-200 dark:border-muted-700"
         >
           <Icon

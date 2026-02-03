@@ -9,24 +9,17 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'saved'])
 
 const { useCustomFetch } = useApi()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
 const toaster = useNuiToasts()
-const { open } = usePanels()
-// No import needed for auto-imported components, or use direct import if needed
-// import PanelsPanelClientDetails from '~/components/panels/PanelClientDetails.vue'
 
-// States
+// ─── States ──────────────────────────────────────────────────────────────────
 const isLoading = ref(true)
 const isSaving = ref(false)
 const declaration = ref<any>(null)
 const isGeneratingLink = ref(false)
 const collectionLink = ref<any>(null)
-const activeTab = ref('activity')
 const smsMessage = ref('')
 const selectedTemplateIndex = ref<number | null>(null)
 const isSendingSms = ref(false)
-const activeSidebarTab = ref('details')
 const checklistItems = ref<any[]>([])
 const isSavingChecklist = ref(false)
 const newChecklistTitle = ref('')
@@ -34,55 +27,79 @@ const showPreviewModal = ref(false)
 const previewItem = ref<any>(null)
 const signedPreviewUrl = ref('')
 const isPreviewLoading = ref(false)
+const showGovPassword = ref(false)
+const showClientDetailsPanel = ref(false)
 
+// ─── Active Tab ───────────────────────────────────────────────────────────────
+const activeTab = ref<'details' | 'checklist' | 'attachments' | 'official_documents' | 'communication'>('details')
+
+const tabs = [
+  { key: 'details', label: 'Detalhes', icon: 'lucide:file-text' },
+  { key: 'checklist', label: 'Checklist', icon: 'lucide:check-square' },
+  { key: 'attachments', label: 'Anexos', icon: 'lucide:paperclip' },
+  { key: 'official_documents', label: 'Documentos Oficiais', icon: 'lucide:shield-check' },
+  { key: 'communication', label: 'Comunicação', icon: 'lucide:send' },
+] as const
+
+// ─── Computed ─────────────────────────────────────────────────────────────────
+const selectedColumn = computed(() => kanbanColumns.value.find(col => col.value === form.value.status))
+const selectedPriority = computed(() => priorityOptions.find(opt => opt.value === form.value.priority))
+const assignedMember = computed(() => {
+  if (!form.value.assignedToId || form.value.assignedToId === 'unassigned')
+    return null
+  return teamMembers.value.find(member => member.id === form.value.assignedToId) || null
+})
+
+const isRectified = computed(() => {
+  const tags = form.value.tags || []
+  return tags.some(t => t.toUpperCase() === 'RETIFICADO' || t.toUpperCase() === 'RETIFICAÇÃO')
+})
+
+const filteredAttachments = computed(() => {
+  if (!declaration.value?.attachments)
+    return []
+  const officialCategories = ['irpf_backup', 'irpf_receipt', 'irpf_declaration', 'irpf_darf']
+  return declaration.value.attachments.filter((a: any) => !officialCategories.includes(a.category))
+})
+
+const baseUrl = computed(() => {
+  if (import.meta.server)
+    return ''
+  return window.location.origin
+})
+
+const pendingChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'pending').length)
+const uploadedChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'uploaded').length)
+
+// ─── Preview ──────────────────────────────────────────────────────────────────
 async function openPreview(item: any) {
   if (!item?.attachment?.previewUrl) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Documento sem URL de visualização',
-      icon: 'ph:warning-circle-fill'
-    })
+    toaster.add({ title: 'Erro', description: 'Documento sem URL de visualização', icon: 'ph:warning-circle-fill' })
     return
   }
-
   previewItem.value = item
   showPreviewModal.value = true
   signedPreviewUrl.value = ''
   isPreviewLoading.value = true
-
   try {
-    // Obter token de forma robusta
     const auth = useAuth()
     let authToken: string | null = auth.token.value
-
-    // Fallback para cookie direto se useAuth falar
-    if (!authToken) {
+    if (!authToken)
       authToken = useCookie<string>('auth_token').value
-    }
-
-    if (!authToken) {
-      throw new Error('Sessão expirada ou token não encontrado. Por favor, recarregue a página.')
-    }
-
+    if (!authToken)
+      throw new Error('Sessão expirada ou token não encontrado.')
     const { data } = await useCustomFetch<any>(item.attachment.previewUrl, {
-      headers: {
-        Authorization: `Bearer ${authToken}`
-      }
+      headers: { Authorization: `Bearer ${authToken}` },
     })
-
-    if (data?.url) {
+    if (data?.url)
       signedPreviewUrl.value = data.url
-    } else {
-      throw new Error('URL de pré-visualização não retornada')
-    }
-  } catch (error: any) {
+    else throw new Error('URL de pré-visualização não retornada')
+  }
+  catch (error: any) {
     console.error('Erro ao buscar URL de preview:', error)
-    toaster.add({
-      title: 'Erro de Visualização',
-      description: error.message || 'Não foi possível carregar o documento',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
+    toaster.add({ title: 'Erro de Visualização', description: error.message || 'Não foi possível carregar o documento', icon: 'ph:warning-circle-fill' })
+  }
+  finally {
     isPreviewLoading.value = false
   }
 }
@@ -90,78 +107,75 @@ async function openPreview(item: any) {
 async function handleDownload(item: any) {
   try {
     const auth = useAuth()
-    let authToken = auth.token.value || useCookie<string>('auth_token').value
-
-    if (!authToken) throw new Error('Sessão expirada')
-
+    const authToken = auth.token.value || useCookie<string>('auth_token').value
+    if (!authToken)
+      throw new Error('Sessão expirada')
     const { data } = await useCustomFetch<any>(item.previewUrl || item.attachment?.previewUrl, {
-      headers: { Authorization: `Bearer ${authToken}` }
+      headers: { Authorization: `Bearer ${authToken}` },
     })
-
-    if (data?.url) {
+    if (data?.url)
       window.open(data.url, '_blank')
-    }
-  } catch (error) {
-    console.error('Erro ao baixar:', error)
   }
+  catch (error) { console.error('Erro ao baixar:', error) }
 }
 
+// ─── SMS ──────────────────────────────────────────────────────────────────────
 const smsTemplates = [
-  {
-    id: 1,
-    icon: 'solar:document-add-linear',
-    title: 'Pedir Docs',
-    message: 'Ola [NOME], envie seus documentos para o IR pelo link: [LINK]. Evite multas! ConsTar.'
-  },
-  {
-    id: 2,
-    icon: 'solar:refresh-linear',
-    title: 'Status IR',
-    message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema. ConsTar.'
-  },
-  {
-    id: 3,
-    icon: 'solar:check-circle-linear',
-    title: 'Transmitido',
-    message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve. ConsTar.'
-  },
-  {
-    id: 4,
-    icon: 'solar:info-circle-linear',
-    title: 'Aviso Geral',
-    message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse [LINK] para verificar. Grato.'
-  }
+  { id: 1, icon: 'solar:document-add-linear', title: 'Pedir Docs', message: 'Ola [NOME], envie seus documentos para o IR pelo link: [LINK]. Evite multas! ConsTar.' },
+  { id: 2, icon: 'solar:refresh-linear', title: 'Status IR', message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema. ConsTar.' },
+  { id: 3, icon: 'solar:check-circle-linear', title: 'Transmitido', message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve. ConsTar.' },
+  { id: 4, icon: 'solar:info-circle-linear', title: 'Aviso Geral', message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse [LINK] para verificar. Grato.' },
 ]
 
 function removeAccents(str: string) {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x00-\x7F]/g, '')
+  return str.normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/[^\x00-\x7F]/g, '')
 }
 
 function handleSelectTemplate(index: number) {
   const templateObj = smsTemplates[index]
-  if (!templateObj) return
-
+  if (!templateObj)
+    return
   selectedTemplateIndex.value = index
   const firstName = removeAccents(declaration.value?.client?.name?.split(' ')[0] || 'Cliente')
   const statusName = removeAccents(declaration.value?.column?.name || 'Atualizado')
-  const fullUrl = collectionLink.value
-    ? `${window.location.origin}${collectionLink.value.url}`
-    : 'sistema'
-
-  let msg = templateObj.message
-    .replace('[NOME]', firstName)
-    .replace('[STATUS]', statusName)
-    .replace('[LINK]', fullUrl)
-
+  const fullUrl = collectionLink.value ? `${window.location.origin}${collectionLink.value.url}` : 'sistema'
+  const msg = templateObj.message.replace('[NOME]', firstName).replace('[STATUS]', statusName).replace('[LINK]', fullUrl)
   smsMessage.value = removeAccents(msg).substring(0, 160)
 }
 
-// Form state
+async function sendSms() {
+  if (!smsMessage.value.trim()) {
+    toaster.add({ title: 'Erro', description: 'Digite uma mensagem para enviar', icon: 'ph:warning-circle-fill' })
+    return
+  }
+  isSendingSms.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/send-sms`, {
+      method: 'POST',
+      body: { message: smsMessage.value },
+    })
+    if (data && data.success) {
+      toaster.add({ title: 'Sucesso', description: 'SMS enviado para o cliente!', icon: 'ph:chat-circle-dots-fill' })
+      smsMessage.value = ''
+      selectedTemplateIndex.value = null
+      await fetchDeclaration()
+    }
+    else {
+      toaster.add({ title: 'Erro', description: data?.message || 'Falha ao enviar SMS', icon: 'ph:warning-circle-fill' })
+    }
+  }
+  catch (error: any) {
+    toaster.add({ title: 'Erro', description: 'Erro na comunicação com o servidor', icon: 'ph:warning-circle-fill' })
+  }
+  finally { isSendingSms.value = false }
+}
+
+// ─── Form ─────────────────────────────────────────────────────────────────────
 const form = ref({
   status: '',
   priority: '',
   declarationType: '',
-  result: '',
+  result: 'neutral',
   resultValue: 0,
   serviceValue: 0,
   paymentStatus: '',
@@ -173,13 +187,7 @@ const form = ref({
   tags: [] as string[],
   rectificationDescription: '',
 })
-const showGovPassword = ref(false)
 const newTag = ref('')
-
-const isRectified = computed(() => {
-  const tags = form.value.tags || []
-  return tags.some(t => t.toUpperCase() === 'RETIFICADO' || t.toUpperCase() === 'RETIFICAÇÃO')
-})
 
 function addTag() {
   const tag = newTag.value.trim()
@@ -189,30 +197,12 @@ function addTag() {
   }
   newTag.value = ''
 }
-
 function removeTag(tag: string) {
   form.value.tags = form.value.tags.filter(t => t !== tag)
   save()
 }
 
-const filteredAttachments = computed(() => {
-  if (!declaration.value?.attachments) return []
-  const officialCategories = ['irpf_backup', 'irpf_receipt', 'irpf_declaration', 'irpf_darf']
-  return declaration.value.attachments.filter((a: any) => !officialCategories.includes(a.category))
-})
-
-// Team members for assignee dropdown
-const teamMembers = ref<any[]>([])
-const isLoadingTeam = ref(false)
-
-// Options
-const statusOptions = [
-  { label: 'Pendente', value: 'pending', color: 'warning' },
-  { label: 'Em Progresso', value: 'in_progress', color: 'info' },
-  { label: 'Transmitida', value: 'submitted', color: 'success' },
-  { label: 'Retificadora', value: 'rectifying', color: 'danger' },
-]
-
+// ─── Options ──────────────────────────────────────────────────────────────────
 const priorityOptions = [
   { label: 'Baixa', value: 'low', icon: 'lucide:arrow-down', color: 'text-muted-500' },
   { label: 'Média', value: 'medium', icon: 'lucide:minus', color: 'text-amber-500' },
@@ -220,8 +210,8 @@ const priorityOptions = [
 ]
 
 const resultOptions = [
-  { label: 'Restituição', value: 'refund' },
-  { label: 'A Pagar', value: 'pay' },
+  { label: 'Restituição', value: 'restitution' },
+  { label: 'Imposto a Pagar', value: 'tax_to_pay' },
   { label: 'Neutro', value: 'neutral' },
 ]
 
@@ -232,8 +222,14 @@ const paymentStatusOptions = [
   { label: 'Pago', value: 'paid' },
 ]
 
-// Methods
-// Methods
+const declarationTypeOptions = [
+  { label: 'Completa', value: 'complete' },
+  { label: 'Simplificada', value: 'simplified' },
+]
+
+// ─── Team & Columns ──────────────────────────────────────────────────────────
+const teamMembers = ref<any[]>([])
+const isLoadingTeam = ref(false)
 const kanbanColumns = ref<any[]>([])
 
 async function fetchKanbanColumns() {
@@ -244,45 +240,33 @@ async function fetchKanbanColumns() {
         label: col.name,
         value: col.id,
         id: col.id,
-        color: col.color
+        color: col.color,
       }))
     }
-  } catch (error) {
-    console.error('Erro ao buscar colunas:', error)
   }
+  catch (error) { console.error('Erro ao buscar colunas:', error) }
 }
-
-const baseUrl = computed(() => {
-  if (import.meta.server) return ''
-  return window.location.origin
-})
 
 async function fetchTeamMembers() {
   isLoadingTeam.value = true
   try {
     const { data } = await useCustomFetch<any>('/tenant/members')
-    if (data.success) {
+    if (data.success)
       teamMembers.value = data.data
-    }
-  } catch (error) {
-    console.error('Erro ao buscar equipe:', error)
-  } finally {
-    isLoadingTeam.value = false
   }
+  catch (error) { console.error('Erro ao buscar equipe:', error) }
+  finally { isLoadingTeam.value = false }
 }
 
+// ─── Fetch ────────────────────────────────────────────────────────────────────
 async function fetchDeclaration() {
   isLoading.value = true
   try {
-    // Force cache bust with timestamp
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}?t=${Date.now()}`)
     if (data && data.success) {
       const result = data.data
       declaration.value = result
-
-      // Populate form
       form.value = {
-        // We are using columnId as "Status" for the dropdown as per request
         status: result.column?.id || '',
         priority: result.priority,
         declarationType: result.declarationType,
@@ -298,208 +282,115 @@ async function fetchDeclaration() {
         tags: result.tags || [],
         rectificationDescription: result.rectificationDescription || '',
       }
-
-      // Check for latest collection link
-      if (result.collectionLinks?.length > 0) {
+      if (result.collectionLinks?.length > 0)
         collectionLink.value = result.collectionLinks[0]
-      }
-
-      // Populate checklist
       checklistItems.value = result.checklist || []
     }
-  } catch (error) {
-    console.error('Erro ao buscar detalhes da declaração:', error)
-  } finally {
-    isLoading.value = false
   }
+  catch (error) { console.error('Erro ao buscar detalhes:', error) }
+  finally { isLoading.value = false }
 }
 
+// ─── Checklist ────────────────────────────────────────────────────────────────
 async function addChecklistItem() {
-  if (!newChecklistTitle.value.trim()) return
-
-  const newItem = {
-    title: newChecklistTitle.value,
-    isRequired: true,
-    status: 'pending'
-  }
-
-  checklistItems.value.push(newItem)
+  if (!newChecklistTitle.value.trim())
+    return
+  checklistItems.value.push({ title: newChecklistTitle.value, isRequired: true, status: 'pending' })
   newChecklistTitle.value = ''
   await syncChecklist()
 }
-
 async function removeChecklistItem(index: number) {
   checklistItems.value.splice(index, 1)
   await syncChecklist()
 }
-
 async function toggleItemRequired(index: number) {
   checklistItems.value[index].isRequired = !checklistItems.value[index].isRequired
   await syncChecklist()
 }
-
 async function syncChecklist() {
   isSavingChecklist.value = true
   try {
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/sync`, {
       method: 'POST',
-      body: { items: checklistItems.value }
+      body: { items: checklistItems.value },
     })
-
-    if (data && data.success) {
+    if (data && data.success)
       checklistItems.value = data.data
-    }
-  } catch (error) {
-    console.error('Erro ao sincronizar checklist:', error)
-  } finally {
-    isSavingChecklist.value = false
   }
+  catch (error) { console.error('Erro ao sincronizar checklist:', error) }
+  finally { isSavingChecklist.value = false }
 }
-
 async function updateItemStatus(itemId: string, status: string, comment?: string) {
   try {
     await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/${itemId}`, {
       method: 'PATCH',
-      body: { status, comment }
+      body: { status, comment },
     })
     await fetchDeclaration()
-  } catch (error) {
-    console.error('Erro ao atualizar status do item:', error)
   }
+  catch (error) { console.error('Erro ao atualizar status:', error) }
 }
 
-async function sendSms() {
-  if (!smsMessage.value.trim()) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Digite uma mensagem para enviar',
-      icon: 'ph:warning-circle-fill'
-    })
-    return
-  }
-
-  isSendingSms.value = true
-  try {
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/send-sms`, {
-      method: 'POST',
-      body: { message: smsMessage.value }
-    })
-
-    if (data && data.success) {
-      toaster.add({
-        title: 'Sucesso',
-        description: 'SMS enviado para o cliente!',
-        icon: 'ph:chat-circle-dots-fill'
-      })
-      smsMessage.value = ''
-      // Refresh to see the new log
-      await fetchDeclaration()
-    } else {
-      toaster.add({
-        title: 'Erro',
-        description: data?.message || 'Falha ao enviar SMS',
-        icon: 'ph:warning-circle-fill'
-      })
-    }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Erro na comunicação com o servidor',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    isSendingSms.value = false
-  }
-}
-
+// ─── Save / Delete ────────────────────────────────────────────────────────────
 async function save() {
   isSaving.value = true
   try {
     const payload = { ...form.value }
-    if (payload.assignedToId === 'unassigned') payload.assignedToId = ''
-
+    if (payload.assignedToId === 'unassigned')
+      payload.assignedToId = ''
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
       method: 'PUT',
       body: payload,
     })
-
     if (data && data.success) {
-      toaster.add({
-        title: 'Salvo',
-        description: 'Alterações gravadas com sucesso',
-        icon: 'ph:check-circle-fill'
-      })
+      toaster.add({ title: 'Salvo', description: 'Alterações gravadas com sucesso', icon: 'ph:check-circle-fill' })
       await fetchDeclaration()
       emit('saved')
     }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao salvar alterações',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    isSaving.value = false
   }
+  catch (error: any) {
+    toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao salvar', icon: 'ph:warning-circle-fill' })
+  }
+  finally { isSaving.value = false }
 }
 
-async function remove() {
-  if (!confirm('Tem certeza que deseja excluir esta declaração?')) return
-
+async function confirmDelete() {
+  if (!confirm('Tem certeza que deseja excluir esta declaração? Esta ação não pode ser desfeita.'))
+    return
   try {
-    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
-      method: 'DELETE',
-    })
-
+    const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, { method: 'DELETE' })
     if (data && data.success) {
-      toaster.add({
-        title: 'Excluído',
-        description: 'Declaração removida com sucesso',
-        icon: 'ph:trash-fill'
-      })
+      toaster.add({ title: 'Excluído', description: 'Declaração excluída com sucesso', icon: 'ph:check-circle-fill' })
       emit('saved')
       emit('close')
     }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: 'Erro ao excluir declaração',
-      icon: 'ph:warning-circle-fill'
-    })
+  }
+  catch (error: any) {
+    toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao excluir', icon: 'ph:warning-circle-fill' })
   }
 }
 
+// ─── Collection Link ──────────────────────────────────────────────────────────
 function copyLink() {
   if (collectionLink.value) {
-    const fullUrl = `${window.location.origin}${collectionLink.value.url}`
-    navigator.clipboard.writeText(fullUrl)
-    toaster.add({
-      title: 'Copiado',
-      description: 'Link copiado para a área de transferência',
-      icon: 'ph:copy-fill'
-    })
+    navigator.clipboard.writeText(`${window.location.origin}${collectionLink.value.url}`)
+    toaster.add({ title: 'Copiado', description: 'Link copiado para a área de transferência', icon: 'ph:copy-fill' })
   }
 }
-
 async function generateLink() {
   isGeneratingLink.value = true
   try {
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/collection-link`, {
       method: 'POST',
-      body: { title: `Documentos para IR ${declaration.value.taxYear}` }
+      body: { title: `Documentos para IR ${declaration.value.taxYear}` },
     })
-
-    if (data && data.success) {
-      collectionLink.value = data.data
-      await fetchDeclaration()
-    }
-  } catch (error) {
-    console.error('Erro ao gerar link:', error)
-  } finally {
-    isGeneratingLink.value = false
+    if (data && data.success) { collectionLink.value = data.data; await fetchDeclaration() }
   }
+  catch (error) { console.error('Erro ao gerar link:', error) }
+  finally { isGeneratingLink.value = false }
 }
 
+// ─── File Upload ──────────────────────────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null)
 const officialFileInput = ref<HTMLInputElement | null>(null)
 const pendingFile = ref<File | null>(null)
@@ -514,928 +405,1079 @@ const officialDocumentSlots = [
   { label: 'DARF do IR', category: 'irpf_darf', icon: 'solar:bill-list-bold-duotone' },
 ]
 
+const officialDocumentsCount = computed(() => {
+  return officialDocumentSlots.reduce((acc, slot) => acc + (getSlotAttachment(slot.category) ? 1 : 0), 0)
+})
 function getSlotAttachment(category: string) {
   return declaration.value?.attachments?.find((a: any) => a.category === category)
 }
-
 function triggerOfficialUpload(category: string) {
   selectedOfficialCategory.value = category
   officialFileInput.value?.click()
 }
-
 async function handleOfficialFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
-  if (!target.files || target.files.length === 0) return
-
+  if (!target.files || target.files.length === 0)
+    return
   const file = target.files[0]
-  if (!file || !selectedOfficialCategory.value) return
-
+  if (!file || !selectedOfficialCategory.value)
+    return
   await uploadFile(file, null, selectedOfficialCategory.value)
   selectedOfficialCategory.value = null
 }
-
 async function deleteOfficialDocument(id: string) {
-  if (!confirm('Deseja excluir este documento oficial?')) return
-
+  if (!confirm('Deseja excluir este documento oficial?'))
+    return
   try {
-    await useCustomFetch(`/declarations/${props.declarationId}/attachments/${id}`, {
-      method: 'DELETE'
-    })
+    await useCustomFetch(`/declarations/${props.declarationId}/attachments/${id}`, { method: 'DELETE' })
     await fetchDeclaration()
-    toaster.add({
-      title: 'Excluído',
-      description: 'Documento oficial removido',
-      icon: 'ph:check-circle-fill'
-    })
-  } catch (error) {
-    console.error('Erro ao excluir:', error)
+    toaster.add({ title: 'Excluído', description: 'Documento oficial removido', icon: 'ph:check-circle-fill' })
   }
+  catch (error) { console.error('Erro ao excluir:', error) }
 }
-
-function triggerUpload() {
-  fileInput.value?.click()
-}
-
+function triggerUpload() { fileInput.value?.click() }
 async function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
-  if (!target.files || target.files.length === 0) return
-
+  if (!target.files || target.files.length === 0)
+    return
   const file = target.files[0]
-  if (!file) return
-
-  // Verificar se há itens pendentes no checklist
+  if (!file)
+    return
   const pendingItems = checklistItems.value.filter(item => item.status === 'pending')
-
   if (pendingItems.length > 0) {
-    // Mostrar modal para selecionar item do checklist
     pendingFile.value = file
     selectedChecklistItemId.value = pendingItems[0].id
     showChecklistModal.value = true
-  } else {
-    // Upload direto sem vincular a checklist
+  }
+  else {
     await uploadFile(file, null)
   }
 }
-
 async function uploadFile(file: File, checklistItemId: string | null, category: string | null = null) {
   const formData = new FormData()
   formData.append('file', file)
-
-  // Adicionar checklistItemId se fornecido
-  if (checklistItemId) {
+  if (checklistItemId)
     formData.append('checklistItemId', checklistItemId)
-  }
-
-  // Adicionar category se fornecido
-  if (category) {
+  if (category)
     formData.append('category', category)
-  }
-
   try {
-    toaster.add({
-      title: 'Enviando...',
-      description: `Enviando ${file.name}...`,
-      icon: 'ph:clock-fill',
-    })
-
+    toaster.add({ title: 'Enviando...', description: `Enviando ${file.name}...`, icon: 'ph:clock-fill' })
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/attachments`, {
       method: 'POST',
       body: formData,
     })
-
     if (data && (data.success || data.id)) {
       toaster.add({
         title: 'Sucesso',
-        description: checklistItemId
-          ? 'Arquivo vinculado ao checklist com sucesso'
-          : 'Arquivo enviado com sucesso',
-        icon: 'ph:check-circle-fill'
+        description: checklistItemId ? 'Arquivo vinculado ao checklist' : 'Arquivo enviado com sucesso',
+        icon: 'ph:check-circle-fill',
       })
-
-      // Refresh data from server to get updated attachments and logs
       await fetchDeclaration()
-
-      // Notify parent to update board (e.g. attachment count)
       emit('saved')
-
-      // Fechar modal e limpar estados
       showChecklistModal.value = false
       pendingFile.value = null
       selectedChecklistItemId.value = null
     }
-  } catch (error: any) {
-    toaster.add({
-      title: 'Erro',
-      description: error.data?.message || 'Erro ao enviar arquivo',
-      icon: 'ph:warning-circle-fill'
-    })
-  } finally {
-    if (fileInput.value) fileInput.value.value = ''
+  }
+  catch (error: any) {
+    toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao enviar arquivo', icon: 'ph:warning-circle-fill' })
+  }
+  finally {
+    if (fileInput.value)
+      fileInput.value.value = ''
   }
 }
-
 function confirmChecklistUpload() {
-  if (pendingFile.value) {
+  if (pendingFile.value)
     uploadFile(pendingFile.value, selectedChecklistItemId.value)
-  }
 }
-
 function cancelChecklistUpload() {
   showChecklistModal.value = false
   pendingFile.value = null
   selectedChecklistItemId.value = null
-  if (fileInput.value) fileInput.value.value = ''
+  if (fileInput.value)
+    fileInput.value.value = ''
 }
 
+// ─── Mount ────────────────────────────────────────────────────────────────────
 onMounted(() => {
-  fetchKanbanColumns() // Fetch dynamic columns
+  fetchKanbanColumns()
   fetchDeclaration()
   fetchTeamMembers()
 })
 </script>
 
 <template>
-  <FocusScope
-    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-5xl shadow-2xl flex flex-col h-screen overflow-hidden">
-    <!-- Header -->
-    <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-b px-6 shrink-0 z-20 bg-white dark:bg-muted-900">
-      <div v-if="declaration" class="flex items-center gap-4">
-        <div class="flex flex-col">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-muted-400">#{{ declaration.id.slice(0, 6) }}</span>
-            <BaseHeading as="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
-              IR {{ declaration.taxYear }} - {{ declaration.client?.name }}
+  <FocusScope class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-6xl shadow-2xl flex flex-col h-screen overflow-hidden">
+    <!-- ═══ HEADER ═══ -->
+    <div class="border-muted-200 dark:border-muted-800 border-b bg-white dark:bg-muted-900 shrink-0 z-20">
+      <!-- Row 1: key + título + close -->
+      <div class="flex h-14 w-full items-center justify-between px-6">
+        <div v-if="declaration" class="flex items-center gap-3 min-w-0">
+          <span class="inline-flex items-center gap-1.5 bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-300 text-xs font-mono font-semibold px-2.5 py-1 rounded-md shrink-0">
+            <Icon name="lucide:hash" class="size-3" />
+            {{ declaration.id.slice(0, 8).toUpperCase() }}
+          </span>
+          <div class="flex items-center gap-2 min-w-0">
+            <BaseHeading as="h3" size="sm" weight="semibold" class="text-muted-800 dark:text-muted-100 truncate">
+              IR {{ declaration.taxYear }} — {{ declaration.client?.name }}
             </BaseHeading>
-            <BaseTag v-if="declaration.declarationType === 'complete'" size="sm" variant="muted" color="primary">
-              Completa</BaseTag>
-            <BaseTag v-else size="sm" variant="muted" color="info">Simplificada</BaseTag>
+            <BaseTag size="sm" :color="declaration.declarationType === 'complete' ? 'primary' : 'info'" variant="muted">
+              {{ declaration.declarationType === 'complete' ? 'Completa' : 'Simplificada' }}
+            </BaseTag>
           </div>
         </div>
-      </div>
-      <div v-else class="flex flex-col gap-1">
-        <BasePlaceload class="h-4 w-48 rounded" />
+        <div v-else>
+          <BasePlaceload class="h-5 w-56 rounded" />
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <div v-if="isSaving" class="mr-1">
+            <Icon name="svg-spinners:ring-resize" class="size-4 text-muted-400" />
+          </div>
+          <button type="button" class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-muted-600 rounded-lg p-1.5 transition-colors" @click="$emit('close')">
+            <Icon name="lucide:x" class="size-5" />
+          </button>
+        </div>
       </div>
 
-      <div class="flex items-center">
-        <div v-if="isSaving" class="mr-3 flex items-center animate-fade-in">
-          <Icon name="svg-spinners:ring-resize" class="size-5 text-muted-400" />
+      <!-- Row 2: status strip -->
+      <div v-if="declaration" class="flex items-center gap-3 px-6 pb-2.5 text-xs text-muted-500 flex-wrap">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-muted-200 dark:border-muted-700 bg-muted-50 dark:bg-muted-800">
+          <span class="size-2 rounded-full" :style="`background-color: var(--color-${selectedColumn?.color || 'gray'}-500, #9ca3af)`" />
+          <span class="font-semibold text-muted-700 dark:text-muted-200">{{ selectedColumn?.label || 'Sem status' }}</span>
+        </span>
+        <div class="flex items-center gap-1.5">
+          <Icon :name="selectedPriority?.icon || 'lucide:minus'" class="size-3.5" :class="selectedPriority?.color || 'text-muted-400'" />
+          <span class="font-semibold">{{ selectedPriority?.label || '—' }}</span>
         </div>
-        <button type="button"
-          class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-500 rounded-full p-2 transition-colors duration-300"
-          @click="() => $emit('close')">
-          <Icon name="lucide:x" class="size-5" />
+        <span class="text-muted-300 dark:text-muted-700">·</span>
+        <div class="flex items-center gap-1.5">
+          <BaseAvatar v-if="assignedMember" :src="assignedMember.photo" :text="assignedMember.name?.charAt(0)" size="xs" />
+          <Icon v-else name="lucide:user" class="size-3.5 text-muted-400" />
+          <span class="font-semibold">{{ assignedMember?.name || 'Sem responsável' }}</span>
+        </div>
+        <span class="text-muted-300 dark:text-muted-700">·</span>
+        <div class="flex items-center gap-1.5">
+          <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
+          <span class="font-semibold">{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo' }}</span>
+        </div>
+        <span class="text-muted-300 dark:text-muted-700">·</span>
+        <div class="flex items-center gap-1.5">
+          <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
+          <span class="font-semibold">{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro' }}</span>
+          <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
+            R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Row 3: Tabs -->
+      <div class="flex items-center gap-1 px-6 border-t border-muted-100 dark:border-muted-800">
+        <button
+          v-for="tab in tabs" :key="tab.key" type="button"
+          class="relative flex items-center gap-2 px-3 py-2.5 text-xs font-semibold transition-all"
+          :class="activeTab === tab.key ? 'text-primary-600 dark:text-primary-400' : 'text-muted-400 hover:text-muted-600 dark:hover:text-muted-300'"
+          @click="activeTab = tab.key"
+        >
+          <Icon :name="tab.icon" class="size-3.5" />
+          <span class="uppercase tracking-wider">{{ tab.label }}</span>
+
+          <!-- Badge checklist -->
+          <span
+            v-if="tab.key === 'checklist' && (pendingChecklistCount > 0 || uploadedChecklistCount > 0)"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold"
+            :class="uploadedChecklistCount > 0 ? 'bg-warning-100 text-warning-700' : 'bg-muted-100 text-muted-500'"
+          >{{ uploadedChecklistCount > 0 ? uploadedChecklistCount : pendingChecklistCount }}</span>
+
+          <!-- Badge anexos -->
+          <span
+            v-if="tab.key === 'attachments' && filteredAttachments.length > 0"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold bg-muted-100 text-muted-500"
+          >{{ filteredAttachments.length }}</span>
+
+          <!-- Badge documentos oficiais -->
+          <span
+            v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold bg-muted-100 text-muted-500"
+          >{{ officialDocumentsCount }}</span>
+
+          <span v-if="activeTab === tab.key" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />
         </button>
       </div>
     </div>
 
-    <!-- Content -->
+    <!-- ═══ BODY ═══ -->
     <div class="flex-1 overflow-hidden flex flex-col md:flex-row">
-      <!-- Loading State -->
+      <!-- Loading -->
       <div v-if="isLoading" class="flex flex-col items-center justify-center w-full h-full min-h-[400px]">
         <BaseLoader class="mb-4 size-10 text-primary-500" />
-        <BaseParagraph size="sm" class="text-muted-500">Carregando detalhes do IR...</BaseParagraph>
+        <BaseParagraph size="sm" class="text-muted-500">
+          Carregando detalhes do IR...
+        </BaseParagraph>
       </div>
 
-      <div v-else-if="declaration" class="w-full flex flex-col md:flex-row h-full">
-        <!-- Main Content (Left) -->
-        <div
-          class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-muted-900 border-r border-muted-200 dark:border-muted-800">
-
-          <!-- Client Data Section -->
-          <div class="space-y-4">
-            <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
-              Dados do Cliente
-            </BaseHeading>
-            <BaseCard rounded="lg" class="p-6 bg-muted-50 dark:bg-muted-900/40 border-muted-200 dark:border-muted-800">
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Nome Completo</p>
-                  <p class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ declaration.client?.name }}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">CPF</p>
-                  <p class="text-sm font-mono text-muted-800 dark:text-muted-100">{{ declaration.client?.cpf }}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Telefone/WhatsApp</p>
-                  <p class="text-sm text-muted-800 dark:text-muted-100">{{ declaration.client?.phone || 'Não informado'
-                    }}</p>
+      <template v-else-if="declaration">
+        <!-- ════ MAIN CONTENT ════ -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 bg-white dark:bg-muted-900 nui-slimscroll">
+          <!-- ━━━ TAB: DETALHES ━━━ -->
+          <div v-if="activeTab === 'details'" class="space-y-6 animate-fade-in">
+            <!-- Cliente: card compacto no topo -->
+            <div class="flex items-center gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800">
+              <div class="size-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
+                <Icon name="lucide:user" class="size-5 text-primary-500" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-muted-800 dark:text-muted-100">
+                  {{ declaration.client?.name }}
+                </p>
+                <div class="flex items-center gap-3 mt-0.5 flex-wrap">
+                  <span class="text-xs font-mono text-muted-500">{{ declaration.client?.cpf }}</span>
+                  <span class="text-muted-300 dark:text-muted-700">·</span>
+                  <span class="text-xs text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
                 </div>
               </div>
-            </BaseCard>
-          </div>
-
-          <!-- Description -->
-          <div class="space-y-2">
-            <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
-              Descrição
-            </BaseHeading>
-            <BaseTextarea v-model="form.description" rounded="lg" rows="6"
-              placeholder="Adicione uma descrição detalhada, instruções ou checklist..." class="bg-transparent" />
-            <div class="flex justify-end">
-              <BaseButton v-if="form.description !== declaration.description" size="sm" variant="primary"
-                :loading="isSaving" @click="save">Salvar Descrição</BaseButton>
-            </div>
-          </div>
-
-          <!-- Attachments -->
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <BaseHeading as="h4" size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
-                Anexos ({{ declaration.attachments?.length || 0 }})
-              </BaseHeading>
-              <input type="file" ref="fileInput" class="hidden" @change="handleFileUpload" multiple />
-              <input type="file" ref="officialFileInput" class="hidden" @change="handleOfficialFileUpload" />
-              <BaseButton size="sm" variant="muted" @click="triggerUpload">
-                <Icon name="lucide:upload" class="size-4 mr-2" />
-                Adicionar Anexo
+              <!-- Tags inline do cliente -->
+              <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1 shrink-0">
+                <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted" class="text-[10px]">
+                  {{ tag }}
+                </BaseTag>
+              </div>
+              <BaseButton
+                size="sm"
+                variant="muted"
+                rounded="lg"
+                class="shrink-0"
+                @click="showClientDetailsPanel = true"
+              >
+                <Icon name="lucide:id-card" class="size-4 mr-1.5" /> Detalhes
               </BaseButton>
             </div>
 
-            <div v-if="filteredAttachments.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <BaseCard v-for="att in filteredAttachments" :key="att.id" rounded="lg"
-                class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-500 transition-colors cursor-pointer group">
-                <div class="flex items-start gap-3">
-                  <div class="size-10 rounded bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0">
-                    <Icon name="lucide:file-text" class="size-5 text-muted-500" />
+            <!-- Descrição: campo principal, grande e com destaque -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:align-left" class="size-4 text-muted-400" />
+                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                    Descrição
+                  </BaseText>
+                </div>
+                <BaseTag size="sm" variant="muted" class="text-[9px] uppercase font-bold tracking-tight">
+                  Público — cliente vê
+                </BaseTag>
+              </div>
+              <BaseTextarea
+                v-model="form.description"
+                rounded="lg"
+                rows="7"
+                placeholder="Adicione uma descrição detalhada, orientações ou instruções para o cliente..."
+                class="bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed transition-colors"
+                @blur="save"
+              />
+            </div>
+
+            <!-- Notas internas -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:eye-off" class="size-4 text-amber-500" />
+                  <BaseText size="xs" class="text-amber-600 dark:text-amber-400 uppercase tracking-widest font-bold">
+                    Notas Internas
+                  </BaseText>
+                </div>
+                <BaseTag size="sm" variant="muted" color="warning" class="text-[9px] uppercase font-bold tracking-tight">
+                  Privado — apenas equipe
+                </BaseTag>
+              </div>
+              <BaseTextarea
+                v-model="form.internalNotes"
+                rounded="lg"
+                rows="4"
+                placeholder="Notas visíveis apenas para a sua equipe..."
+                class="bg-amber-50/40 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/40 focus:border-amber-400 focus:ring-1 focus:ring-amber-500/20 text-sm leading-relaxed italic transition-colors"
+                @blur="save"
+              />
+            </div>
+
+            <!-- Retificação (condicional) -->
+            <div v-if="isRectified" class="space-y-2">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:alert-triangle" class="size-4 text-danger-500" />
+                <BaseText size="xs" class="text-danger-500 uppercase tracking-widest font-bold">
+                  Motivo da Retificação
+                </BaseText>
+              </div>
+              <BaseTextarea
+                v-model="form.rectificationDescription"
+                rounded="lg"
+                rows="3"
+                placeholder="Descreva o que motivou a retificação..."
+                class="bg-danger-50/30 dark:bg-danger-900/10 border border-danger-200/60 dark:border-danger-800/40 text-sm leading-relaxed"
+                @blur="save"
+              />
+            </div>
+
+            <!-- Docs Oficiais: compacto, 2x2 grid -->
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:shield-check" class="size-4 text-muted-400" />
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  Documentos Oficiais
+                </BaseText>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="slot in officialDocumentSlots" :key="slot.category"
+                  class="group relative flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-muted-950 transition-all"
+                  :class="getSlotAttachment(slot.category)
+                    ? 'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10'
+                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'"
+                >
+                  <div
+                    class="size-8 rounded-lg flex items-center justify-center shrink-0"
+                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'"
+                  >
+                    <Icon :name="slot.icon" class="size-4" :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'" />
                   </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-xs font-medium truncate" :title="att.fileName">{{ att.fileName }}</p>
-                    <p class="text-[10px] text-muted-400 capitalize">{{ att.category }}</p>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-bold text-muted-600 dark:text-muted-300 uppercase tracking-tight">
+                      {{ slot.label }}
+                    </p>
+                    <p v-if="getSlotAttachment(slot.category)" class="text-[10px] text-success-600 font-semibold mt-0.5 truncate">
+                      ✓ Enviado
+                    </p>
+                    <p v-else class="text-[10px] text-muted-400 mt-0.5">
+                      Aguardando...
+                    </p>
                   </div>
+                  <!-- actions on hover -->
                   <div class="flex gap-1 shrink-0">
-                    <button @click.stop="openPreview({ attachment: att, title: 'Anexo' })"
-                      class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-700 text-primary-500 transition-colors"
-                      title="Pré-visualizar">
-                      <Icon name="solar:eye-bold-duotone" class="size-4" />
-                    </button>
-                    <button @click.stop="handleDownload(att)"
-                      class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-700 text-muted-400 hover:text-primary-500 transition-colors"
-                      title="Download">
-                      <Icon name="lucide:download" class="size-4" />
+                    <template v-if="getSlotAttachment(slot.category)">
+                      <button class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-500 transition-all" @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })">
+                        <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                      </button>
+                      <button class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-danger-500 transition-all" @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)">
+                        <Icon name="lucide:trash-2" class="size-3.5" />
+                      </button>
+                    </template>
+                    <button v-else class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm" @click="triggerOfficialUpload(slot.category)">
+                      <Icon name="lucide:upload" class="size-3.5" />
                     </button>
                   </div>
                 </div>
-              </BaseCard>
-            </div>
-            <div v-else
-              class="text-center py-6 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
-              <p class="text-sm text-muted-400">Nenhum anexo encontrado</p>
-            </div>
-          </div>
-
-          <!-- Tabs: Activity & Notes -->
-          <div>
-            <div class="border-b border-muted-200 dark:border-muted-800 flex gap-6 mb-4">
-              <button @click="activeTab = 'activity'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
-                :class="activeTab === 'activity' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-400 hover:text-muted-600'">
-                Atividade
-              </button>
-              <button @click="activeTab = 'notes'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
-                :class="activeTab === 'notes' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-400 hover:text-muted-600'">
-                Notas Internas
-              </button>
+              </div>
             </div>
 
-            <!-- Activity Tab -->
-            <div v-if="activeTab === 'activity'" class="space-y-4">
-              <div v-if="declaration.auditLogs?.length > 0" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                <div v-for="log in declaration.auditLogs" :key="log.id" class="flex gap-3 text-sm">
-                  <div class="mt-0.5">
-                    <BaseAvatar v-if="log.userId" :text="log.userName?.charAt(0)" size="xs"
-                      class="bg-muted-200 dark:bg-muted-800 text-muted-600" />
-                    <div v-else class="size-6 rounded-full bg-primary-100 flex items-center justify-center">
-                      <Icon name="lucide:zap" class="size-3 text-primary-500" />
+            <!-- ── HISTÓRICO: timeline leve, sem cards ── -->
+            <div class="space-y-2 pt-2">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:clock" class="size-4 text-muted-400" />
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Histórico
+                </BaseText>
+                <span class="text-[9px] text-muted-300 font-normal ml-1">({{ declaration.auditLogs?.length || 0 }} entradas)</span>
+              </div>
+
+              <div v-if="declaration.auditLogs?.length > 0" class="relative pl-4 border-l-2 border-muted-200 dark:border-muted-800 ml-2 space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                <div v-for="log in declaration.auditLogs" :key="log.id" class="flex items-start gap-2.5">
+                  <!-- dot no timeline -->
+                  <div class="absolute -left-[5px] mt-1.5 size-2.5 rounded-full bg-muted-300 dark:bg-muted-600 border-2 border-white dark:border-muted-900 shrink-0" />
+
+                  <!-- conteúdo inline -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                      <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName || 'Sistema' }}</span>
+                      <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
                     </div>
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium text-muted-800 dark:text-muted-100">{{ log.userName || 'Sistema'
-                        }}</span>
-                      <span class="text-xs text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR') }}</span>
-                    </div>
-                    <p class="text-muted-600 dark:text-muted-300 mt-0.5">{{ log.description }}</p>
+                    <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
+                      {{ log.description }}
+                    </p>
                   </div>
                 </div>
               </div>
-              <div v-else class="text-muted-400 text-sm italic">Nenhuma atividade registrada.</div>
-            </div>
-
-            <!-- Internal Notes Tab -->
-            <div v-if="activeTab === 'notes'" class="space-y-2">
-              <BaseTextarea v-model="form.internalNotes" rounded="lg" rows="6"
-                placeholder="Notas visíveis apenas para a equipe..." />
-              <div class="flex justify-end">
-                <BaseButton size="sm" variant="primary" :loading="isSaving" @click="save">Salvar Nota</BaseButton>
-              </div>
+              <p v-else class="text-xs text-muted-400 italic ml-3">
+                Nenhuma atividade registrada.
+              </p>
             </div>
           </div>
-        </div>
 
-        <!-- Sidebar (Right) -->
-        <!-- Sidebar (Right) -->
-        <div
-          class="w-full md:w-80 border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/50 dark:bg-muted-900/20 overflow-y-auto flex flex-col h-full">
-
-          <!-- Sidebar Tabs -->
-          <div
-            class="flex border-b border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 px-4 shrink-0 overflow-x-auto no-scrollbar">
-            <button @click="activeSidebarTab = 'details'"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
-              :class="activeSidebarTab === 'details' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
-              Card
-            </button>
-            <button @click="activeSidebarTab = 'notification'"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
-              :class="activeSidebarTab === 'notification' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
-              Avisos
-            </button>
-            <button @click="activeSidebarTab = 'financial'"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
-              :class="activeSidebarTab === 'financial' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
-              Financeiro
-            </button>
-            <button @click="activeSidebarTab = 'checklist'"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
-              :class="activeSidebarTab === 'checklist' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
-              Checklist
-            </button>
-            <button @click="activeSidebarTab = 'documents'"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-wider transition-colors border-b-2 grow text-center whitespace-nowrap"
-              :class="activeSidebarTab === 'documents' ? 'border-primary-500 text-primary-500' : 'border-transparent text-muted-400 hover:text-muted-500'">
-              Documentos
-            </button>
-          </div>
-
-          <div class="flex-1 overflow-y-auto p-6 space-y-8">
-            <!-- TAB: DETALHES -->
-            <div v-if="activeSidebarTab === 'details'" class="space-y-6 animate-fade-in">
-              <!-- Status -->
-              <div class="space-y-3">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status</label>
-                <BaseSelect v-model="form.status" rounded="md" @update:model-value="() => save()">
-                  <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value" class="py-1">
-                    <div class="flex items-center gap-2">
-                      <div class="size-2 rounded-full" :class="`bg-${opt.color || 'gray'}-500`"></div>
-                      <span>{{ opt.label }}</span>
-                    </div>
-                  </BaseSelectItem>
-                </BaseSelect>
+          <!-- ━━━ TAB: CHECKLIST ━━━ -->
+          <div v-if="activeTab === 'checklist'" class="space-y-5 animate-fade-in">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:check-square" class="size-4 text-muted-400" />
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  Checklist
+                </BaseText>
               </div>
-
-              <!-- Assignee -->
-              <div class="space-y-3">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Responsável</label>
-                <BaseSelect v-model="form.assignedToId" rounded="md" placeholder="Selecione..."
-                  @update:model-value="save">
-                  <BaseSelectItem value="unassigned">
-                    <span class="text-muted-400">Sem responsável</span>
-                  </BaseSelectItem>
-                  <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
-                    <div class="flex items-center gap-2">
-                      <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
-                      <div>
-                        <span class="font-medium text-sm">{{ member.name }}</span>
-                      </div>
-                    </div>
-                  </BaseSelectItem>
-                </BaseSelect>
+              <div class="flex items-center gap-3">
+                <span v-if="isSavingChecklist" class="animate-spin text-primary-500"><Icon name="svg-spinners:ring-resize" class="size-4" /></span>
+                <span class="text-xs text-muted-400 font-semibold">{{ checklistItems.filter(i => i.status === 'approved').length }}/{{ checklistItems.length }} aprovados</span>
               </div>
+            </div>
 
-              <!-- Priority -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prioridade</label>
-                <div class="flex flex-wrap gap-2">
-                  <button v-for="p in priorityOptions" :key="p.value" @click="form.priority = p.value; save()"
-                    type="button"
-                    class="px-2 py-1 rounded text-xs font-medium border transition-all flex items-center gap-1" :class="form.priority === p.value
-                      ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
-                      : 'border-transparent hover:bg-muted-200 dark:hover:bg-muted-800 text-muted-500'">
-                    <Icon :name="p.icon" class="size-3" :class="p.color" />
-                    {{ p.label }}
-                  </button>
+            <!-- Input + botão -->
+            <div class="flex gap-2">
+              <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante de renda..." size="sm" rounded="lg" class="flex-1" @keyup.enter="addChecklistItem" />
+              <BaseButton size="sm" variant="primary" rounded="lg" @click="addChecklistItem">
+                <Icon name="lucide:plus" class="size-4 mr-1" /> Adicionar
+              </BaseButton>
+            </div>
+
+            <!-- Progress bar -->
+            <div v-if="checklistItems.length > 0" class="w-full bg-muted-200 dark:bg-muted-800 rounded-full h-1.5">
+              <div
+                class="h-1.5 rounded-full transition-all duration-500"
+                :class="checklistItems.filter(i => i.status === 'approved').length === checklistItems.length && checklistItems.length > 0 ? 'bg-success-500' : 'bg-primary-500'"
+                :style="`width: ${checklistItems.length > 0 ? (checklistItems.filter(i => i.status === 'approved').length / checklistItems.length) * 100 : 0}%`"
+              />
+            </div>
+
+            <!-- Items -->
+            <div class="space-y-2">
+              <div
+                v-for="(item, idx) in checklistItems" :key="item.id || idx"
+                class="group flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-muted-950 transition-all"
+                :class="{
+                  'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10': item.status === 'approved',
+                  'border-danger-200 dark:border-danger-800 bg-danger-50/40 dark:bg-danger-900/10': item.status === 'rejected',
+                  'border-warning-200 dark:border-warning-800 bg-warning-50/40 dark:bg-warning-900/10': item.status === 'uploaded',
+                  'border-muted-200 dark:border-muted-800 hover:border-primary-300': item.status === 'pending',
+                }"
+              >
+                <!-- Status icon -->
+                <div
+                  class="size-6 rounded-full flex items-center justify-center shrink-0"
+                  :class="{
+                    'bg-success-100 text-success-600': item.status === 'approved',
+                    'bg-danger-100 text-danger-600': item.status === 'rejected',
+                    'bg-warning-100 text-warning-600': item.status === 'uploaded',
+                    'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
+                  }"
+                >
+                  <Icon :name="({ approved: 'lucide:check', rejected: 'lucide:x', uploaded: 'lucide:upload', pending: 'lucide:circle-dashed' })[item.status] || 'lucide:circle-dashed'" class="size-3" />
                 </div>
-              </div>
 
-              <!-- Tags -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Tags</label>
-                <div class="flex flex-wrap gap-1.5 mb-2">
-                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted"
-                    class="group relative py-1 px-2 pr-6">
-                    {{ tag }}
-                    <button @click="removeTag(tag)"
-                      class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all">
-                      <Icon name="lucide:x" class="size-3" />
-                    </button>
+                <!-- Title -->
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
+                    {{ item.title }}
+                  </p>
+                  <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="text-[9px] shrink-0">
+                    Obrigatório
+                  </BaseTag>
+                  <BaseTag v-if="item.status !== 'pending'" size="sm" :color="({ uploaded: 'warning', approved: 'success', rejected: 'danger' })[item.status]" variant="muted" class="text-[9px] shrink-0 capitalize">
+                    {{ ({ uploaded: 'Enviado', approved: 'Aprovado', rejected: 'Rejeitado' })[item.status] }}
                   </BaseTag>
                 </div>
-                <div class="flex gap-2">
-                  <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1"
-                    @keyup.enter="addTag" />
-                  <BaseButton size="sm" variant="muted" @click="addTag">
-                    <Icon name="lucide:plus" class="size-4" />
+
+                <!-- Arquivo enviado: nome + ações -->
+                <div v-if="item.status === 'uploaded' && item.attachment" class="flex items-center gap-2 shrink-0">
+                  <span class="text-[10px] text-muted-400 font-mono truncate max-w-[100px]">{{ item.attachment.fileName }}</span>
+                  <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)">
+                    <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                  </BaseButton>
+                  <BaseButton color="success" size="icon-sm" @click="updateItemStatus(item.id, 'approved')">
+                    <Icon name="lucide:check" class="size-3.5" />
+                  </BaseButton>
+                  <BaseButton color="danger" size="icon-sm" @click="updateItemStatus(item.id, 'rejected')">
+                    <Icon name="lucide:x" class="size-3.5" />
                   </BaseButton>
                 </div>
-              </div>
 
-              <!-- Rectification Description (Conditional) -->
-              <div v-if="isRectified"
-                class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800 animate-fade-in">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Motivo da Retificação</label>
-                <BaseTextarea v-model="form.rectificationDescription" rounded="md" rows="4"
-                  placeholder="Descreva o que motivou a retificação..." size="sm" @blur="save" />
-              </div>
-
-              <!-- Due Date -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Prazo de Entrega</label>
-                <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
-              </div>
-
-              <!-- Gov Password -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Senha GOV.br</label>
-                <div class="relative group">
-                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm"
-                    rounded="md" placeholder="Sua senha gov" class="pr-10" @blur="save" />
-                  <button type="button" @click="showGovPassword = !showGovPassword"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors">
-                    <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
-                      class="size-4" />
+                <!-- Actions: required toggle + delete -->
+                <div v-if="item.status !== 'uploaded' || !item.attachment" class="flex items-center gap-0.5 shrink-0">
+                  <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors" :class="item.isRequired ? 'text-danger-500' : 'text-muted-400 hover:text-primary-500'" @click="toggleItemRequired(idx)">
+                    <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle'" class="size-3.5" />
+                  </button>
+                  <button class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-muted-400 hover:text-danger-500 transition-all" @click="removeChecklistItem(idx)">
+                    <Icon name="lucide:trash-2" class="size-3.5" />
                   </button>
                 </div>
               </div>
 
-              <!-- Declaration Type -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Tipo de Declaração</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <button @click="form.declarationType = 'complete'; save()"
-                    class="text-xs p-2 rounded-lg border transition-all"
-                    :class="form.declarationType === 'complete' ? 'border-primary-500 bg-primary-500/5 text-primary-600' : 'border-muted-200 dark:border-muted-800 text-muted-400 hover:bg-muted-200 dark:hover:bg-muted-800'">Completa</button>
-                  <button @click="form.declarationType = 'simplified'; save()"
-                    class="text-xs p-2 rounded-lg border transition-all"
-                    :class="form.declarationType === 'simplified' ? 'border-primary-500 bg-primary-500/5 text-primary-600' : 'border-muted-200 dark:border-muted-800 text-muted-400 hover:bg-muted-200 dark:hover:bg-muted-800'">Simplificada</button>
-                </div>
+              <div v-if="checklistItems.length === 0" class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+                <Icon name="lucide:clipboard-list" class="size-8 text-muted-200 mx-auto mb-2" />
+                <p class="text-xs text-muted-400">
+                  Adicione itens ao checklist acima
+                </p>
               </div>
             </div>
+          </div>
 
-            <!-- TAB: NOTIFICAÇÕES -->
-            <div v-if="activeSidebarTab === 'notification'" class="space-y-6 animate-fade-in">
-              <!-- Client Link -->
-              <div class="space-y-3">
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Link de Coleta</label>
-                  <Icon name="lucide:share-2" class="size-4 text-primary-500" />
+          <!-- ━━━ TAB: ANEXOS ━━━ -->
+          <div v-if="activeTab === 'attachments'" class="space-y-6 animate-fade-in">
+            <input ref="fileInput" type="file" class="hidden" @change="handleFileUpload">
+
+            <!-- Anexos do cliente -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:paperclip" class="size-4 text-muted-400" />
+                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                    Anexos <span class="text-muted-300">({{ filteredAttachments.length }})</span>
+                  </BaseText>
                 </div>
-                <BaseCard rounded="lg" class="p-4 bg-primary-500/5 border-primary-500/10 border shadow-none">
-                  <div v-if="collectionLink">
-                    <p class="text-[10px] font-mono text-muted-500 mb-3 break-all line-clamp-2">
-                      {{ `${baseUrl}${collectionLink.url}` }}
-                    </p>
-                    <div class="flex gap-2">
-                      <BaseButton size="sm" class="flex-1" @click="copyLink">Copiar Link</BaseButton>
-                      <BaseButton size="icon-sm" :to="collectionLink.url" target="_blank">
-                        <Icon name="lucide:external-link" class="size-4" />
-                      </BaseButton>
+                <BaseButton size="sm" variant="muted" rounded="lg" @click="triggerUpload">
+                  <Icon name="lucide:upload" class="size-3.5 mr-1.5" /> Adicionar
+                </BaseButton>
+              </div>
+
+              <div v-if="filteredAttachments.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <BaseCard v-for="att in filteredAttachments" :key="att.id" rounded="lg" class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-400 hover:shadow-sm transition-all cursor-pointer group bg-white dark:bg-muted-950">
+                  <div class="flex items-start gap-3">
+                    <div class="size-9 rounded-lg bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0 group-hover:bg-primary-100 group-hover:text-primary-500 transition-colors">
+                      <Icon name="lucide:file-text" class="size-4.5 text-muted-500 group-hover:text-primary-500 transition-colors" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-semibold truncate text-muted-700 dark:text-muted-200" :title="att.fileName">
+                        {{ att.fileName }}
+                      </p>
+                      <p class="text-[10px] text-muted-400 capitalize mt-0.5">
+                        {{ att.category || 'Geral' }}
+                      </p>
                     </div>
                   </div>
-                  <div v-else>
-                    <p class="text-xs text-muted-500 mb-3">Gere um link para o cliente enviar documentos.</p>
-                    <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink"
-                      @click="generateLink">Gerar Novo Link</BaseButton>
+                  <div class="flex gap-1 mt-2.5 pt-2 border-t border-muted-100 dark:border-muted-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="flex-1 flex items-center justify-center gap-1 text-[10px] text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded py-0.5 transition-colors" @click.stop="openPreview({ attachment: att, title: 'Anexo' })">
+                      <Icon name="solar:eye-bold-duotone" class="size-3" /> Ver
+                    </button>
+                    <button class="flex-1 flex items-center justify-center gap-1 text-[10px] text-muted-500 hover:bg-muted-100 dark:hover:bg-muted-800 rounded py-0.5 transition-colors" @click.stop="handleDownload(att)">
+                      <Icon name="lucide:download" class="size-3" /> Baixar
+                    </button>
                   </div>
                 </BaseCard>
               </div>
+              <div v-else class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+                <Icon name="lucide:paperclip" class="size-8 text-muted-200 mx-auto mb-2" />
+                <p class="text-xs text-muted-400">
+                  Nenhum anexo. Clique "Adicionar" para enviar.
+                </p>
+              </div>
+            </div>
+          </div>
 
-              <!-- SMS Templates -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Enviar SMS</label>
-                  <BaseTag size="sm" variant="muted" color="success" class="scale-90">GSM Standard</BaseTag>
-                </div>
-
-                <div class="space-y-2">
-                  <button v-for="(tpl, idx) in smsTemplates" :key="tpl.id" @click="handleSelectTemplate(idx)"
-                    class="w-full text-left p-2.5 rounded-lg border transition-all duration-200 group"
-                    :class="selectedTemplateIndex === idx
-                      ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500'
-                      : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50'">
-                    <div class="flex items-center gap-3">
-                      <div class="size-7 rounded flex items-center justify-center transition-colors"
-                        :class="selectedTemplateIndex === idx ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500 group-hover:bg-primary-100 group-hover:text-primary-500'">
-                        <Icon :name="tpl.icon" class="size-3.5" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-[11px] font-bold text-muted-800 dark:text-muted-100 uppercase tracking-wider">{{
-                          tpl.title }}</p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                <div v-if="selectedTemplateIndex !== null" class="mt-4 animate-fade-in">
-                  <BaseCard rounded="lg" class="p-3 border-primary-500/20 bg-primary-500/5">
-                    <p class="text-xs text-muted-600 dark:text-muted-300 mb-3 italic leading-relaxed">
-                      "{{ smsMessage }}"
+          <!-- ━━━ TAB: DOCUMENTOS OFICIAIS ━━━ -->
+          <div v-if="activeTab === 'official_documents'" class="space-y-6 animate-fade-in">
+            <input ref="officialFileInput" type="file" class="hidden" @change="handleOfficialFileUpload">
+            <div class="space-y-3">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:shield-check" class="size-4 text-primary-500" />
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  Documentos Oficiais
+                </BaseText>
+              </div>
+              <div class="space-y-2">
+                <div
+                  v-for="slot in officialDocumentSlots" :key="slot.category"
+                  class="group flex items-center gap-4 p-3.5 rounded-xl border bg-white dark:bg-muted-950 transition-all"
+                  :class="getSlotAttachment(slot.category)
+                    ? 'border-success-200 dark:border-success-800 bg-success-50/30 dark:bg-success-900/10'
+                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'"
+                >
+                  <div
+                    class="size-9 rounded-lg flex items-center justify-center shrink-0"
+                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'"
+                  >
+                    <Icon :name="slot.icon" class="size-4.5" :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-muted-700 dark:text-muted-200">
+                      {{ slot.label }}
                     </p>
-                    <BaseButton variant="primary" size="sm" class="w-full h-8" :loading="isSendingSms" @click="sendSms">
-                      <Icon name="solar:paper-plane-bold" class="size-3.5 mr-2" />
-                      Enviar Agora
-                    </BaseButton>
-                  </BaseCard>
-                  <p class="text-[10px] text-muted-400 text-center italic mt-2">
-                    Destino: {{ declaration.client?.phone || '...' }}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- TAB: FINANCEIRO -->
-            <div v-if="activeSidebarTab === 'financial'" class="space-y-6 animate-fade-in">
-              <!-- Honorários -->
-              <div class="space-y-3">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Valor do Serviço</label>
-                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
-                  icon="lucide:dollar-sign" @change="save" placeholder="0,00" />
-              </div>
-
-              <!-- Pagamento -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Status do Pagamento</label>
-                <div class="grid grid-cols-1 gap-1">
-                  <button v-for="opt in paymentStatusOptions" :key="opt.value"
-                    @click="form.paymentStatus = opt.value; save()"
-                    class="flex items-center gap-3 p-3 rounded-lg border transition-all text-sm" :class="form.paymentStatus === opt.value
-                      ? 'border-primary-500 bg-primary-500/5 text-primary-600 font-bold'
-                      : 'border-transparent text-muted-500 hover:bg-muted-100 dark:hover:bg-muted-800'">
-                    <div class="size-2 rounded-full" :class="{
-                      'bg-success-500': opt.value === 'paid',
-                      'bg-warning-500': opt.value === 'partial',
-                      'bg-danger-500': opt.value === 'pending'
-                    }"></div>
-                    {{ opt.label }}
-                    <Icon v-if="form.paymentStatus === opt.value" name="lucide:check" class="ms-auto size-4" />
-                  </button>
-                </div>
-              </div>
-
-              <!-- Resultado IR -->
-              <div class="space-y-3 pt-6 border-t border-muted-200 dark:border-muted-800">
-                <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Resultado do IR</label>
-                <BaseSelect v-model="form.result" rounded="md" @update:model-value="save">
-                  <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </BaseSelectItem>
-                </BaseSelect>
-
-                <div v-if="form.result !== 'neutral'" class="mt-2">
-                  <p class="text-[10px] text-muted-400 uppercase font-bold mb-1">Valor do Resultado</p>
-                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md"
-                    icon="lucide:banknote" @change="save" placeholder="0,00" />
-                </div>
-              </div>
-            </div>
-
-            <!-- TAB: CHECKLIST -->
-            <div v-if="activeSidebarTab === 'checklist'" class="space-y-6 animate-fade-in">
-              <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Documentos
-                    Necessários</label>
-                  <div v-if="isSavingChecklist" class="animate-spin text-primary-500">
-                    <Icon name="svg-spinners:ring-resize" class="size-4" />
+                    <p class="text-[10px] text-muted-400 mt-0.5 truncate">
+                      {{ getSlotAttachment(slot.category)?.fileName || 'Aguardando envio' }}
+                    </p>
+                  </div>
+                  <BaseTag v-if="getSlotAttachment(slot.category)" size="sm" color="success" variant="muted" class="text-[9px] shrink-0">
+                    Enviado
+                  </BaseTag>
+                  <BaseTag v-else size="sm" color="muted" variant="muted" class="text-[9px] shrink-0">
+                    Pendente
+                  </BaseTag>
+                  <div class="flex gap-1 shrink-0">
+                    <template v-if="getSlotAttachment(slot.category)">
+                      <button class="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-500 transition-colors" @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })">
+                        <Icon name="solar:eye-bold-duotone" class="size-4" />
+                      </button>
+                      <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors" @click="handleDownload(getSlotAttachment(slot.category))">
+                        <Icon name="lucide:download" class="size-4" />
+                      </button>
+                      <button class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-danger-500 transition-all" @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)">
+                        <Icon name="lucide:trash-2" class="size-4" />
+                      </button>
+                    </template>
+                    <button v-else class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm" @click="triggerOfficialUpload(slot.category)">
+                      <Icon name="lucide:upload" class="size-4" />
+                    </button>
                   </div>
                 </div>
+              </div>
+              <div class="flex gap-2 p-3 bg-primary-500/5 border border-primary-500/20 rounded-lg">
+                <Icon name="solar:info-circle-bold-duotone" class="size-4 text-primary-500 shrink-0 mt-0.5" />
+                <p class="text-[10px] text-muted-500 leading-relaxed">
+                  Documentos finais processados pelo contador. O cliente não pode removê-los via link.
+                </p>
+              </div>
+            </div>
+          </div>
 
-                <!-- Add Item -->
-                <div class="flex gap-2">
-                  <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante..." size="sm"
-                    rounded="md" class="flex-1" @keyup.enter="addChecklistItem" />
-                  <BaseButton size="sm" variant="primary" @click="addChecklistItem">
-                    <Icon name="lucide:plus" class="size-4" />
+          <!-- ━━━ TAB: COMUNICAÇÃO ━━━ -->
+          <div v-if="activeTab === 'communication'" class="space-y-6 animate-fade-in">
+            <!-- Link de Coleta -->
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:link" class="size-4 text-muted-400" />
+                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  Link de Coleta
+                </BaseText>
+              </div>
+              <div class="p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
+                <div v-if="collectionLink">
+                  <p class="text-xs font-mono text-muted-500 mb-3 break-all">
+                    {{ `${baseUrl}${collectionLink.url}` }}
+                  </p>
+                  <div class="flex gap-2">
+                    <BaseButton size="sm" class="flex-1" @click="copyLink">
+                      <Icon name="lucide:copy" class="size-3.5 mr-1.5" /> Copiar Link
+                    </BaseButton>
+                    <BaseButton size="sm" variant="muted" :to="collectionLink.url" target="_blank">
+                      <Icon name="lucide:external-link" class="size-4" />
+                    </BaseButton>
+                  </div>
+                </div>
+                <div v-else>
+                  <p class="text-xs text-muted-500 mb-3">
+                    Gere um link para o cliente enviar seus documentos de forma segura.
+                  </p>
+                  <BaseButton size="sm" variant="primary" class="w-full" :loading="isGeneratingLink" @click="generateLink">
+                    <Icon name="lucide:link" class="size-3.5 mr-1.5" /> Gerar Novo Link
                   </BaseButton>
                 </div>
-
-                <!-- Item List -->
-                <div class="space-y-2">
-                  <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
-                    class="p-3 rounded-lg border bg-white dark:bg-muted-950 transition-all border-muted-200 dark:border-muted-800">
-                    <div class="flex items-start gap-3">
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                          <p class="text-xs font-semibold text-muted-800 dark:text-muted-100">{{ item.title }}</p>
-                          <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="scale-75">
-                            Obrigatório</BaseTag>
-                        </div>
-                        <div class="mt-2 flex flex-wrap gap-1.5">
-                          <BaseTag v-if="item.status === 'pending'" size="sm" color="muted">Pendente</BaseTag>
-                          <BaseTag v-else-if="item.status === 'uploaded'" size="sm" color="warning">Enviado</BaseTag>
-                          <BaseTag v-else-if="item.status === 'approved'" size="sm" color="success">Aprovado</BaseTag>
-                          <BaseTag v-else-if="item.status === 'rejected'" size="sm" color="danger">Rejeitado</BaseTag>
-                        </div>
-                      </div>
-                      <div class="flex flex-col gap-1">
-                        <button @click="removeChecklistItem(idx)" class="p-1 text-muted-400 hover:text-danger-500">
-                          <Icon name="lucide:trash-2" class="size-3.5" />
-                        </button>
-                        <button @click="toggleItemRequired(idx)" class="p-1 text-muted-400"
-                          :class="item.isRequired ? 'text-danger-500' : 'hover:text-primary-500'">
-                          <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle'" class="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Actions for Uploaded -->
-                    <div v-if="item.status === 'uploaded' && item.attachment"
-                      class="mt-3 pt-3 border-t border-muted-100 dark:border-muted-800 flex items-center justify-between">
-                      <div class="flex items-center gap-2 text-[10px] text-muted-500 truncate max-w-[150px]">
-                        <Icon name="lucide:file" class="size-3" />
-                        <span class="truncate">{{ item.attachment.fileName }}</span>
-                      </div>
-                      <div class="flex gap-1 shrink-0">
-                        <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)"
-                          title="Pré-visualizar">
-                          <Icon name="solar:eye-bold-duotone" class="size-3.5" />
-                        </BaseButton>
-                        <BaseButton color="success" size="icon-sm" @click="updateItemStatus(item.id, 'approved')"
-                          title="Aprovar">
-                          <Icon name="lucide:check" class="size-3.5" />
-                        </BaseButton>
-                        <BaseButton color="danger" size="icon-sm" @click="updateItemStatus(item.id, 'rejected')"
-                          title="Rejeitar">
-                          <Icon name="lucide:x" class="size-3.5" />
-                        </BaseButton>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="checklistItems.length === 0"
-                    class="text-center py-6 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
-                    <p class="text-[10px] text-muted-400 uppercase font-medium">Nenhum item definido</p>
-                  </div>
-                </div>
               </div>
             </div>
 
-            <!-- TAB: DOCUMENTOS (OFICIAIS) -->
-            <div v-if="activeSidebarTab === 'documents'" class="space-y-6 animate-fade-in pb-10">
-              <div class="space-y-4">
+            <!-- SMS -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:send" class="size-4 text-muted-400" />
+                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                    Enviar SMS
+                  </BaseText>
+                </div>
+                <BaseTag size="sm" variant="muted" color="success" class="text-[9px]">
+                  GSM Standard
+                </BaseTag>
+              </div>
+
+              <!-- Templates grid 2x2 -->
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  v-for="(tpl, idx) in smsTemplates" :key="tpl.id"
+                  class="text-left p-3 rounded-xl border transition-all group"
+                  :class="selectedTemplateIndex === idx
+                    ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500'
+                    : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-400'"
+                  @click="handleSelectTemplate(idx)"
+                >
+                  <div class="flex items-center gap-2.5">
+                    <div
+                      class="size-8 rounded-lg flex items-center justify-center transition-colors"
+                      :class="selectedTemplateIndex === idx ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500 group-hover:bg-primary-100 group-hover:text-primary-500'"
+                    >
+                      <Icon :name="tpl.icon" class="size-4" />
+                    </div>
+                    <p class="text-xs font-bold text-muted-700 dark:text-muted-200">
+                      {{ tpl.title }}
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Preview + envio -->
+              <div v-if="selectedTemplateIndex !== null" class="animate-fade-in p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
+                <p class="text-xs text-muted-600 dark:text-muted-300 italic leading-relaxed mb-3">
+                  "{{ smsMessage }}"
+                </p>
                 <div class="flex items-center justify-between">
-                  <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">Documentos Oficiais</label>
-                </div>
-
-                <div class="space-y-3">
-                  <div v-for="slot in officialDocumentSlots" :key="slot.category"
-                    class="p-4 rounded-xl border bg-white dark:bg-muted-950 transition-all border-muted-200 dark:border-muted-800 hover:border-primary-500/30 group">
-                    <div class="flex items-center gap-4">
-                      <div
-                        class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center shrink-0">
-                        <Icon :name="slot.icon" class="size-5 text-muted-400" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-muted-800 dark:text-muted-100">{{ slot.label }}</p>
-                        <p class="text-[10px] text-muted-400 mt-0.5 truncate">{{
-                          getSlotAttachment(slot.category)?.fileName
-                          || 'Pendente de envio' }}</p>
-                      </div>
-
-                      <div class="flex gap-2">
-                        <!-- If has file -->
-                        <template v-if="getSlotAttachment(slot.category)">
-                          <button
-                            @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })"
-                            class="p-1.5 rounded-lg hover:bg-primary-500/10 text-primary-500 transition-colors"
-                            title="Visualizar">
-                            <Icon name="solar:eye-bold-duotone" class="size-4" />
-                          </button>
-                          <button @click="handleDownload(getSlotAttachment(slot.category))"
-                            class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors"
-                            title="Baixar">
-                            <Icon name="lucide:download" class="size-4" />
-                          </button>
-                          <button @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)"
-                            class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-500/10 text-danger-500 transition-colors"
-                            title="Excluir">
-                            <Icon name="lucide:trash-2" class="size-4" />
-                          </button>
-                        </template>
-
-                        <!-- If no file -->
-                        <template v-else>
-                          <button @click="triggerOfficialUpload(slot.category)"
-                            class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm shadow-primary-500/20">
-                            <Icon name="lucide:upload" class="size-4" />
-                          </button>
-                        </template>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="bg-primary-500/5 border border-primary-500/20 rounded-xl p-4 mt-6">
-                  <div class="flex gap-3">
-                    <Icon name="solar:info-circle-bold-duotone" class="size-5 text-primary-500 shrink-0" />
-                    <BaseParagraph size="xs" class="text-muted-500 leading-relaxed">
-                      Estes documentos são as versões finais processadas pelo contador. O cliente não pode excluí-los
-                      via
-                      link.
-                    </BaseParagraph>
-                  </div>
+                  <p class="text-[10px] text-muted-400">
+                    Para: {{ declaration.client?.phone || '—' }} · {{ smsMessage.length }}/160
+                  </p>
+                  <BaseButton variant="primary" size="sm" :loading="isSendingSms" @click="sendSms">
+                    <Icon name="solar:paper-plane-bold" class="size-3.5 mr-1.5" /> Enviar Agora
+                  </BaseButton>
                 </div>
               </div>
-            </div>
-
-            <!-- Account Actions -->
-            <div class="pt-10 text-center">
-              <button @click="remove"
-                class="text-[10px] font-bold uppercase tracking-widest text-muted-400 hover:text-rose-500 transition-colors">
-                Excluir Card
-              </button>
             </div>
           </div>
         </div>
-      </div>
+
+        <!-- ════ SIDEBAR ════ -->
+        <div class="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/30 dark:bg-muted-950/20 overflow-y-auto nui-slimscroll h-full">
+          <div class="p-5 space-y-5">
+            <!-- STATUS -->
+            <div class="space-y-1.5">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                Status
+              </BaseText>
+              <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="() => save()">
+                <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value">
+                  <div class="flex items-center gap-2">
+                    <span class="size-2 rounded-full" :style="`background-color: var(--color-${opt.color || 'gray'}-500, #9ca3af)`" />
+                    <span class="text-sm font-medium">{{ opt.label }}</span>
+                  </div>
+                </BaseSelectItem>
+              </BaseSelect>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- RESULTADO FINANCEIRO: destaque visual -->
+            <div class="space-y-2">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                Resultado do IR
+              </BaseText>
+              <div class="flex items-center gap-2">
+                <BaseSelect v-model="form.result" rounded="md" size="sm" class="flex-1" @update:model-value="save">
+                  <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
+                    <span class="text-sm font-medium">{{ opt.label }}</span>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
+              <!-- Valor com destaque visual forte -->
+              <div v-if="form.result !== 'neutral'" class="flex items-center gap-2 mt-1">
+                <div class="flex-1 relative">
+                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md" placeholder="0,00" class="text-sm font-bold pr-16" @blur="save" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-400">BRL</span>
+                </div>
+              </div>
+              <!-- Valor formatado destaque -->
+              <div
+                v-if="form.result !== 'neutral'" class="mt-1 px-3 py-1.5 rounded-lg"
+                :class="form.result === 'restitution' ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800' : 'bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800'"
+              >
+                <p class="text-[10px] font-bold uppercase tracking-widest" :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'">
+                  {{ form.result === 'restitution' ? '↑ Restituição' : '↓ A Pagar' }}
+                </p>
+                <p class="text-lg font-bold" :class="form.result === 'restitution' ? 'text-success-700 dark:text-success-400' : 'text-danger-700 dark:text-danger-400'">
+                  R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
+                </p>
+              </div>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- RESPONSÁVEL + PRIORIDADE + PRAZO -->
+            <div class="space-y-3.5">
+              <!-- Responsável -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Responsável
+                </BaseText>
+                <BaseSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="save">
+                  <BaseSelectItem value="unassigned">
+                    <span class="text-muted-400 text-xs">Sem responsável</span>
+                  </BaseSelectItem>
+                  <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id">
+                    <div class="flex items-center gap-2">
+                      <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
+                      <span class="text-xs font-medium">{{ member.name }}</span>
+                    </div>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
+
+              <!-- Prioridade -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Prioridade
+                </BaseText>
+                <div class="flex gap-1.5">
+                  <button
+                    v-for="p in priorityOptions" :key="p.value"
+                    type="button" class="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center gap-1"
+                    :class="form.priority === p.value
+                      ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
+                      : 'border-muted-200 dark:border-muted-700 hover:border-muted-300 text-muted-500'"
+                    @click="form.priority = p.value; save()"
+                  >
+                    <Icon :name="p.icon" class="size-3" :class="p.color" /> {{ p.label }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Prazo -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Prazo
+                </BaseText>
+                <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
+              </div>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- TIPO DE DECLARAÇÃO -->
+            <div class="space-y-1.5">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                Tipo de Declaração
+              </BaseText>
+              <div class="flex gap-1.5">
+                <button
+                  v-for="opt in declarationTypeOptions" :key="opt.value"
+                  class="flex-1 text-xs p-2 rounded-lg border transition-all font-medium"
+                  :class="form.declarationType === opt.value
+                    ? 'border-primary-500 bg-primary-500/5 text-primary-600'
+                    : 'border-muted-200 dark:border-muted-700 text-muted-400 hover:border-muted-300'"
+                  @click="form.declarationType = opt.value; save()"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- FINANCEIRO: honorários + pagamento -->
+            <div class="space-y-3">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                Financeiro
+              </BaseText>
+              <!-- Honorários -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 font-semibold">
+                  Valor do Serviço
+                </BaseText>
+                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md" icon="lucide:dollar-sign" placeholder="0,00" @blur="save" />
+              </div>
+              <!-- Pagamento -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 font-semibold">
+                  Status do Pagamento
+                </BaseText>
+                <BaseSelect v-model="form.paymentStatus" rounded="md" size="sm" @update:model-value="save">
+                  <BaseSelectItem v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="size-2 rounded-full" :class="{
+                          'bg-success-500': opt.value === 'paid',
+                          'bg-warning-500': opt.value === 'partial' || opt.value === 'processing',
+                          'bg-danger-500': opt.value === 'pending',
+                        }"
+                      />
+                      <span class="text-xs font-medium">{{ opt.label }}</span>
+                    </div>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- TAGS + GOV.BR: campos que estavam ocultos -->
+            <div class="space-y-3">
+              <!-- Tags -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Tags
+                </BaseText>
+                <div class="flex flex-wrap gap-1.5">
+                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted" class="group relative text-[10px] pr-5">
+                    {{ tag }}
+                    <button class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all" @click="removeTag(tag)">
+                      <Icon name="lucide:x" class="size-2.5" />
+                    </button>
+                  </BaseTag>
+                </div>
+                <div class="flex gap-1.5 mt-1">
+                  <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs" @keyup.enter="addTag" />
+                  <BaseButton size="sm" variant="muted" @click="addTag">
+                    <Icon name="lucide:plus" class="size-3.5" />
+                  </BaseButton>
+                </div>
+              </div>
+
+              <!-- Senha GOV.br -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                  Senha GOV.br
+                </BaseText>
+                <div class="relative">
+                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="save" />
+                  <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors" @click="showGovPassword = !showGovPassword">
+                    <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'" class="size-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-muted-200 dark:border-muted-800" />
+
+            <!-- AÇÕES -->
+            <div class="space-y-2">
+              <BaseButton variant="muted" rounded="lg" size="sm" class="w-full text-danger-500 hover:text-danger-600 hover:bg-danger-500/5 transition-colors" @click="confirmDelete">
+                <Icon name="lucide:trash-2" class="size-3.5 mr-2" /> Excluir Declaração
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
 
-    <!-- Modal de Seleção de Checklist -->
+    <!-- ═══ MODAL: Checklist Upload ═══ -->
     <DialogRoot v-model:open="showChecklistModal">
       <DialogPortal>
         <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[100]" />
-        <DialogContent
-          class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col">
-
+        <DialogContent class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col">
           <div class="flex w-full items-center justify-between p-6 border-b border-muted-200 dark:border-muted-800">
             <DialogTitle class="font-heading text-muted-900 text-lg font-medium dark:text-white">
               Vincular ao Checklist
             </DialogTitle>
-            <BaseButtonIcon @click="cancelChecklistUpload" rounded="full" variant="ghost">
+            <BaseButtonIcon rounded="full" variant="ghost" @click="cancelChecklistUpload">
               <Icon name="solar:close-circle-linear" class="size-5" />
             </BaseButtonIcon>
           </div>
-
           <div class="nui-slimscroll overflow-y-auto p-8 space-y-6">
             <DialogDescription class="text-sm text-muted-500">
-              Este arquivo corresponde a algum documento do checklist? Selecione abaixo para vincular.
+              Este arquivo corresponde a algum documento do checklist? Selecione abaixo.
             </DialogDescription>
-
-            <!-- Arquivo sendo enviado -->
-            <div class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700">
-              <div class="flex items-center gap-3">
-                <div class="size-12 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
-                  <Icon name="solar:file-bold-duotone" class="size-7" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <BaseText size="sm" weight="semibold" class="text-muted-900 dark:text-white truncate">
-                    {{ pendingFile?.name }}
-                  </BaseText>
-                  <BaseText size="xs" class="text-muted-500">
-                    {{ pendingFile ? (pendingFile.size / 1024).toFixed(2) : 0 }} KB
-                  </BaseText>
-                </div>
+            <!-- File card -->
+            <div class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700 flex items-center gap-3">
+              <div class="size-12 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
+                <Icon name="solar:file-bold-duotone" class="size-7" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <BaseText size="sm" weight="semibold" class="text-muted-900 dark:text-white truncate">
+                  {{ pendingFile?.name }}
+                </BaseText>
+                <BaseText size="xs" class="text-muted-500">
+                  {{ pendingFile ? (pendingFile.size / 1024).toFixed(2) : 0 }} KB
+                </BaseText>
               </div>
             </div>
-
-            <!-- Seletor de item do checklist -->
-            <div class="space-y-3">
-              <label class="text-xs font-bold text-muted-400 uppercase tracking-wider">
+            <!-- Checklist items -->
+            <div class="space-y-2">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-wider font-bold">
                 Selecione o documento correspondente
-              </label>
-
-              <div class="space-y-2">
-                <!-- Itens pendentes do checklist -->
-                <button v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
-                  class="w-full text-left p-4 rounded-xl border transition-all"
-                  :class="selectedChecklistItemId === item.id
-                    ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500 shadow-sm shadow-primary-500/10'
-                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50 hover:bg-muted-50 dark:hover:bg-muted-900/40'" @click="selectedChecklistItemId = item.id">
-                  <div class="flex items-center gap-3">
-                    <div class="size-8 rounded-full flex items-center justify-center transition-colors"
-                      :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
-                      <Icon name="solar:document-text-bold-duotone" class="size-4" />
-                    </div>
-                    <div class="flex-1">
-                      <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
-                        {{ item.title }}
-                      </BaseText>
-                      <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted"
-                        class="mt-1 scale-90 origin-left">
-                        Obrigatório
-                      </BaseTag>
-                    </div>
-                    <div v-if="selectedChecklistItemId === item.id"
-                      class="text-primary-500 animate-in zoom-in duration-200">
-                      <Icon name="solar:check-circle-bold" class="size-5" />
-                    </div>
+              </BaseText>
+              <button
+                v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
+                class="w-full text-left p-4 rounded-xl border transition-all"
+                :class="selectedChecklistItemId === item.id ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500' : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50'"
+                @click="selectedChecklistItemId = item.id"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="size-8 rounded-full flex items-center justify-center transition-colors" :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
+                    <Icon name="solar:document-text-bold-duotone" class="size-4" />
                   </div>
-                </button>
-              </div>
+                  <div class="flex-1">
+                    <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
+                      {{ item.title }}
+                    </BaseText>
+                    <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="mt-1 scale-90 origin-left">
+                      Obrigatório
+                    </BaseTag>
+                  </div>
+                  <Icon v-if="selectedChecklistItemId === item.id" name="solar:check-circle-bold" class="size-5 text-primary-500" />
+                </div>
+              </button>
             </div>
           </div>
-
-          <div
-            class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
-            <BaseButton @click="cancelChecklistUpload">Cancelar</BaseButton>
+          <div class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+            <BaseButton @click="cancelChecklistUpload">
+              Cancelar
+            </BaseButton>
             <BaseButton variant="primary" rounded="lg" @click="confirmChecklistUpload">
-              <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" />
-              Enviar e Vincular
+              <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" /> Enviar e Vincular
             </BaseButton>
           </div>
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
-    <!-- Modal de Pré-visualização de Documento -->
+
+    <!-- ═══ MODAL: Preview ═══ -->
     <DialogRoot v-model:open="showPreviewModal">
       <DialogPortal>
         <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[110]" />
-        <DialogContent
-          class="fixed starting:opacity-0 starting:top-[45%] top-[50%] start-[50%] max-h-[95vh] w-[95vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-xl overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 shadow-2xl focus:outline-none z-[111] transition-discrete transition-all duration-300 ease-out flex flex-col">
-
-          <div
-            class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
+        <DialogContent class="fixed starting:opacity-0 starting:top-[45%] top-[50%] start-[50%] max-h-[95vh] w-[95vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-xl overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 shadow-2xl focus:outline-none z-[111] transition-discrete transition-all duration-300 ease-out flex flex-col">
+          <!-- Header -->
+          <div class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
             <div class="flex items-center gap-3">
               <div class="size-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
                 <Icon name="solar:file-bold-duotone" class="size-6" />
               </div>
               <div class="min-w-0">
                 <DialogTitle class="text-sm font-semibold text-muted-900 dark:text-white truncate">
-                  {{ previewItem?.attachment?.fileName || 'Visualizar Documento' }}
+                  {{ previewItem?.attachment?.fileName || 'Visualizar' }}
                 </DialogTitle>
-                <BaseText size="xs" class="text-muted-500">{{ previewItem?.title }}</BaseText>
+                <BaseText size="xs" class="text-muted-500">
+                  {{ previewItem?.title }}
+                </BaseText>
               </div>
             </div>
-            <BaseButtonIcon @click="showPreviewModal = false" rounded="full" variant="ghost">
+            <BaseButtonIcon rounded="full" variant="ghost" @click="showPreviewModal = false">
               <Icon name="solar:close-circle-linear" class="size-6" />
             </BaseButtonIcon>
           </div>
-
-          <div
-            class="flex-1 overflow-auto bg-muted-100 dark:bg-muted-900 flex items-center justify-center p-4 min-h-[60vh]">
-            <!-- Loading State -->
+          <!-- Body -->
+          <div class="flex-1 overflow-auto bg-muted-100 dark:bg-muted-900 flex items-center justify-center p-4 min-h-[60vh]">
             <div v-if="isPreviewLoading" class="text-center py-20">
-              <Icon name="svg-spinners:ring-resize" class="size-12 text-primary-500 mb-4" />
-              <BaseParagraph size="sm" class="text-muted-500">Buscando documento...</BaseParagraph>
+              <Icon name="svg-spinners:ring-resize" class="size-12 text-primary-500 mb-4 mx-auto" />
+              <BaseParagraph size="sm" class="text-muted-500">
+                Buscando documento...
+              </BaseParagraph>
             </div>
-
             <template v-else-if="signedPreviewUrl">
-              <!-- PDF Viewer -->
-              <template v-if="previewItem?.attachment?.mimeType === 'application/pdf'">
-                <iframe :src="signedPreviewUrl"
-                  class="w-full h-full min-h-[75vh] rounded-lg border border-muted-200 dark:border-muted-800"></iframe>
-              </template>
-
-              <!-- Image Viewer -->
-              <template v-else-if="previewItem?.attachment?.mimeType?.startsWith('image/')">
-                <img :src="signedPreviewUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                  alt="Documento" />
-              </template>
-
-              <!-- Generic/Download -->
-              <template v-else>
-                <div class="text-center p-12">
-                  <div
-                    class="size-20 mx-auto mb-4 rounded-3xl bg-muted-200 dark:bg-muted-800 flex items-center justify-center">
-                    <Icon name="solar:document-bold-duotone" class="size-10 text-muted-400" />
-                  </div>
-                  <BaseHeading as="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-2">
-                    Pré-visualização indisponível
-                  </BaseHeading>
-                  <BaseParagraph size="sm" class="text-muted-500 mb-6">
-                    Este tipo de arquivo ({{ previewItem?.attachment?.mimeType }}) não pode ser visualizado no
-                    navegador.
-                  </BaseParagraph>
-                  <BaseButton as="a" :href="signedPreviewUrl" target="_blank" variant="primary">
-                    <Icon name="solar:download-bold" class="size-4 mr-2" />
-                    Abrir Arquivo / Baixar
-                  </BaseButton>
+              <iframe v-if="previewItem?.attachment?.mimeType === 'application/pdf'" :src="signedPreviewUrl" class="w-full h-full min-h-[75vh] rounded-lg border border-muted-200 dark:border-muted-800" />
+              <img v-else-if="previewItem?.attachment?.mimeType?.startsWith('image/')" :src="signedPreviewUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-lg" alt="Documento">
+              <div v-else class="text-center p-12">
+                <div class="size-20 mx-auto mb-4 rounded-3xl bg-muted-200 dark:bg-muted-800 flex items-center justify-center">
+                  <Icon name="solar:document-bold-duotone" class="size-10 text-muted-400" />
                 </div>
-              </template>
+                <BaseHeading as="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-2">
+                  Pré-visualização indisponível
+                </BaseHeading>
+                <BaseParagraph size="sm" class="text-muted-500 mb-6">
+                  Este tipo de arquivo não pode ser visualizado no navegador.
+                </BaseParagraph>
+                <BaseButton as="a" :href="signedPreviewUrl" target="_blank" variant="primary">
+                  <Icon name="solar:download-bold" class="size-4 mr-2" /> Abrir / Baixar
+                </BaseButton>
+              </div>
             </template>
-
-            <!-- Error State -->
             <div v-else class="text-center py-20">
-              <Icon name="solar:danger-bold" class="size-12 text-danger-500 mb-4" />
-              <BaseParagraph size="sm" class="text-muted-500">Falha ao carregar o documento.</BaseParagraph>
-              <BaseButton size="sm" variant="muted" class="mt-4" @click="openPreview(previewItem)">Tentar novamente
+              <Icon name="solar:danger-bold" class="size-12 text-danger-500 mb-4 mx-auto" />
+              <BaseParagraph size="sm" class="text-muted-500">
+                Falha ao carregar o documento.
+              </BaseParagraph>
+              <BaseButton size="sm" variant="muted" class="mt-4" @click="openPreview(previewItem)">
+                Tentar novamente
               </BaseButton>
             </div>
           </div>
-
-          <div
-            class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+          <!-- Footer -->
+          <div class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50">
             <BaseButton color="danger" @click="updateItemStatus(previewItem.id, 'rejected'); showPreviewModal = false">
-              <Icon name="lucide:x" class="size-4 mr-2" />
-              Rejeitar
+              <Icon name="lucide:x" class="size-4 mr-2" /> Rejeitar
             </BaseButton>
             <BaseButton color="success" @click="updateItemStatus(previewItem.id, 'approved'); showPreviewModal = false">
-              <Icon name="lucide:check" class="size-4 mr-2" />
-              Aprovar Documento
+              <Icon name="lucide:check" class="size-4 mr-2" /> Aprovar
             </BaseButton>
           </div>
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
+
+  <!-- Overlay: Detalhes do Cliente -->
+  <Teleport to="body">
+    <div v-if="showClientDetailsPanel" class="fixed inset-0 z-[120]">
+      <div class="bg-muted-800/70 dark:bg-muted-900/80 absolute inset-0" @click="showClientDetailsPanel = false"></div>
+      <div class="absolute start-auto end-0 top-0 h-full">
+        <PanelsPanelClientDetails :client-id="declaration.client?.id" @close="showClientDetailsPanel = false" />
+      </div>
+    </div>
+  </Teleport>
   </FocusScope>
 </template>
