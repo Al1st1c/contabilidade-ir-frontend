@@ -470,37 +470,6 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 
 <template>
   <div class="h-full flex flex-col overflow-hidden">
-    <!-- Page Header -->
-    <div class="px-4 md:px-6 lg:px-8 xl:px-10 pb-6 shrink-0">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div class="flex h-12 items-center justify-between pe-4 xl:pe-10">
-          <div class="flex items-center gap-2">
-            <BaseAvatar src="/img/avatars/10.svg" size="xs" />
-            <div>
-              <BaseParagraph size="xs" class="text-muted-400">
-                Gustavo B
-              </BaseParagraph>
-              <BaseHeading as="h2" size="sm" weight="normal">
-                ConsTar
-              </BaseHeading>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <BaseAvatarGroup :avatars="[]" size="xs" />
-          <BaseTooltip content="Gerenciar Colunas">
-            <BaseButton size="icon-sm" rounded="full" @click="openManageColumns">
-              <Icon name="solar:widget-4-linear" class="size-4" />
-            </BaseButton>
-          </BaseTooltip>
-          <BaseTooltip content="Novo IR">
-            <BaseButton size="icon-sm" rounded="full" variant="primary" @click="openCreateDeclaration">
-              <Icon name="lucide:plus" class="size-4" />
-            </BaseButton>
-          </BaseTooltip>
-        </div>
-      </div>
-    </div>
 
     <!-- Kanban Board -->
     <!-- Kanban Board -->
@@ -545,7 +514,13 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
             >
               Limpar
             </button>
+
+            
+     
+
           </div>
+
+          
         </div>
 
         <!-- Tags Filter -->
@@ -562,7 +537,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 
         <!-- Payment Status -->
         <div class="w-full md:w-48 flex items-center gap-2">
-          <BaseSelect v-model="filters.paymentStatus" rounded="md" icon="lucide:wallet">
+          <BaseSelect placeholder="Financeiro: Todos" v-model="filters.paymentStatus" rounded="md" icon="lucide:wallet">
             <BaseSelectItem value="all">
               Financeiro: Todos
             </BaseSelectItem>
@@ -584,6 +559,23 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
           <Icon name="lucide:filter-x" class="size-4 mr-1" />
           Limpar
         </BaseButton>
+
+
+         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <BaseAvatarGroup :avatars="[]" size="xs" />
+          <BaseTooltip content="Gerenciar Colunas">
+            <BaseButton size="icon-sm" rounded="full" @click="openManageColumns">
+              <Icon name="solar:widget-4-linear" class="size-4" />
+            </BaseButton>
+          </BaseTooltip>
+          <BaseTooltip content="Novo IR">
+            <BaseButton size="icon-sm" rounded="full" variant="primary" @click="openCreateDeclaration">
+              <Icon name="lucide:plus" class="size-4" />
+            </BaseButton>
+          </BaseTooltip>
+        </div>
+      </div>
       </div>
 
       <!-- Kanban Board + Scrolling -->
