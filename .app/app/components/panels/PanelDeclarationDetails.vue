@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useApi } from '~/composables/useAuth'
+import { useDebounceFn } from '@vueuse/core'
+import { io } from 'socket.io-client'
 
 interface Props {
   declarationId: string
@@ -29,6 +31,9 @@ const signedPreviewUrl = ref('')
 const isPreviewLoading = ref(false)
 const showGovPassword = ref(false)
 const showClientDetailsPanel = ref(false)
+const socket = ref<any>(null)
+const saveDebounced = useDebounceFn(() => { if (!isSaving.value) save() }, 500)
+const lastSavedForm = ref<any>({})
 
 // ─── Active Tab ───────────────────────────────────────────────────────────────
 const activeTab = ref<'details' | 'checklist' | 'attachments' | 'official_documents' | 'communication'>('details')
@@ -193,13 +198,13 @@ function addTag() {
   const tag = newTag.value.trim()
   if (tag && !form.value.tags.includes(tag)) {
     form.value.tags.push(tag)
-    save()
+    saveDebounced()
   }
   newTag.value = ''
 }
 function removeTag(tag: string) {
   form.value.tags = form.value.tags.filter(t => t !== tag)
-  save()
+  saveDebounced()
 }
 
 // ─── Options ──────────────────────────────────────────────────────────────────
@@ -282,6 +287,7 @@ async function fetchDeclaration() {
         tags: result.tags || [],
         rectificationDescription: result.rectificationDescription || '',
       }
+      lastSavedForm.value = JSON.parse(JSON.stringify(form.value))
       if (result.collectionLinks?.length > 0)
         collectionLink.value = result.collectionLinks[0]
       checklistItems.value = result.checklist || []
@@ -326,7 +332,10 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
       method: 'PATCH',
       body: { status, comment },
     })
-    await fetchDeclaration()
+    const idx = checklistItems.value.findIndex(i => i.id === itemId)
+    if (idx !== -1) {
+      checklistItems.value[idx] = { ...checklistItems.value[idx], status }
+    }
   }
   catch (error) { console.error('Erro ao atualizar status:', error) }
 }
@@ -335,17 +344,27 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
 async function save() {
   isSaving.value = true
   try {
-    const payload = { ...form.value }
-    if (payload.assignedToId === 'unassigned')
-      payload.assignedToId = ''
+    const updated: any = {}
+    for (const key in form.value) {
+      const nv = (form.value as any)[key]
+      const ov = (lastSavedForm.value as any)[key]
+      const same = JSON.stringify(nv) === JSON.stringify(ov)
+      if (!same) updated[key] = nv
+    }
+    if (updated.assignedToId === 'unassigned')
+      updated.assignedToId = ''
+    if (Object.keys(updated).length === 0) {
+      isSaving.value = false
+      return
+    }
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, {
-      method: 'PUT',
-      body: payload,
+      method: 'PATCH',
+      body: updated,
     })
     if (data && data.success) {
-      toaster.add({ title: 'Salvo', description: 'Alterações gravadas com sucesso', icon: 'ph:check-circle-fill' })
-      await fetchDeclaration()
+      // toaster.add({ title: 'Salvo', description: 'Alterações gravadas com sucesso', icon: 'ph:check-circle-fill' })
       emit('saved')
+      lastSavedForm.value = JSON.parse(JSON.stringify(form.value))
     }
   }
   catch (error: any) {
@@ -384,7 +403,7 @@ async function generateLink() {
       method: 'POST',
       body: { title: `Documentos para IR ${declaration.value.taxYear}` },
     })
-    if (data && data.success) { collectionLink.value = data.data; await fetchDeclaration() }
+    if (data && data.success) { collectionLink.value = data.data }
   }
   catch (error) { console.error('Erro ao gerar link:', error) }
   finally { isGeneratingLink.value = false }
@@ -430,7 +449,8 @@ async function deleteOfficialDocument(id: string) {
     return
   try {
     await useCustomFetch(`/declarations/${props.declarationId}/attachments/${id}`, { method: 'DELETE' })
-    await fetchDeclaration()
+    if (declaration.value?.attachments)
+      declaration.value.attachments = declaration.value.attachments.filter((a: any) => a.id !== id)
     toaster.add({ title: 'Excluído', description: 'Documento oficial removido', icon: 'ph:check-circle-fill' })
   }
   catch (error) { console.error('Erro ao excluir:', error) }
@@ -472,7 +492,11 @@ async function uploadFile(file: File, checklistItemId: string | null, category: 
         description: checklistItemId ? 'Arquivo vinculado ao checklist' : 'Arquivo enviado com sucesso',
         icon: 'ph:check-circle-fill',
       })
-      await fetchDeclaration()
+      if (!declaration.value.attachments)
+        declaration.value.attachments = []
+      const created = data?.data ?? data
+      if (created)
+        declaration.value.attachments.push(created)
       emit('saved')
       showChecklistModal.value = false
       pendingFile.value = null
@@ -504,6 +528,33 @@ onMounted(() => {
   fetchKanbanColumns()
   fetchDeclaration()
   fetchTeamMembers()
+  try {
+    const config = useRuntimeConfig()
+    const url = (config.public.apiBase || '').replace(/\/$/, '')
+    socket.value = io(url, { transports: ['websocket'], autoConnect: true })
+    socket.value.emit('declaration:join', { id: props.declarationId })
+    socket.value.on('declaration:patch', (patch: any) => {
+      if (!patch) return
+      if (patch.attachments && declaration.value) {
+        declaration.value.attachments = patch.attachments
+      }
+      if (patch.checklist) {
+        checklistItems.value = patch.checklist
+      }
+      if (patch.form) {
+        form.value = { ...form.value, ...patch.form }
+      }
+    })
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible')
+        fetchDeclaration()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    onBeforeUnmount(() => {
+      document.removeEventListener('visibilitychange', onVisibility)
+    })
+  }
+  catch {}
 })
 </script>
 
@@ -673,7 +724,7 @@ onMounted(() => {
                 rows="7"
                 placeholder="Adicione uma descrição detalhada, orientações ou instruções para o cliente..."
                 class="bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed transition-colors"
-                @blur="save"
+                @blur="saveDebounced"
               />
             </div>
 
@@ -696,7 +747,7 @@ onMounted(() => {
                 rows="4"
                 placeholder="Notas visíveis apenas para a sua equipe..."
                 class="bg-amber-50/40 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/40 focus:border-amber-400 focus:ring-1 focus:ring-amber-500/20 text-sm leading-relaxed italic transition-colors"
-                @blur="save"
+                @blur="saveDebounced"
               />
             </div>
 
@@ -714,7 +765,7 @@ onMounted(() => {
                 rows="3"
                 placeholder="Descreva o que motivou a retificação..."
                 class="bg-danger-50/30 dark:bg-danger-900/10 border border-danger-200/60 dark:border-danger-800/40 text-sm leading-relaxed"
-                @blur="save"
+                @blur="saveDebounced"
               />
             </div>
 
@@ -1122,7 +1173,7 @@ onMounted(() => {
               <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
                 Status
               </BaseText>
-              <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="() => save()">
+              <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="saveDebounced">
                 <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value">
                   <div class="flex items-center gap-2">
                     <span class="size-2 rounded-full" :style="`background-color: var(--color-${opt.color || 'gray'}-500, #9ca3af)`" />
@@ -1140,7 +1191,7 @@ onMounted(() => {
                 Resultado do IR
               </BaseText>
               <div class="flex items-center gap-2">
-                <BaseSelect v-model="form.result" rounded="md" size="sm" class="flex-1" @update:model-value="save">
+              <BaseSelect v-model="form.result" rounded="md" size="sm" class="flex-1" @update:model-value="saveDebounced">
                   <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
                     <span class="text-sm font-medium">{{ opt.label }}</span>
                   </BaseSelectItem>
@@ -1149,7 +1200,7 @@ onMounted(() => {
               <!-- Valor com destaque visual forte -->
               <div v-if="form.result !== 'neutral'" class="flex items-center gap-2 mt-1">
                 <div class="flex-1 relative">
-                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md" placeholder="0,00" class="text-sm font-bold pr-16" @blur="save" />
+                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md" placeholder="0,00" @blur="saveDebounced" class="text-sm font-bold pr-16" />
                   <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-400">BRL</span>
                 </div>
               </div>
@@ -1176,7 +1227,7 @@ onMounted(() => {
                 <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
                   Responsável
                 </BaseText>
-                <BaseSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="save">
+                <BaseSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="saveDebounced">
                   <BaseSelectItem value="unassigned">
                     <span class="text-muted-400 text-xs">Sem responsável</span>
                   </BaseSelectItem>
@@ -1201,7 +1252,7 @@ onMounted(() => {
                     :class="form.priority === p.value
                       ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
                       : 'border-muted-200 dark:border-muted-700 hover:border-muted-300 text-muted-500'"
-                    @click="form.priority = p.value; save()"
+                    @click="form.priority = p.value; saveDebounced()"
                   >
                     <Icon :name="p.icon" class="size-3" :class="p.color" /> {{ p.label }}
                   </button>
@@ -1213,7 +1264,7 @@ onMounted(() => {
                 <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
                   Prazo
                 </BaseText>
-                <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="save" />
+                <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="saveDebounced" />
               </div>
             </div>
 
@@ -1231,7 +1282,7 @@ onMounted(() => {
                   :class="form.declarationType === opt.value
                     ? 'border-primary-500 bg-primary-500/5 text-primary-600'
                     : 'border-muted-200 dark:border-muted-700 text-muted-400 hover:border-muted-300'"
-                  @click="form.declarationType = opt.value; save()"
+                  @click="form.declarationType = opt.value; saveDebounced()"
                 >
                   {{ opt.label }}
                 </button>
@@ -1250,14 +1301,14 @@ onMounted(() => {
                 <BaseText size="xs" class="text-muted-400 font-semibold">
                   Valor do Serviço
                 </BaseText>
-                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md" icon="lucide:dollar-sign" placeholder="0,00" @blur="save" />
+                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md" icon="lucide:dollar-sign" placeholder="0,00" @blur="saveDebounced" />
               </div>
               <!-- Pagamento -->
               <div class="space-y-1.5">
                 <BaseText size="xs" class="text-muted-400 font-semibold">
                   Status do Pagamento
                 </BaseText>
-                <BaseSelect v-model="form.paymentStatus" rounded="md" size="sm" @update:model-value="save">
+                <BaseSelect v-model="form.paymentStatus" rounded="md" size="sm" @update:model-value="saveDebounced">
                   <BaseSelectItem v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">
                     <div class="flex items-center gap-2">
                       <div
@@ -1305,7 +1356,7 @@ onMounted(() => {
                   Senha GOV.br
                 </BaseText>
                 <div class="relative">
-                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="save" />
+                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
                   <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors" @click="showGovPassword = !showGovPassword">
                     <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'" class="size-4" />
                   </button>
