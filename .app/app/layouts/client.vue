@@ -1,13 +1,34 @@
 <script setup lang="ts">
 const { tenant, fetchTenant } = useTenant()
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
+const token = computed(() => route.query.token as string | undefined)
+const branding = ref<any>(null)
 const { selectedTaxYear, availableYears } = useClientSession()
 
 const isReady = ref(!!tenant.value?.name)
 
 onMounted(async () => {
-  await fetchTenant()
+  if (token.value) {
+    try {
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
+      const result = await res.json()
+      if (result?.success) {
+        branding.value = result.data?.branding
+      }
+    }
+    catch { /* noop */ }
+  }
+  else {
+    await fetchTenant()
+  }
   isReady.value = true
 })
+
+function withToken(to: string) {
+  return token.value ? { path: to, query: { token: token.value } } : to
+}
 
 const menuItems = [
   {
@@ -52,11 +73,11 @@ const menuItems = [
     >
       <div class="flex items-center justify-between max-w-lg mx-auto">
         <div class="flex items-center gap-3">
-          <img v-if="tenant?.logo" :src="tenant.logo" class="size-8 object-contain" alt="Logo">
+          <img v-if="(branding?.logo || tenant?.logo)" :src="branding?.logo || tenant?.logo" class="size-8 object-contain" alt="Logo">
           <TairoLogo v-else class="size-8 text-primary-500" />
           <div class="flex flex-col">
             <BaseHeading as="h1" size="xs" weight="bold" class="text-muted-800 dark:text-muted-100 leading-none">
-              {{ tenant?.tradeName || tenant?.name || 'Contabilidade' }}
+              {{ branding?.companyName || tenant?.tradeName || tenant?.name || 'Contabilidade' }}
             </BaseHeading>
 
             <!-- Year Selector -->
@@ -93,7 +114,7 @@ const menuItems = [
       <div class="flex items-center justify-around max-w-lg mx-auto">
         <NuxtLink
           v-for="item in menuItems" :key="item.to" v-slot="{ isActive }"
-          :to="item.to"
+          :to="withToken(item.to)"
           class="flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 min-w-[64px]" active-class="text-primary-500"
         >
           <div

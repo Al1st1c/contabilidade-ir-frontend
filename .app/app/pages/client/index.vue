@@ -7,6 +7,18 @@ const { user } = useAuth()
 const { useCustomFetch } = useApi()
 const { selectedTaxYear } = useClientSession()
 const { fetchTenant, tenant } = useTenant()
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
+const token = computed(() => route.query.token as string | undefined)
+const isPublicMode = computed(() => Boolean(token.value))
+const clientPixKey = computed(() => (rawClient.value as any)?.pixKey || null)
+function pixKeyType(key: string) {
+  if (!key) return 'unknown'
+  const digits = key.replace(/\D/g, '')
+  if (digits.length === 11) return 'cpf'
+  return 'bank'
+}
 
 const isLoading = ref(true)
 const isReportingPayment = ref(false)
@@ -15,38 +27,55 @@ const rawDeclaration = ref<any>(null)
 const showOnboarding = ref(false)
 
 async function loadData() {
-  if (!user.value?.id)
+  if (!token.value && !user.value?.id)
     return
 
   try {
     isLoading.value = true
-    const [clientRes] = await Promise.all([
-      useCustomFetch<any>(`/clients/${user.value.id}`),
-      fetchTenant(),
-    ])
+    if (!token.value) {
+      const [clientRes] = await Promise.all([
+        useCustomFetch<any>(`/clients/${(user.value as any)?.id}`),
+        fetchTenant(),
+      ])
 
-    if (clientRes.data.success) {
-      rawClient.value = clientRes.data.data
+      if (clientRes.data.success) {
+        rawClient.value = clientRes.data.data
 
-      // Check for onboarding
-      if (!clientRes.data.data.onboardingCompleted) {
-        showOnboarding.value = true
-      }
+        if (!clientRes.data.data.onboardingCompleted) {
+          showOnboarding.value = true
+        }
 
-      // Busca declaração que bate com o ano selecionado
-      const declaration = clientRes.data.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
+        const declaration = clientRes.data.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
 
-      if (declaration) {
-        const { data: decRes } = await useCustomFetch(`/declarations/${declaration.id}`)
-        if (decRes.success) {
-          rawDeclaration.value = decRes.data
+        if (declaration) {
+          const { data: decRes } = await useCustomFetch(`/declarations/${declaration.id}`)
+          if (decRes.success) {
+            rawDeclaration.value = decRes.data
+          }
+          else {
+            rawDeclaration.value = null
+          }
         }
         else {
           rawDeclaration.value = null
         }
       }
-      else {
-        rawDeclaration.value = null
+    }
+    else {
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
+      const result = await res.json()
+      if (result?.success) {
+        rawClient.value = { name: result.data?.client?.name }
+        rawDeclaration.value = {
+          id: null,
+          taxYear: result.data?.declaration?.taxYear,
+          status: result.data?.declaration?.status,
+          assignedTo: null,
+          paymentStatus: null,
+          result: result.data?.declaration?.result || null,
+          resultValue: result.data?.declaration?.resultValue || 0,
+        }
+        selectedTaxYear.value = Number(result.data?.declaration?.taxYear) || selectedTaxYear.value
       }
     }
   }
@@ -110,6 +139,15 @@ const clientData = computed(() => {
 
   const currentStatus = statusMapper[visualStatus] || statusMapper.pending
 
+  const resultCode = declaration?.result as string | undefined
+  const refundStatus =
+    resultCode && ['refund', 'tax_to_receive', 'to_receive', 'refund_due'].includes(resultCode)
+      ? 'A Receber'
+      : resultCode && ['pay', 'tax_to_pay', 'to_pay', 'owed'].includes(resultCode)
+        ? 'A Pagar'
+        : null
+  const refundValue = declaration?.resultValue != null ? Number(declaration.resultValue) : 0
+
   return {
     id: declaration?.id,
     name: rawClient.value?.name?.split(' ')[0] || 'Usuário',
@@ -124,8 +162,8 @@ const clientData = computed(() => {
       value: declaration?.serviceValue || 0,
     },
     refund: {
-      value: declaration?.resultValue || 0,
-      status: declaration?.result === 'refund' ? 'A Receber' : declaration?.result === 'pay' ? 'A Pagar' : null,
+      value: refundValue,
+      status: refundStatus,
     },
     accountant: declaration?.assignedTo
       ? {
@@ -212,6 +250,13 @@ function formatCurrency(value: number) {
 function openWhatsApp(phone: string) {
   window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank')
 }
+
+function goToDocuments() {
+  if (token.value)
+    navigateTo({ path: '/client/documentos', query: { token: token.value } })
+  else
+    navigateTo('/client/documentos')
+}
 </script>
 
 <template>
@@ -254,7 +299,7 @@ function openWhatsApp(phone: string) {
           <BaseButton
             variant="none" rounded="lg" size="sm"
             class="h-10 px-4 font-bold shadow-sm text-white bg-warning-500 hover:bg-warning-500/20"
-            @click="navigateTo('/client/documentos')"
+            @click="goToDocuments"
           >
             Enviar Agora
           </BaseButton>
@@ -321,7 +366,7 @@ function openWhatsApp(phone: string) {
 
               <!-- Minimalist Payment Section (REFINED) -->
               <div
-                v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
+                v-if="!isPublicMode && index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
                 class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2"
               >
                 <div class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
@@ -367,7 +412,7 @@ function openWhatsApp(phone: string) {
 
               <!-- Awaiting Verification Status (NEW) -->
               <div
-                v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
+                v-if="!isPublicMode && index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
                 class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2"
               >
                 <div class="flex items-center gap-3">
@@ -389,7 +434,7 @@ function openWhatsApp(phone: string) {
 
               <!-- Paid Confirmation (REFINED) -->
               <div
-                v-if="index === 4 && step.completed"
+                v-if="!isPublicMode && index === 4 && step.completed"
                 class="mt-2 flex items-center gap-2 text-success-500 animate-in fade-in"
               >
                 <Icon name="solar:verified-check-bold" class="size-4" />
@@ -411,11 +456,11 @@ function openWhatsApp(phone: string) {
         <div class="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none">
           <div
             class="absolute -top-24 -right-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/40'"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/10'"
           />
           <div
             class="absolute -bottom-24 -left-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/20'"
+            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/5'"
           />
         </div>
 
@@ -431,10 +476,10 @@ function openWhatsApp(phone: string) {
               </BaseHeading>
               <div
                 class="size-10 rounded-xl flex items-center justify-center shadow-lg"
-                :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'"
+                :class="clientData.refund.status ? (clientData.refund.status === 'A Receber' ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/5 text-danger-400') : 'bg-info-500/10 text-info-500'"
               >
                 <Icon
-                  :name="clientData.refund.status === 'A Receber' ? 'solar:hand-stars-bold-duotone' : 'solar:bill-list-bold-duotone'"
+                  :name="clientData.refund.status ? (clientData.refund.status === 'A Receber' ? 'solar:hand-stars-bold-duotone' : 'solar:bill-list-bold-duotone') : 'solar:flag-bold-duotone'"
                   class="size-6"
                 />
               </div>
@@ -444,8 +489,8 @@ function openWhatsApp(phone: string) {
               <div class="flex items-baseline gap-2">
                 <!-- <span class="text-2xl font-light text-muted-400">R$</span> -->
                 <BaseHeading
-                  as="h2" size="5xl" weight="bold" class="tracking-tight leading-none"
-                  :class="clientData.refund.status === 'A Receber' ? 'text-green-500' : 'text-red-500'"
+                  as="h2" :size="clientData.refund.status === 'A Receber' ? '5xl' : '3xl'" weight="bold" class="tracking-tight leading-none"
+                  :class="clientData.refund.status === 'A Receber' ? 'text-green-500' : 'text-red-500/80'"
                 >
                   {{ clientData.refund.status }}
                 </BaseHeading>
@@ -453,8 +498,16 @@ function openWhatsApp(phone: string) {
 
               <div class="flex items-center gap-2">
                 <BaseTag
-                  :color="clientData.refund.status === 'A Receber' ? 'success' : 'danger'" variant="muted"
-                  rounded="full" class="px-4 py-1.5 font-bold text-[10px] uppercase tracking-wider"
+                  v-if="clientData.refund.status === 'A Receber'"
+                  size="sm" variant="none"
+                  class="px-4 py-1.5 font-bold text-[10px] uppercase tracking-wider bg-success-500 text-white rounded-full"
+                >
+                  {{ clientData.refund.status }}
+                </BaseTag>
+                <BaseTag
+                  v-else
+                  size="sm" variant="none"
+                  class="px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-danger-500/10 text-danger-700 border border-danger-500/20 rounded-full"
                 >
                   {{ clientData.refund.status }}
                 </BaseTag>
@@ -463,13 +516,59 @@ function openWhatsApp(phone: string) {
                     ? 'A ser depositado em sua conta' : 'Valor a ser pago à Receita' }}
                 </BaseText>
               </div>
+            <div class="flex items-center justify-between mt-2">
+              <BaseText size="xs" class="text-muted-500">Valor</BaseText>
+              <BaseText size="xs" weight="bold" class="text-muted-800 dark:text-white">
+                {{ formatCurrency(clientData.refund.value || 0) }}
+              </BaseText>
+            </div>
+            <div v-if="clientData.refund.status === 'A Pagar'" class="mt-2 flex items-center gap-2">
+              <Icon name="solar:info-circle-bold" class="size-4 text-danger-500/80" />
+              <BaseText size="xs" class="text-danger-600/80 dark:text-danger-400/80">
+                O DARF para pagamento está em Documentos Oficiais.
+              </BaseText>
+            </div>
+            <div v-else-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center gap-2">
+              <Icon name="solar:info-circle-bold" class="size-4 text-success-500" />
+              <BaseText size="xs" class="text-success-600 dark:text-success-400">
+                Confirme sua chave Pix: CPF ou Agência e Conta.
+              </BaseText>
+            </div>
+            <div v-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center justify-between">
+              <BaseText size="xs" class="text-muted-500">Chave Pix</BaseText>
+              <div class="flex items-center gap-2">
+                <BaseTag v-if="clientPixKey" size="sm" variant="none" :class="pixKeyType(clientPixKey) === 'cpf' ? 'bg-success-500 text-white' : 'bg-info-500 text-white'">
+                  {{ pixKeyType(clientPixKey) === 'cpf' ? 'CPF' : 'Agência/Conta' }}
+                </BaseTag>
+                <BaseTag v-else size="sm" variant="none" class="bg-danger-500 text-white">
+                  Não configurada
+                </BaseTag>
+              </div>
+            </div>
             </div>
 
             <div v-else class="py-4">
-              <BasePlaceholderMinimal
-                title="Aguardando Transmissão"
-                subtitle="O resultado oficial aparecerá aqui após a entrega." class="!bg-transparent"
-              />
+              <template v-if="rawDeclaration?.status === 'finished'">
+                <div class="flex items-center gap-3">
+                  <div class="size-10 rounded-xl bg-info-500/10 text-info-500 flex items-center justify-center">
+                    <Icon name="solar:flag-bold-duotone" class="size-6" />
+                  </div>
+                  <div>
+                    <BaseHeading as="h2" size="lg" weight="bold" class="leading-none">
+                      Transmitida
+                    </BaseHeading>
+                    <BaseText size="xs" class="text-muted-500">
+                      Sua declaração foi transmitida. Os documentos oficiais estão abaixo.
+                    </BaseText>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <BasePlaceholderMinimal
+                  title="Aguardando Transmissão"
+                  subtitle="O resultado oficial aparecerá aqui após a entrega." class="!bg-transparent"
+                />
+              </template>
             </div>
           </div>
 

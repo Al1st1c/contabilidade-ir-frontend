@@ -7,6 +7,10 @@ const { add } = useNuiToasts()
 const { user } = useAuth()
 const { useCustomFetch } = useApi()
 const { selectedTaxYear } = useClientSession()
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
+const token = computed(() => route.query.token as string | undefined)
 
 const isLoading = ref(true)
 const declaration = ref<any>(null)
@@ -15,40 +19,61 @@ const documents = ref<any[]>([])
 const isUploading = ref<string | null>(null)
 
 async function loadDocuments() {
-  if (!user.value?.id)
+  if (!token.value && !user.value?.id)
     return
 
   try {
     isLoading.value = true
-    // 1. Buscar dados do cliente (que trazem as declarações)
-    const { data: clientRes } = await useCustomFetch(`/clients/${user.value.id}`)
-    if (clientRes.success) {
-      // Busca declaração que bate com o ano selecionado
-      const currentDeclaration = clientRes.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
-
-      if (currentDeclaration) {
-        // 2. Buscar detalhes da declaração (com checklist e links)
-        const { data: decRes } = await useCustomFetch(`/declarations/${currentDeclaration.id}`)
-        if (decRes.success) {
-          declaration.value = decRes.data
-          documents.value = (decRes.data.checklist || []).map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            description: item.description,
-            status: item.status, // pending, uploaded, approved, rejected
-            isRequired: item.isRequired,
-            comment: item.comment,
-            attachmentId: item.attachment?.id,
-          }))
-
-          // Pegar o link de coleta ativo
-          collectionLink.value = decRes.data.collectionLinks?.find((l: any) => l.isActive)
+    if (!token.value) {
+      const { data: clientRes } = await useCustomFetch(`/clients/${(user.value as any)?.id}`)
+      if (clientRes.success) {
+        const currentDeclaration = clientRes.data.taxDeclarations?.find((d: any) => Number(d.taxYear) === selectedTaxYear.value)
+        if (currentDeclaration) {
+          const { data: decRes } = await useCustomFetch(`/declarations/${currentDeclaration.id}`)
+          if (decRes.success) {
+            declaration.value = decRes.data
+            documents.value = (decRes.data.checklist || []).map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              status: item.status,
+              isRequired: item.isRequired,
+              comment: item.comment,
+              attachmentId: item.attachment?.id,
+            }))
+            collectionLink.value = decRes.data.collectionLinks?.find((l: any) => l.isActive)
+          }
+          else {
+            declaration.value = null
+            documents.value = []
+            collectionLink.value = null
+          }
         }
         else {
           declaration.value = null
           documents.value = []
           collectionLink.value = null
         }
+      }
+    }
+    else {
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
+      const result = await res.json()
+      if (result?.success) {
+        declaration.value = {
+          taxYear: result.data?.declaration?.taxYear,
+        }
+        selectedTaxYear.value = Number(result.data?.declaration?.taxYear) || selectedTaxYear.value
+        documents.value = (result.data?.checklist || []).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          status: item.status,
+          isRequired: item.isRequired,
+          comment: item.comment,
+          attachmentId: item.attachment?.id,
+        }))
+        collectionLink.value = { token: token.value }
       }
       else {
         declaration.value = null

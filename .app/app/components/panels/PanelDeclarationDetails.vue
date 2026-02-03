@@ -76,7 +76,7 @@ const baseUrl = computed(() => {
 const collectionLinkUrl = computed(() => {
   if (!collectionLink.value)
     return ''
-  return collectionLink.value.url || (collectionLink.value.token ? `/upload/${collectionLink.value.token}` : '')
+  return collectionLink.value.url || (collectionLink.value.token ? `/client?token=${collectionLink.value.token}` : '')
 })
 const fullCollectionLink = computed(() => {
   if (!collectionLinkUrl.value)
@@ -389,8 +389,6 @@ async function save() {
       body: updated,
     })
     if (data && data.success) {
-      // toaster.add({ title: 'Salvo', description: 'Alterações gravadas com sucesso', icon: 'ph:check-circle-fill' })
-      emit('saved')
       lastSavedForm.value = JSON.parse(JSON.stringify(form.value))
     }
   }
@@ -418,10 +416,13 @@ async function confirmDelete() {
 
 // ─── Collection Link ──────────────────────────────────────────────────────────
 function copyLink() {
-  if (collectionLink.value) {
-    navigator.clipboard.writeText(`${window.location.origin}${collectionLink.value.url}`)
-    toaster.add({ title: 'Copiado', description: 'Link copiado para a área de transferência', icon: 'ph:copy-fill' })
+  const url = fullCollectionLink.value
+  if (!url) {
+    toaster.add({ title: 'Erro', description: 'Link indisponível. Gere um novo link.', icon: 'ph:warning-circle-fill' })
+    return
   }
+  navigator.clipboard.writeText(url)
+  toaster.add({ title: 'Copiado', description: 'Link copiado para a área de transferência', icon: 'ph:copy-fill' })
 }
 async function generateLink() {
   isGeneratingLink.value = true
@@ -456,6 +457,31 @@ const officialDocumentsCount = computed(() => {
 })
 function getSlotAttachment(category: string) {
   return declaration.value?.attachments?.find((a: any) => a.category === category)
+}
+function statusIcon(status: string) {
+  const map: Record<string, string> = {
+    approved: 'lucide:check',
+    rejected: 'lucide:x',
+    uploaded: 'lucide:upload',
+    pending: 'lucide:circle-dashed',
+  }
+  return map[status] || 'lucide:circle-dashed'
+}
+function statusTagClass(status: string) {
+  const map: Record<string, string> = {
+    uploaded: 'bg-warning-500 text-white',
+    approved: 'bg-success-500 text-white',
+    rejected: 'bg-danger-500 text-white',
+  }
+  return map[status] || ''
+}
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    uploaded: 'Enviado',
+    approved: 'Aprovado',
+    rejected: 'Rejeitado',
+  }
+  return map[status] || ''
 }
 function triggerOfficialUpload(category: string) {
   selectedOfficialCategory.value = category
@@ -934,7 +960,7 @@ onMounted(() => {
                     'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
                   }"
                 >
-                  <Icon :name="({ approved: 'lucide:check', rejected: 'lucide:x', uploaded: 'lucide:upload', pending: 'lucide:circle-dashed' })[item.status] || 'lucide:circle-dashed'" class="size-3" />
+                  <Icon :name="statusIcon(item.status)" class="size-3" />
                 </div>
 
                 <!-- Title -->
@@ -945,8 +971,8 @@ onMounted(() => {
                   <BaseTag v-if="item.isRequired" size="sm" variant="none" class="text-[9px] shrink-0 bg-danger-500 text-white">
                     Obrigatório
                   </BaseTag>
-                  <BaseTag v-if="item.status !== 'pending'" size="sm" :class="({ uploaded: 'bg-warning-500 text-white', approved: 'bg-success-500 text-white', rejected: 'bg-danger-500 text-white' })[item.status]" variant="none" class="text-[9px] shrink-0 capitalize">
-                    {{ ({ uploaded: 'Enviado', approved: 'Aprovado', rejected: 'Rejeitado' })[item.status] }}
+                  <BaseTag v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)" variant="none" class="text-[9px] shrink-0 capitalize">
+                    {{ statusLabel(item.status) }}
                   </BaseTag>
                 </div>
 
