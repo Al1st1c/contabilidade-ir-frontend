@@ -73,6 +73,33 @@ const baseUrl = computed(() => {
   return window.location.origin
 })
 
+const collectionLinkUrl = computed(() => {
+  if (!collectionLink.value)
+    return ''
+  return collectionLink.value.url || (collectionLink.value.token ? `/upload/${collectionLink.value.token}` : '')
+})
+const fullCollectionLink = computed(() => {
+  if (!collectionLinkUrl.value)
+    return ''
+  return `${baseUrl.value}${collectionLinkUrl.value}`
+})
+const isValidatingLink = ref(false)
+const linkValidation = ref<{ valid: boolean, reason?: string } | null>(null)
+async function validatePublicLink() {
+  if (!collectionLink.value?.token)
+    return
+  isValidatingLink.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/public/${collectionLink.value.token}/validate`)
+    linkValidation.value = data
+  }
+  catch (error) {
+    linkValidation.value = { valid: false, reason: 'Erro ao validar' }
+  }
+  finally {
+    isValidatingLink.value = false
+  }
+}
 const pendingChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'pending').length)
 const uploadedChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'uploaded').length)
 
@@ -573,7 +600,7 @@ onMounted(() => {
             <BaseHeading as="h3" size="sm" weight="semibold" class="text-muted-800 dark:text-muted-100 truncate">
               IR {{ declaration.taxYear }} — {{ declaration.client?.name }}
             </BaseHeading>
-            <BaseTag size="sm" :color="declaration.declarationType === 'complete' ? 'primary' : 'info'" variant="muted">
+            <BaseTag size="sm" variant="none" :class="declaration.declarationType === 'complete' ? 'bg-primary-500 text-white' : 'bg-info-500 text-white'">
               {{ declaration.declarationType === 'complete' ? 'Completa' : 'Simplificada' }}
             </BaseTag>
           </div>
@@ -690,7 +717,7 @@ onMounted(() => {
               </div>
               <!-- Tags inline do cliente -->
               <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1 shrink-0">
-                <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted" class="text-[10px]">
+                <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none" class="text-[10px] bg-primary-500 text-white">
                   {{ tag }}
                 </BaseTag>
               </div>
@@ -714,7 +741,7 @@ onMounted(() => {
                     Descrição
                   </BaseText>
                 </div>
-                <BaseTag size="sm" variant="muted" class="text-[9px] uppercase font-bold tracking-tight">
+                <BaseTag size="sm" variant="none" class="text-[9px] uppercase font-bold tracking-tight bg-muted-100 text-muted-700">
                   Público — cliente vê
                 </BaseTag>
               </div>
@@ -737,7 +764,7 @@ onMounted(() => {
                     Notas Internas
                   </BaseText>
                 </div>
-                <BaseTag size="sm" variant="muted" color="warning" class="text-[9px] uppercase font-bold tracking-tight">
+                <BaseTag size="sm" variant="none" class="text-[9px] uppercase font-bold tracking-tight bg-warning-500 text-white">
                   Privado — apenas equipe
                 </BaseTag>
               </div>
@@ -915,10 +942,10 @@ onMounted(() => {
                   <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
                     {{ item.title }}
                   </p>
-                  <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="text-[9px] shrink-0">
+                  <BaseTag v-if="item.isRequired" size="sm" variant="none" class="text-[9px] shrink-0 bg-danger-500 text-white">
                     Obrigatório
                   </BaseTag>
-                  <BaseTag v-if="item.status !== 'pending'" size="sm" :color="({ uploaded: 'warning', approved: 'success', rejected: 'danger' })[item.status]" variant="muted" class="text-[9px] shrink-0 capitalize">
+                  <BaseTag v-if="item.status !== 'pending'" size="sm" :class="({ uploaded: 'bg-warning-500 text-white', approved: 'bg-success-500 text-white', rejected: 'bg-danger-500 text-white' })[item.status]" variant="none" class="text-[9px] shrink-0 capitalize">
                     {{ ({ uploaded: 'Enviado', approved: 'Aprovado', rejected: 'Rejeitado' })[item.status] }}
                   </BaseTag>
                 </div>
@@ -1041,10 +1068,10 @@ onMounted(() => {
                       {{ getSlotAttachment(slot.category)?.fileName || 'Aguardando envio' }}
                     </p>
                   </div>
-                  <BaseTag v-if="getSlotAttachment(slot.category)" size="sm" color="success" variant="muted" class="text-[9px] shrink-0">
+                  <BaseTag v-if="getSlotAttachment(slot.category)" size="sm" variant="none" class="text-[9px] shrink-0 bg-success-500 text-white">
                     Enviado
                   </BaseTag>
-                  <BaseTag v-else size="sm" color="muted" variant="muted" class="text-[9px] shrink-0">
+                  <BaseTag v-else size="sm" variant="none" class="text-[9px] shrink-0 bg-muted-200 text-muted-700">
                     Pendente
                   </BaseTag>
                   <div class="flex gap-1 shrink-0">
@@ -1087,15 +1114,21 @@ onMounted(() => {
               <div class="p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
                 <div v-if="collectionLink">
                   <p class="text-xs font-mono text-muted-500 mb-3 break-all">
-                    {{ `${baseUrl}${collectionLink.url}` }}
+                    {{ fullCollectionLink }}
                   </p>
-                  <div class="flex gap-2">
+                  <div class="flex gap-2 items-center">
                     <BaseButton size="sm" class="flex-1" @click="copyLink">
                       <Icon name="lucide:copy" class="size-3.5 mr-1.5" /> Copiar Link
                     </BaseButton>
-                    <BaseButton size="sm" variant="muted" :to="collectionLink.url" target="_blank">
+                    <BaseButton size="sm" variant="muted" :to="collectionLinkUrl" target="_blank">
                       <Icon name="lucide:external-link" class="size-4" />
                     </BaseButton>
+                    <BaseButton size="sm" variant="muted" :loading="isValidatingLink" @click="validatePublicLink">
+                      <Icon name="lucide:shield-check" class="size-4 mr-1.5" /> Validar
+                    </BaseButton>
+                    <BaseTag v-if="linkValidation" size="sm" variant="none" :class="linkValidation.valid ? 'bg-success-500 text-white' : 'bg-danger-500 text-white'" class="text-[9px]">
+                      {{ linkValidation.valid ? 'Válido' : 'Inválido' }}
+                    </BaseTag>
                   </div>
                 </div>
                 <div v-else>
@@ -1118,7 +1151,7 @@ onMounted(() => {
                     Enviar SMS
                   </BaseText>
                 </div>
-                <BaseTag size="sm" variant="muted" color="success" class="text-[9px]">
+                <BaseTag size="sm" variant="none" class="text-[9px] bg-success-500 text-white">
                   GSM Standard
                 </BaseTag>
               </div>
@@ -1335,7 +1368,7 @@ onMounted(() => {
                   Tags
                 </BaseText>
                 <div class="flex flex-wrap gap-1.5">
-                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" color="primary" variant="muted" class="group relative text-[10px] pr-5">
+                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none" class="group relative text-[10px] pr-5 bg-primary-500 text-white">
                     {{ tag }}
                     <button class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all" @click="removeTag(tag)">
                       <Icon name="lucide:x" class="size-2.5" />
@@ -1427,7 +1460,7 @@ onMounted(() => {
                     <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
                       {{ item.title }}
                     </BaseText>
-                    <BaseTag v-if="item.isRequired" size="sm" color="danger" variant="muted" class="mt-1 scale-90 origin-left">
+                    <BaseTag v-if="item.isRequired" size="sm" variant="none" class="mt-1 scale-90 origin-left bg-danger-500 text-white">
                       Obrigatório
                     </BaseTag>
                   </div>
