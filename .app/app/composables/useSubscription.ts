@@ -40,6 +40,19 @@ export interface Subscription {
   trialEnd?: string
   cancelAtPeriodEnd: boolean
   canceledAt?: string
+
+  // Novos campos de limites explícitos
+  employeesLimit: number
+  taxDeclarationsLimit: number
+  smsMonthlyLimit: number
+  emailsMonthlyLimit: number
+  storageMbLimit: number
+  whatsappMonthlyLimit: number
+  hasWhitelabel: boolean
+  hasReports: boolean
+  hasApi: boolean
+  hasTeamManagement: boolean
+
   storageUsedMb: number
   monthlyUsage: any
   yearlyUsage: any

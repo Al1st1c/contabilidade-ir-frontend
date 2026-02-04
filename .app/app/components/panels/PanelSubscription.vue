@@ -140,18 +140,33 @@ function calculatePercentage(current: number | undefined, max: number | undefine
             Uso do Período
           </BaseHeading>
           <div class="space-y-4">
-            <!-- Declarations -->
+            <!-- Employees -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs">
-                <span class="text-muted-500">Declarações de IR</span>
+                <span class="text-muted-500">Funcionários</span>
                 <span class="font-medium">
-                  {{ currentSubscription.yearlyUsage?.tax_declarations || 0 }} / {{ currentSubscription.plan?.limits?.tax_declarations_yearly || 0 }}
+                  {{ currentSubscription.monthlyUsage?.employees || 0 }} / {{ currentSubscription.employeesLimit || 0 }}
                 </span>
               </div>
               <BaseProgress
                 size="xs"
                 variant="primary"
-                :model-value="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.plan?.limits?.tax_declarations_yearly)"
+                :model-value="calculatePercentage(currentSubscription.monthlyUsage?.employees, currentSubscription.employeesLimit)"
+              />
+            </div>
+
+            <!-- Declarations -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-muted-500">Declarações de IR</span>
+                <span class="font-medium">
+                  {{ currentSubscription.yearlyUsage?.tax_declarations || 0 }} / {{ currentSubscription.taxDeclarationsLimit || 0 }}
+                </span>
+              </div>
+              <BaseProgress
+                size="xs"
+                variant="primary"
+                :model-value="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.taxDeclarationsLimit)"
               />
             </div>
 
@@ -160,29 +175,80 @@ function calculatePercentage(current: number | undefined, max: number | undefine
               <div class="flex justify-between text-xs">
                 <span class="text-muted-500">SMS Enviados</span>
                 <span class="font-medium">
-                  {{ currentSubscription.monthlyUsage?.sms || 0 }} / {{ currentSubscription.plan?.limits?.sms_monthly || 0 }}
+                  {{ currentSubscription.monthlyUsage?.sms || 0 }} / {{ currentSubscription.smsMonthlyLimit || 0 }}
                 </span>
               </div>
               <BaseProgress
                 size="xs"
                 variant="primary"
-                :model-value="calculatePercentage(currentSubscription.monthlyUsage?.sms, currentSubscription.plan?.limits?.sms_monthly)"
+                :model-value="calculatePercentage(currentSubscription.monthlyUsage?.sms, currentSubscription.smsMonthlyLimit)"
+              />
+            </div>
+
+            <!-- Emails -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs">
+                <span class="text-muted-500">E-mails Enviados</span>
+                <span class="font-medium">
+                  {{ currentSubscription.monthlyUsage?.emails || 0 }} / {{ currentSubscription.emailsMonthlyLimit || 0 }}
+                </span>
+              </div>
+              <BaseProgress
+                size="xs"
+                variant="primary"
+                :model-value="calculatePercentage(currentSubscription.monthlyUsage?.emails, currentSubscription.emailsMonthlyLimit)"
               />
             </div>
 
             <!-- Storage -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs">
-                <span class="text-muted-500">Armazenamento</span>
+                <span class="text-muted-500">Armazenamento (Drive)</span>
                 <span class="font-medium">
-                  {{ currentSubscription.storageUsedMb || 0 }} MB / {{ currentSubscription.plan?.limits?.storage_mb || 0 }} MB
+                  {{ currentSubscription.storageUsedMb || 0 }} MB / {{ currentSubscription.storageMbLimit || 0 }} MB
                 </span>
               </div>
               <BaseProgress
                 size="xs"
                 variant="primary"
-                :model-value="calculatePercentage(currentSubscription.storageUsedMb, currentSubscription.plan?.limits?.storage_mb)"
+                :model-value="calculatePercentage(currentSubscription.storageUsedMb, currentSubscription.storageMbLimit)"
               />
+            </div>
+
+            <!-- Boolean Features -->
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              <div class="flex items-center gap-2 text-xs">
+                <Icon
+                  :name="currentSubscription.hasWhitelabel ? 'lucide:check-circle-2' : 'lucide:x-circle'"
+                  :class="currentSubscription.hasWhitelabel ? 'text-success-500' : 'text-muted-400'"
+                  class="size-4"
+                />
+                <span :class="currentSubscription.hasWhitelabel ? 'text-muted-800 dark:text-muted-100' : 'text-muted-500'">Whitelabel</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <Icon
+                  :name="currentSubscription.hasReports ? 'lucide:check-circle-2' : 'lucide:x-circle'"
+                  :class="currentSubscription.hasReports ? 'text-success-500' : 'text-muted-400'"
+                  class="size-4"
+                />
+                <span :class="currentSubscription.hasReports ? 'text-muted-800 dark:text-muted-100' : 'text-muted-500'">Relatórios</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <Icon
+                  :name="currentSubscription.hasApi ? 'lucide:check-circle-2' : 'lucide:x-circle'"
+                  :class="currentSubscription.hasApi ? 'text-success-500' : 'text-muted-400'"
+                  class="size-4"
+                />
+                <span :class="currentSubscription.hasApi ? 'text-muted-800 dark:text-muted-100' : 'text-muted-500'">API</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <Icon
+                  :name="currentSubscription.hasTeamManagement ? 'lucide:check-circle-2' : 'lucide:x-circle'"
+                  :class="currentSubscription.hasTeamManagement ? 'text-success-500' : 'text-muted-400'"
+                  class="size-4"
+                />
+                <span :class="currentSubscription.hasTeamManagement ? 'text-muted-800 dark:text-muted-100' : 'text-muted-500'">Equipe</span>
+              </div>
             </div>
           </div>
         </div>
