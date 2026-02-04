@@ -450,6 +450,7 @@ async function createDeclaration() {
     }
   }
   catch (error: any) {
+    console.log(error)
     toaster.add({
       title: 'Erro',
       description: error.data?.message || 'Erro ao criar declaração',

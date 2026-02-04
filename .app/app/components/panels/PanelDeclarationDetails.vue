@@ -649,27 +649,27 @@ onMounted(() => {
       <div v-if="declaration" class="flex items-center gap-3 px-6 pb-2.5 text-xs text-muted-500 flex-wrap">
         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-muted-200 dark:border-muted-700 bg-muted-50 dark:bg-muted-800">
           <span class="size-2 rounded-full" :style="`background-color: var(--color-${selectedColumn?.color || 'gray'}-500, #9ca3af)`" />
-          <span class="font-semibold text-muted-700 dark:text-muted-200">{{ selectedColumn?.label || 'Sem status' }}</span>
+          <span class=" text-muted-700 dark:text-muted-200">{{ selectedColumn?.label || 'Sem status' }}</span>
         </span>
         <div class="flex items-center gap-1.5">
           <Icon :name="selectedPriority?.icon || 'lucide:minus'" class="size-3.5" :class="selectedPriority?.color || 'text-muted-400'" />
-          <span class="font-semibold">{{ selectedPriority?.label || '—' }}</span>
+          <span >{{ selectedPriority?.label || '—' }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <BaseAvatar v-if="assignedMember" :src="assignedMember.photo" :text="assignedMember.name?.charAt(0)" size="xs" />
           <Icon v-else name="lucide:user" class="size-3.5 text-muted-400" />
-          <span class="font-semibold">{{ assignedMember?.name || 'Sem responsável' }}</span>
+          <span >{{ assignedMember?.name || 'Sem responsável' }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
-          <span class="font-semibold">{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo' }}</span>
+          <span >{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo' }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
-          <span class="font-semibold">{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro' }}</span>
+          <span >{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro' }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -680,7 +680,7 @@ onMounted(() => {
       <div class="flex items-center gap-1 px-6 border-t border-muted-100 dark:border-muted-800">
         <button
           v-for="tab in tabs" :key="tab.key" type="button"
-          class="relative flex items-center gap-2 px-3 py-2.5 text-xs font-semibold transition-all"
+          class="relative flex items-center gap-2 px-3 py-2.5 text-xs transition-all"
           :class="activeTab === tab.key ? 'text-primary-600 dark:text-primary-400' : 'text-muted-400 hover:text-muted-600 dark:hover:text-muted-300'"
           @click="activeTab = tab.key"
         >
@@ -690,20 +690,20 @@ onMounted(() => {
           <!-- Badge checklist -->
           <span
             v-if="tab.key === 'checklist' && (pendingChecklistCount > 0 || uploadedChecklistCount > 0)"
-            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] "
             :class="uploadedChecklistCount > 0 ? 'bg-warning-100 text-warning-700' : 'bg-muted-100 text-muted-500'"
           >{{ uploadedChecklistCount > 0 ? uploadedChecklistCount : pendingChecklistCount }}</span>
 
           <!-- Badge anexos -->
           <span
             v-if="tab.key === 'attachments' && filteredAttachments.length > 0"
-            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold bg-muted-100 text-muted-500"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500"
           >{{ filteredAttachments.length }}</span>
 
           <!-- Badge documentos oficiais -->
           <span
             v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
-            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] font-bold bg-muted-100 text-muted-500"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500"
           >{{ officialDocumentsCount }}</span>
 
           <span v-if="activeTab === tab.key" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />
@@ -736,29 +736,27 @@ onMounted(() => {
                   {{ declaration.client?.name }}
                 </p>
                 <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span class="text-xs font-mono text-muted-500">{{ declaration.client?.cpf }}</span>
+                  <span class="text-xs text-muted-500">{{ declaration.client?.cpf }}</span>
                   <span class="text-muted-300 dark:text-muted-700">·</span>
                   <span class="text-xs text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
                 </div>
-                <!-- Link de Coleta (minimalista) -->
+                <!-- Link de Coleta -->
                 <div class="mt-2 flex items-center gap-2">
                   <Icon name="lucide:link" class="size-3.5 text-muted-400" />
-                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  <BaseText size="xs" class="text-muted-500 uppercase font-bold">
                     Link de Coleta
                   </BaseText>
-                  <div v-if="collectionLink" class="flex items-center gap-2 ml-auto">
+                  <div v-if="collectionLink" class="flex items-center">
+                    <span
+                      v-if="fullCollectionLink"
+                      class="text-xs text-primary-600 truncate max-w-[220px]"
+                      :title="fullCollectionLink"
+                    >
+                      {{ fullCollectionLink }}
+                    </span>
                     <BaseButton size="sm" variant="none" class="px-2 py-1 bg-primary-500 text-white" @click="copyLink">
-                      <Icon name="lucide:copy" class="size-3 mr-1" /> Copiar
+                      <Icon name="lucide:copy" class="size-3 mr-1" />
                     </BaseButton>
-                    <BaseButton size="sm" variant="muted" :to="collectionLinkUrl" target="_blank">
-                      <Icon name="lucide:external-link" class="size-4" />
-                    </BaseButton>
-                    <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors" :disabled="isValidatingLink" @click="validatePublicLink">
-                      <Icon name="lucide:shield-check" class="size-4" />
-                    </button>
-                    <BaseTag v-if="linkValidation" size="sm" variant="none" :class="linkValidation.valid ? 'bg-success-500 text-white' : 'bg-danger-500 text-white'" class="text-[9px]">
-                      {{ linkValidation.valid ? 'Válido' : 'Inválido' }}
-                    </BaseTag>
                   </div>
                   <div v-else class="ml-auto">
                     <BaseButton size="sm" variant="primary" :loading="isGeneratingLink" @click="generateLink">
@@ -789,7 +787,7 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <Icon name="lucide:align-left" class="size-4 text-muted-400" />
-                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                     Descrição
                   </BaseText>
                 </div>
@@ -812,7 +810,7 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <Icon name="lucide:eye-off" class="size-4 text-amber-500" />
-                  <BaseText size="xs" class="text-amber-600 dark:text-amber-400 uppercase tracking-widest font-bold">
+                  <BaseText size="xs" class="text-amber-600 dark:text-amber-400 uppercase  font-bold">
                     Notas Internas
                   </BaseText>
                 </div>
@@ -834,7 +832,7 @@ onMounted(() => {
             <div v-if="isRectified" class="space-y-2">
               <div class="flex items-center gap-2">
                 <Icon name="lucide:alert-triangle" class="size-4 text-danger-500" />
-                <BaseText size="xs" class="text-danger-500 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-danger-500 uppercase  font-bold">
                   Motivo da Retificação
                 </BaseText>
               </div>
@@ -852,7 +850,7 @@ onMounted(() => {
             <div class="space-y-2">
               <div class="flex items-center gap-2">
                 <Icon name="lucide:shield-check" class="size-4 text-muted-400" />
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                   Documentos Oficiais
                 </BaseText>
               </div>
@@ -903,7 +901,7 @@ onMounted(() => {
             <div class="space-y-2 pt-2">
               <div class="flex items-center gap-2">
                 <Icon name="lucide:clock" class="size-4 text-muted-400" />
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Histórico
                 </BaseText>
                 <span class="text-[9px] text-muted-300 font-normal ml-1">({{ declaration.auditLogs?.length || 0 }} entradas)</span>
@@ -937,7 +935,7 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <Icon name="lucide:check-square" class="size-4 text-muted-400" />
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                   Checklist
                 </BaseText>
               </div>
@@ -1004,7 +1002,7 @@ onMounted(() => {
 
                 <!-- Arquivo enviado: nome + ações -->
                 <div v-if="item.status === 'uploaded' && item.attachment" class="flex items-center gap-2 shrink-0">
-                  <span class="text-[10px] text-muted-400 font-mono truncate max-w-[100px]">{{ item.attachment.fileName }}</span>
+                  <span class="text-[10px] text-muted-400 truncate max-w-[100px]">{{ item.attachment.fileName }}</span>
                   <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)">
                     <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                   </BaseButton>
@@ -1045,7 +1043,7 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <Icon name="lucide:paperclip" class="size-4 text-muted-400" />
-                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                     Anexos <span class="text-muted-300">({{ filteredAttachments.length }})</span>
                   </BaseText>
                 </div>
@@ -1094,7 +1092,7 @@ onMounted(() => {
             <div class="space-y-3">
               <div class="flex items-center gap-2">
                 <Icon name="lucide:shield-check" class="size-4 text-primary-500" />
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                   Documentos Oficiais
                 </BaseText>
               </div>
@@ -1160,7 +1158,7 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <Icon name="lucide:send" class="size-4 text-muted-400" />
-                  <BaseText size="xs" class="text-muted-500 uppercase tracking-widest font-bold">
+                  <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
                     Enviar SMS
                   </BaseText>
                 </div>
@@ -1216,7 +1214,7 @@ onMounted(() => {
           <div class="p-5 space-y-5">
             <!-- STATUS -->
             <div class="space-y-1.5">
-              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+              <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                 Status
               </BaseText>
               <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="saveDebounced">
@@ -1233,7 +1231,7 @@ onMounted(() => {
 
             <!-- RESULTADO FINANCEIRO: destaque visual -->
             <div class="space-y-2">
-              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+              <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                 Resultado do IR
               </BaseText>
               <div class="flex items-center gap-2">
@@ -1255,7 +1253,7 @@ onMounted(() => {
                 v-if="form.result !== 'neutral'" class="mt-1 px-3 py-1.5 rounded-lg"
                 :class="form.result === 'restitution' ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800' : 'bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800'"
               >
-                <p class="text-[10px] font-bold uppercase tracking-widest" :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'">
+                <p class="text-[10px] font-bold uppercase " :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'">
                   {{ form.result === 'restitution' ? '↑ Restituição' : '↓ A Pagar' }}
                 </p>
                 <p class="text-lg font-bold" :class="form.result === 'restitution' ? 'text-success-700 dark:text-success-400' : 'text-danger-700 dark:text-danger-400'">
@@ -1270,7 +1268,7 @@ onMounted(() => {
             <div class="space-y-3.5">
               <!-- Responsável -->
               <div class="space-y-1.5">
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Responsável
                 </BaseText>
                 <BaseSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="saveDebounced">
@@ -1288,7 +1286,7 @@ onMounted(() => {
 
               <!-- Prioridade -->
               <div class="space-y-1.5">
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Prioridade
                 </BaseText>
                 <div class="flex gap-1.5">
@@ -1307,7 +1305,7 @@ onMounted(() => {
 
               <!-- Prazo -->
               <div class="space-y-1.5">
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Prazo
                 </BaseText>
                 <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="saveDebounced" />
@@ -1318,7 +1316,7 @@ onMounted(() => {
 
             <!-- TIPO DE DECLARAÇÃO -->
             <div class="space-y-1.5">
-              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+              <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                 Tipo de Declaração
               </BaseText>
               <div class="flex gap-1.5">
@@ -1339,7 +1337,7 @@ onMounted(() => {
 
             <!-- FINANCEIRO: honorários + pagamento -->
             <div class="space-y-3">
-              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+              <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                 Financeiro
               </BaseText>
               <!-- Honorários -->
@@ -1377,7 +1375,7 @@ onMounted(() => {
             <div class="space-y-3">
               <!-- Tags -->
               <div class="space-y-1.5">
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Tags
                 </BaseText>
                 <div class="flex flex-wrap gap-1.5">
@@ -1398,7 +1396,7 @@ onMounted(() => {
 
               <!-- Senha GOV.br -->
               <div class="space-y-1.5">
-                <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Senha GOV.br
                 </BaseText>
                 <div class="relative">
