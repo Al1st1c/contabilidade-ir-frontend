@@ -97,9 +97,38 @@ function getRoleLabel(roleName: string): string {
   return roles[roleName] || roleName || 'Membro'
 }
 
+// Fetch subscription to check limits
+const { fetchMySubscription, currentSubscription, loading: loadingSub } = useSubscription()
+
+// Computed to check if can add members
+const totalMembers = computed(() => data.value?.total || 0)
+const canAddMember = computed(() => {
+  if (!currentSubscription.value) return true // Fallback if sub not loaded yet
+
+  // If unlimited (0 or negative often means unlimited in some systems, but here seems explicit)
+  // Assuming 0 is NOT unlimited based on backend defaults (1).
+  const limit = currentSubscription.value.employeesLimit || 1
+  return totalMembers.value < limit
+})
+
+// Wrapper to show toast if limit reached
+function handleOpenAddMember() {
+  if (!canAddMember.value) {
+    useNuiToasts().add({
+      title: 'Limite Atingido',
+      description: 'Você atingiu o limite de colaboradores do seu plano. Faça um upgrade para adicionar mais.',
+      icon: 'lucide:lock',
+      duration: 5000
+    })
+    return
+  }
+  openAddMemberPanel()
+}
+
 // Fetch on mount
 onMounted(() => {
   fetchMembers()
+  fetchMySubscription()
 })
 
 // Current selected member
@@ -117,6 +146,7 @@ function openAddMemberPanel() {
   open(PanelAddTeamUser, {
     onSuccess: async () => {
       await fetchMembers()
+      // Refresh subscription to get updated usage if needed (though usage counts likely dynamic)
     },
   })
 }
@@ -132,11 +162,15 @@ function openAddMemberPanel() {
         </BaseHeading>
         <BaseParagraph size="sm" class="text-muted-400">
           Gerencie os membros da sua equipe
+          <span v-if="currentSubscription" class="ms-2 text-xs bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full">
+            {{ totalMembers }} / {{ currentSubscription.employeesLimit }}
+          </span>
         </BaseParagraph>
       </div>
       <!-- Buttons -->
       <div class="hidden items-center gap-2 md:flex">
-        <BaseButton rounded="md" size="sm" variant="primary" @click="openAddMemberPanel">
+        <BaseButton rounded="md" size="sm" variant="primary" :disabled="!canAddMember || loadingSub"
+          @click="handleOpenAddMember">
           <Icon name="solar:user-plus-rounded-linear" class="size-4" />
           <span>Convidar Membro</span>
         </BaseButton>
@@ -144,27 +178,24 @@ function openAddMemberPanel() {
     </div>
 
     <!-- Loading -->
-    <!-- Loading -->
     <AppPageLoading v-if="pending" message="Carregando membros..." />
 
+    <!-- Alert when limit reached -->
+    <AppLimitAlert v-if="!canAddMember && !loadingSub && !pending" class="mb-6" title="Limite de Equipe Atingido"
+      description="Você atingiu o número máximo de colaboradores permitidos no seu plano atual. Ative um plano superior para adicionar mais membros e escalar sua operação." />
+
     <!-- Empty State -->
-    <div v-else-if="!data?.data?.length" class="py-10">
-      <BasePlaceholderPage
-        title="Nenhum membro encontrado"
-        subtitle="Você ainda não possui membros na equipe. Convide alguém para começar."
-      >
+    <div v-if="!pending && !data?.data?.length" class="py-10">
+      <BasePlaceholderPage title="Nenhum membro encontrado"
+        subtitle="Você ainda não possui membros na equipe. Convide alguém para começar.">
         <template #image>
-          <img
-            class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-2.svg"
-            alt="Sem membros"
-          >
-          <img
-            class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-2-dark.svg"
-            alt="Sem membros"
-          >
+          <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/accounting-empty-search-v2.png"
+            alt="Sem membros">
+          <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/accounting-empty-search-v2-dark.png"
+            alt="Sem membros">
         </template>
         <template #action>
-          <BaseButton variant="primary" @click="openAddMemberPanel">
+          <BaseButton variant="primary" :disabled="!canAddMember || loadingSub" @click="handleOpenAddMember">
             <Icon name="solar:user-plus-rounded-linear" class="size-4" />
             <span>Convidar Membro</span>
           </BaseButton>
@@ -173,34 +204,26 @@ function openAddMemberPanel() {
     </div>
 
     <!-- Content Grid -->
-    <div v-else class="grid grid-cols-12 gap-6">
+    <div v-else-if="!pending && data?.data?.length" class="grid grid-cols-12 gap-6">
       <!-- Navigation - Members List -->
       <div class="col-span-12 lg:col-span-5">
         <BaseCard rounded="lg" class="p-2">
           <ul class="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-x-hidden max-h-[600px] overflow-y-auto">
-            <li
-              v-for="member in data?.data" :key="member.id" role="button" tabindex="0"
-              @click="currentMember = member"
-            >
-              <NuxtLink
-                :to="`/dashboard/settings/team/${member.slug}`"
+            <li v-for="member in data?.data" :key="member.id" role="button" tabindex="0"
+              @click="currentMember = member">
+              <NuxtLink :to="`/dashboard/settings/team/${member.slug}`"
                 class="hover:bg-muted-200/80 dark:hover:bg-muted-800/60 flex items-center gap-3 rounded-xl p-3 transition-colors"
-                :class="{ 'bg-muted-200/80 dark:bg-muted-800/60': currentMember?.id === member.id }"
-              >
+                :class="{ 'bg-muted-200/80 dark:bg-muted-800/60': currentMember?.id === member.id }">
                 <div class="relative">
                   <BaseAvatar :src="member.picture" :text="member.name?.charAt(0) || 'U'" size="sm" />
                   <!-- Pending invite indicator -->
-                  <span
-                    v-if="member.status === 'PENDING_INVITE'"
+                  <span v-if="member.status === 'PENDING_INVITE'"
                     class="absolute -top-1 -right-1 size-3 bg-warning-500 rounded-full border-2 border-white dark:border-muted-800"
-                    title="Convite pendente"
-                  />
+                    title="Convite pendente" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <BaseHeading
-                    weight="medium" size="sm" lead="tight"
-                    class="line-clamp-1 text-muted-800 dark:text-muted-100"
-                  >
+                  <BaseHeading weight="medium" size="sm" lead="tight"
+                    class="line-clamp-1 text-muted-800 dark:text-muted-100">
                     {{ member.name }}
                   </BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 line-clamp-1">
@@ -227,10 +250,8 @@ function openAddMemberPanel() {
         <BaseCard v-else rounded="lg">
           <div class="p-6">
             <div class="py-10 text-center">
-              <Icon
-                name="solar:users-group-rounded-bold-duotone"
-                class="size-16 text-muted-300 dark:text-muted-700 mx-auto mb-4"
-              />
+              <Icon name="solar:users-group-rounded-bold-duotone"
+                class="size-16 text-muted-300 dark:text-muted-700 mx-auto mb-4" />
               <BaseHeading weight="medium" size="xl" lead="none" class="mb-2 text-muted-800 dark:text-muted-100">
                 Selecione um membro
               </BaseHeading>

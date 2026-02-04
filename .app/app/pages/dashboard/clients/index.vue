@@ -88,9 +88,9 @@ watch(query, () => {
 
 // Tag colors for consistency with Kanban
 const tagColors: Record<string, string> = {
-  VIP: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  VIP: 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
   Recorrente: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  Novo: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  Novo: 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
   Médico: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
@@ -136,19 +136,13 @@ function formatCpf(cpf: string): string {
         <AppPageLoading v-if="pending" message="Carregando clientes..." />
 
         <div v-else-if="data?.data.length === 0">
-          <BasePlaceholderPage
-            title="Nenhum cliente encontrado"
-            subtitle="Tente buscar por outro termo ou cadastre um novo cliente."
-          >
+          <BasePlaceholderPage title="Nenhum cliente encontrado"
+            subtitle="Tente buscar por outro termo ou cadastre um novo cliente.">
             <template #image>
-              <img
-                class="block dark:hidden" src="/img/illustrations/placeholders/flat/placeholder-search-4.svg"
-                alt="Placeholder image"
-              >
-              <img
-                class="hidden dark:block" src="/img/illustrations/placeholders/flat/placeholder-search-4-dark.svg"
-                alt="Placeholder image"
-              >
+              <img class="block dark:hidden" src="/img/illustrations/placeholders/flat/accounting-empty-search-v2.png"
+                alt="Placeholder image">
+              <img class="hidden dark:block"
+                src="/img/illustrations/placeholders/flat/accounting-empty-search-v2-dark.png" alt="Placeholder image">
             </template>
             <div class="mt-4 flex justify-center">
               <BaseButton variant="primary" to="/dashboard/clients/create">
@@ -164,20 +158,16 @@ function formatCpf(cpf: string): string {
               <TairoTableHeading uppercase spaced class="p-4" @click="toggleSort('name')">
                 <div class="flex items-center cursor-pointer hover:text-primary-500 transition-colors">
                   Cliente
-                  <Icon
-                    v-if="sortBy === 'name'"
-                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1"
-                  />
+                  <Icon v-if="sortBy === 'name'"
+                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1" />
                 </div>
               </TairoTableHeading>
 
               <TairoTableHeading uppercase spaced @click="toggleSort('cpf')">
                 <div class="flex items-center cursor-pointer hover:text-primary-500 transition-colors">
                   CPF / Contato
-                  <Icon
-                    v-if="sortBy === 'cpf'"
-                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1"
-                  />
+                  <Icon v-if="sortBy === 'cpf'"
+                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1" />
                 </div>
               </TairoTableHeading>
 
@@ -188,10 +178,8 @@ function formatCpf(cpf: string): string {
               <TairoTableHeading uppercase spaced @click="toggleSort('declarationsCount')">
                 <div class="flex items-center cursor-pointer hover:text-primary-500 transition-colors">
                   Declarações
-                  <Icon
-                    v-if="sortBy === 'declarationsCount'"
-                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1"
-                  />
+                  <Icon v-if="sortBy === 'declarationsCount'"
+                    :name="sortOrder === 'asc' ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="size-3 ml-1" />
                 </div>
               </TairoTableHeading>
 
@@ -207,16 +195,12 @@ function formatCpf(cpf: string): string {
             <TairoTableRow v-for="item in data?.data" :key="item.id">
               <TairoTableCell spaced>
                 <div class="flex items-center">
-                  <BaseAvatar
-                    :text="item.name.charAt(0).toUpperCase()" size="sm"
-                    class="bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400"
-                  />
+                  <BaseAvatar :text="item.name.charAt(0).toUpperCase()" size="sm"
+                    class="bg-primary-500/10 text-primary-600 dark:bg-primary-500/20 dark:text-primary-400" />
                   <div class="ms-3 leading-none">
                     <h4 class="text-muted-900 dark:text-white font-sans text-sm font-medium">
-                      <NuxtLink
-                        :to="`/dashboard/clients/edit/${item.id}`"
-                        class="hover:text-primary-500 transition-colors"
-                      >
+                      <NuxtLink :to="`/dashboard/clients/edit/${item.id}`"
+                        class="hover:text-primary-500 transition-colors">
                         {{ item.name }}
                       </NuxtLink>
                     </h4>
@@ -241,10 +225,8 @@ function formatCpf(cpf: string): string {
 
               <TairoTableCell spaced>
                 <div v-if="item.tags && item.tags.length > 0" class="flex flex-wrap gap-1">
-                  <BaseTag
-                    v-for="tag in item.tags.slice(0, 2)" :key="tag" size="sm" rounded="full" variant="none"
-                    class="px-2 py-0.5 rounded text-[10px] font-medium" :class="[getTagColor(tag)]"
-                  >
+                  <BaseTag v-for="tag in item.tags.slice(0, 2)" :key="tag" size="sm" rounded="full" variant="none"
+                    class="px-2 py-0.5 rounded text-[10px] font-medium" :class="[getTagColor(tag)]">
                     {{ tag }}
                   </BaseTag>
                   <BaseTag v-if="item.tags.length > 2" size="sm" rounded="full" variant="muted" class="text-[10px]">
@@ -257,7 +239,7 @@ function formatCpf(cpf: string): string {
               <TairoTableCell spaced>
                 <div class="flex items-center gap-2">
                   <span class="font-semibold text-sm text-muted-800 dark:text-muted-100">{{ item.declarationsCount
-                  }}</span>
+                    }}</span>
                   <span class="text-xs text-muted-500">enviadas</span>
                 </div>
               </TairoTableCell>
@@ -271,26 +253,20 @@ function formatCpf(cpf: string): string {
               <TairoTableCell spaced>
                 <div class="flex justify-end items-center gap-2">
                   <BaseTooltip content="Histórico">
-                    <BaseButton
-                      :to="`/dashboard/clients/edit/${item.id}`" rounded="lg" size="sm" variant="muted"
-                      class="size-8 p-0 flex items-center justify-center"
-                    >
+                    <BaseButton :to="`/dashboard/clients/edit/${item.id}`" rounded="lg" size="sm" variant="muted"
+                      class="size-8 p-0 flex items-center justify-center">
                       <Icon name="lucide:eye" class="size-4" />
                     </BaseButton>
                   </BaseTooltip>
                   <BaseDropdown placement="bottom-end">
                     <template #button>
-                      <BaseButton
-                        rounded="lg" size="sm" variant="muted"
-                        class="size-8 p-0 flex items-center justify-center"
-                      >
+                      <BaseButton rounded="lg" size="sm" variant="muted"
+                        class="size-8 p-0 flex items-center justify-center">
                         <Icon name="lucide:more-vertical" class="size-4" />
                       </BaseButton>
                     </template>
-                    <BaseDropdownItem
-                      :to="{ path: '/dashboard/ir', query: { newFor: item.id } }"
-                      title="Nova Declaração" text="Iniciar processo"
-                    >
+                    <BaseDropdownItem :to="{ path: '/dashboard/ir', query: { newFor: item.id } }"
+                      title="Nova Declaração" text="Iniciar processo">
                       <template #start>
                         <Icon name="lucide:file-plus" class="size-4 text-primary-500" />
                       </template>
@@ -302,10 +278,8 @@ function formatCpf(cpf: string): string {
           </TairoTable>
 
           <div class="mt-6 px-4">
-            <BasePagination
-              v-model:page="page" :items-per-page="perPage" :total="data?.pagination?.total || 0"
-              :sibling-count="1" rounded="lg" class="w-full"
-            />
+            <BasePagination v-model:page="page" :items-per-page="perPage" :total="data?.pagination?.total || 0"
+              :sibling-count="1" rounded="lg" class="w-full" />
           </div>
         </div>
       </div>

@@ -14,9 +14,11 @@ const token = computed(() => route.query.token as string | undefined)
 const isPublicMode = computed(() => Boolean(token.value))
 const clientPixKey = computed(() => (rawClient.value as any)?.pixKey || null)
 function pixKeyType(key: string) {
-  if (!key) return 'unknown'
+  if (!key)
+    return 'unknown'
   const digits = key.replace(/\D/g, '')
-  if (digits.length === 11) return 'cpf'
+  if (digits.length === 11)
+    return 'cpf'
   return 'bank'
 }
 
@@ -140,8 +142,8 @@ const clientData = computed(() => {
   const currentStatus = statusMapper[visualStatus] || statusMapper.pending
 
   const resultCode = declaration?.result as string | undefined
-  const refundStatus =
-    resultCode && ['refund', 'tax_to_receive', 'to_receive', 'refund_due'].includes(resultCode)
+  const refundStatus
+    = resultCode && ['refund', 'tax_to_receive', 'to_receive', 'refund_due'].includes(resultCode)
       ? 'A Receber'
       : resultCode && ['pay', 'tax_to_pay', 'to_pay', 'owed'].includes(resultCode)
         ? 'A Pagar'
@@ -517,35 +519,39 @@ function goToDocuments() {
                     ? 'A ser depositado em sua conta' : 'Valor a ser pago à Receita' }}
                 </BaseText>
               </div>
-            <div class="flex items-center justify-between mt-2">
-              <BaseText size="xs" class="text-muted-500">Valor</BaseText>
-              <BaseText size="xs" weight="bold" class="text-muted-800 dark:text-white">
-                {{ formatCurrency(clientData.refund.value || 0) }}
-              </BaseText>
-            </div>
-            <div v-if="clientData.refund.status === 'A Pagar'" class="mt-2 flex items-center gap-2">
-              <Icon name="solar:info-circle-bold" class="size-4 text-danger-500/80" />
-              <BaseText size="xs" class="text-danger-600/80 dark:text-danger-400/80">
-                O DARF para pagamento está em Documentos Oficiais.
-              </BaseText>
-            </div>
-            <div v-else-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center gap-2">
-              <Icon name="solar:info-circle-bold" class="size-4 text-success-500" />
-              <BaseText size="xs" class="text-success-600 dark:text-success-400">
-                Confirme sua chave Pix: CPF ou Agência e Conta.
-              </BaseText>
-            </div>
-            <div v-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center justify-between">
-              <BaseText size="xs" class="text-muted-500">Chave Pix</BaseText>
-              <div class="flex items-center gap-2">
-                <BaseTag v-if="clientPixKey" size="sm" variant="none" :class="pixKeyType(clientPixKey) === 'cpf' ? 'bg-success-500 text-white' : 'bg-info-500 text-white'">
-                  {{ pixKeyType(clientPixKey) === 'cpf' ? 'CPF' : 'Agência/Conta' }}
-                </BaseTag>
-                <BaseTag v-else size="sm" variant="none" class="bg-danger-500 text-white">
-                  Não configurada
-                </BaseTag>
+              <div class="flex items-center justify-between mt-2">
+                <BaseText size="xs" class="text-muted-500">
+                  Valor
+                </BaseText>
+                <BaseText size="xs" weight="bold" class="text-muted-800 dark:text-white">
+                  {{ formatCurrency(clientData.refund.value || 0) }}
+                </BaseText>
               </div>
-            </div>
+              <div v-if="clientData.refund.status === 'A Pagar'" class="mt-2 flex items-center gap-2">
+                <Icon name="solar:info-circle-bold" class="size-4 text-danger-500/80" />
+                <BaseText size="xs" class="text-danger-600/80 dark:text-danger-400/80">
+                  O DARF para pagamento está em Documentos Oficiais.
+                </BaseText>
+              </div>
+              <div v-else-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center gap-2">
+                <Icon name="solar:info-circle-bold" class="size-4 text-success-500" />
+                <BaseText size="xs" class="text-success-600 dark:text-success-400">
+                  Confirme sua chave Pix: CPF ou Agência e Conta.
+                </BaseText>
+              </div>
+              <div v-if="clientData.refund.status === 'A Receber'" class="mt-2 flex items-center justify-between">
+                <BaseText size="xs" class="text-muted-500">
+                  Chave Pix
+                </BaseText>
+                <div class="flex items-center gap-2">
+                  <BaseTag v-if="clientPixKey" size="sm" variant="none" :class="pixKeyType(clientPixKey) === 'cpf' ? 'bg-success-500 text-white' : 'bg-info-500 text-white'">
+                    {{ pixKeyType(clientPixKey) === 'cpf' ? 'CPF' : 'Agência/Conta' }}
+                  </BaseTag>
+                  <BaseTag v-else size="sm" variant="none" class="bg-danger-500 text-white">
+                    Não configurada
+                  </BaseTag>
+                </div>
+              </div>
             </div>
 
             <div v-else class="py-4">

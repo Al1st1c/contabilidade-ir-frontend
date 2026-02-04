@@ -589,16 +589,21 @@ const filteredMembers = computed(() => {
           <!-- Header Row -->
           <div class="col-span-12">
             <div class="grid grid-cols-12 gap-4">
-              <!-- Left: User Profile & Rookies & Job Feed (Col 7/8) -->
+              <!-- Left: User Profile + Rookies + Job Feed (Col 7/8) -->
               <div class="col-span-12 lg:col-span-7 2xl:col-span-8">
-                <div class="bg-primary-800 rounded-2xl px-6 py-8 h-full flex items-center">
-                  <div class="flex w-full flex-col items-center gap-y-6 sm:flex-row">
+                <div class="bg-primary-800 rounded-2xl px-6 py-8 h-full flex items-center relative overflow-hidden">
+                  <!-- Decorative Favicon Illustration (Half-hidden watermark) -->
+                  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div class="absolute -right-35 -bottom-30 opacity-20 transform scale-x-[-1] z-0">
+                      <!-- Using white favicon: background is always dark primary-800 even in light mode -->
+                      <img :src="'/img/favicon-white.png'" class="size-96 object-contain" alt="">
+                    </div>
+                  </div>
+                  <div class="flex w-full flex-col items-center gap-y-6 sm:flex-row relative z-10">
                     <!-- User Profile -->
                     <div class="flex flex-1 flex-col gap-y-2 px-4 border-muted-700/50">
-                      <BaseAvatar
-                        :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="lg"
-                        class="border-primary-200/50 ring-primary-200/50 ring-offset-primary-600 mb-2 border ring-2 ring-offset-4"
-                      />
+                      <BaseAvatar :src="user?.photo" :text="user?.name?.charAt(0) || '?'" size="lg"
+                        class="border-primary-200/50 ring-primary-200/50 ring-offset-primary-600 mb-2 border ring-2 ring-offset-4" />
                       <BaseHeading as="h2" size="2xl" weight="semibold" lead="none" class="text-white">
                         <span>Olá, {{ user?.name?.split(' ')[0] || 'Contador' }}! 👋</span>
                       </BaseHeading>
@@ -613,17 +618,16 @@ const filteredMembers = computed(() => {
                         <span>Equipe</span>
                       </BaseHeading>
                       <BaseParagraph size="xs" lead="tight" class="mb-3 text-primary-200">
-                        <span v-if="isViewingAdmin">Acompanhe a produtividade dos seus colaboradores em tempo real.</span>
+                        <span v-if="isViewingAdmin">Acompanhe a produtividade dos seus colaboradores em tempo
+                          real.</span>
                         <span v-else>Acompanhe seu desempenho e metas individuais em tempo real.</span>
                       </BaseParagraph>
                       <div class="mt-auto flex items-center gap-2">
                         <div class="flex -space-x-2">
-                          <BaseAvatar
-                            v-for="rookie in rookies" :key="rookie.name" size="sm" rounded="full"
-                            :src="rookie.avatar" class="border-2 border-primary-800"
-                          />
+                          <BaseAvatar v-for="rookie in rookies" :key="rookie.name" size="sm" rounded="full"
+                            :src="rookie.avatar" class="border-2 border-primary-800" />
                         </div>
-                        <BaseButton size="icon-md" rounded="lg" to="/dashboard/settings/team" v-if="isViewingAdmin">
+                        <BaseButton v-if="isViewingAdmin" size="icon-md" rounded="lg" to="/dashboard/settings/team">
                           <Icon name="lucide:plus" class="size-4" />
                         </BaseButton>
                       </div>
@@ -649,10 +653,8 @@ const filteredMembers = computed(() => {
 
               <!-- Right: Standing Orders (Timer) (Col 5/4) -->
               <div class="col-span-12 lg:col-span-5 2xl:col-span-4">
-                <BaseCard
-                  rounded="md" variant="none"
-                  class="bg-primary-900 border-primary-900 h-full p-4 md:p-6 lg:p-10 relative"
-                >
+                <BaseCard rounded="md" variant="none"
+                  class="bg-primary-900 border-primary-900 h-full p-4 md:p-6 lg:p-10 relative">
                   <!-- Clip illustration without clipping the clock tooltip -->
                   <div class="absolute inset-0 overflow-hidden rounded-md pointer-events-none">
                     <!-- Background Illustration (Repositioned to Left) -->
@@ -665,7 +667,7 @@ const filteredMembers = computed(() => {
                     <!-- Text Area -->
                     <div class="col-span-12 sm:col-span-6">
                       <BaseHeading as="h3" size="xl" weight="semibold" class="text-white mb-2">
-                        {{ isIrPeriodStarted ? 'Tempo Restante' : 'Campanha IR' }}
+                        {{ isIrPeriodStarted ? 'Tempo Restante' : 'Campanha IRPF 2026' }}
                       </BaseHeading>
                       <BaseParagraph size="xs" class="text-primary-100 mb-6 leading-relaxed opacity-90">
                         {{ isIrPeriodStarted
@@ -680,13 +682,11 @@ const filteredMembers = computed(() => {
 
                     <!-- Visual Area (Interactive Clock) -->
                     <div class="col-span-12 sm:col-span-6 flex flex-col items-center justify-center min-h-[160px]">
-                      <div
-                        class="transition-all duration-300 cursor-pointer" :class="[
-                          isClockZoomed
-                            ? 'z-[100] relative'
-                            : 'scale-[0.8] sm:scale-90 lg:scale-100 z-10 relative',
-                        ]" @click="isClockZoomed = !isClockZoomed"
-                      >
+                      <div class="transition-all duration-300 cursor-pointer" :class="[
+                        isClockZoomed
+                          ? 'z-[100] relative'
+                          : 'scale-[0.8] sm:scale-90 lg:scale-100 z-10 relative',
+                      ]" @click="isClockZoomed = !isClockZoomed">
                         <DashboardIRCanvasClock :start-date="irStartDate" :end-date="irEndDate" :size="140" />
                       </div>
                     </div>
@@ -709,28 +709,20 @@ const filteredMembers = computed(() => {
                 </BaseHeading>
               </div>
               <div class="flex gap-2 sm:justify-end">
-                <BaseButton
-                  rounded="md" size="sm" :variant="activeAlertTab === 'all' ? 'primary' : 'default'"
-                  @click="activeAlertTab = 'all'"
-                >
+                <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'all' ? 'primary' : 'default'"
+                  @click="activeAlertTab = 'all'">
                   Todos
                 </BaseButton>
-                <BaseButton
-                  rounded="md" size="sm" :variant="activeAlertTab === 'error' ? 'primary' : 'default'"
-                  @click="activeAlertTab = 'error'"
-                >
+                <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'error' ? 'primary' : 'default'"
+                  @click="activeAlertTab = 'error'">
                   Em Análise
                 </BaseButton>
-                <BaseButton
-                  rounded="md" size="sm" :variant="activeAlertTab === 'waitingDocs' ? 'primary' : 'default'"
-                  @click="activeAlertTab = 'waitingDocs'"
-                >
+                <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'waitingDocs' ? 'primary' : 'default'"
+                  @click="activeAlertTab = 'waitingDocs'">
                   Aguardando Documentos
                 </BaseButton>
-                <BaseButton
-                  rounded="md" size="sm" :variant="activeAlertTab === 'stuckClients' ? 'primary' : 'default'"
-                  @click="activeAlertTab = 'stuckClients'"
-                >
+                <BaseButton rounded="md" size="sm" :variant="activeAlertTab === 'stuckClients' ? 'primary' : 'default'"
+                  @click="activeAlertTab = 'stuckClients'">
                   Travados
                 </BaseButton>
               </div>
@@ -738,32 +730,25 @@ const filteredMembers = computed(() => {
 
             <!-- Feed Content -->
             <div class="space-y-3 min-h-[200px] mt-6">
-              <TransitionGroup
-                enter-active-class="transform-gpu duration-300 ease-out"
+              <TransitionGroup enter-active-class="transform-gpu duration-300 ease-out"
                 enter-from-class="opacity-0 -translate-x-4" enter-to-class="opacity-100 translate-x-0"
                 leave-active-class="absolute transform-gpu duration-200 ease-in" leave-from-class="opacity-100"
-                leave-to-class="opacity-0 translate-x-4"
-              >
-                <DemoFlexTableRow
-                  v-for="(alert, index) in filteredAlerts" :key="alert.id" rounded="sm"
+                leave-to-class="opacity-0 translate-x-4">
+                <DemoFlexTableRow v-for="(alert, index) in filteredAlerts" :key="alert.id" rounded="sm"
                   class="hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors cursor-pointer group"
-                  @click="openDetails(alert.id)"
-                >
+                  @click="openDetails(alert.id)">
                   <template #start>
                     <div class="flex items-center gap-3">
-                      <div
-                        class="size-10 rounded-xl flex items-center justify-center shrink-0 ml-2 shadow-sm" :class="[alert.iconBg, alert.iconColor]"
-                      >
+                      <div class="size-10 rounded-xl flex items-center justify-center shrink-0 ml-2 shadow-sm"
+                        :class="[alert.iconBg, alert.iconColor]">
                         <Icon :name="alert.icon" class="size-5" />
                       </div>
                       <div>
                         <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-900 dark:text-muted-100">
                           {{ alert.client?.name }}
                         </BaseHeading>
-                        <BaseParagraph
-                          size="xs" class="font-medium uppercase tracking-wider text-[10px]"
-                          :class="alert.iconColor"
-                        >
+                        <BaseParagraph size="xs" class="font-medium uppercase tracking-wider text-[10px]"
+                          :class="alert.iconColor">
                           {{ alert.label }}
                         </BaseParagraph>
                       </div>
@@ -771,19 +756,15 @@ const filteredMembers = computed(() => {
                   </template>
                   <template #end>
                     <DemoFlexTableCell label="Status" :hide-label="index > 0" class="w-48">
-                      <BaseTag
-                        variant="none"
+                      <BaseTag variant="none"
                         class="!px-3 !py-1 !font-medium !text-[10px] !uppercase !bg-muted-100 dark:!bg-muted-800 !text-muted-500"
-                        rounded="md"
-                      >
+                        rounded="md">
                         {{ alert.column?.name || 'Iniciado' }}
                       </BaseTag>
                     </DemoFlexTableCell>
                     <DemoFlexTableCell label="Ação" :hide-label="index > 0" class="w-32">
-                      <BaseButton
-                        variant="link" size="sm" color="primary"
-                        class="p-0 h-auto font-medium opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                      >
+                      <BaseButton variant="link" size="sm" color="primary"
+                        class="p-0 h-auto font-medium opacity-70 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                         Resolver
                       </BaseButton>
                     </DemoFlexTableCell>
@@ -791,13 +772,10 @@ const filteredMembers = computed(() => {
                 </DemoFlexTableRow>
 
                 <!-- Empty State -->
-                <div
-                  v-if="filteredAlerts.length === 0" key="empty"
-                  class="py-12 flex flex-col items-center justify-center text-center"
-                >
+                <div v-if="filteredAlerts.length === 0" key="empty"
+                  class="py-12 flex flex-col items-center justify-center text-center">
                   <div
-                    class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400 mb-4"
-                  >
+                    class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-muted-400 mb-4">
                     <Icon name="solar:check-circle-bold" class="size-8 text-success-500" />
                   </div>
                   <BaseHeading as="h4" size="md" weight="medium" class="text-muted-800 dark:text-muted-100">
@@ -819,18 +797,14 @@ const filteredMembers = computed(() => {
 
                 <!-- Tabs -->
                 <div class="flex items-center gap-1 p-1 bg-muted-100 dark:bg-muted-900 rounded-lg overflow-hidden">
-                  <button
-                    class="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
+                  <button class="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
                     :class="pipelineTab === 'bar' ? 'bg-white dark:bg-muted-800 text-primary-500 shadow-sm rounded-md shadow-muted-200 dark:shadow-muted-950' : 'text-muted-400 hover:text-muted-600'"
-                    @click="pipelineTab = 'bar'"
-                  >
+                    @click="pipelineTab = 'bar'">
                     Barra
                   </button>
-                  <button
-                    class="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
+                  <button class="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
                     :class="pipelineTab === 'pie' ? 'bg-white dark:bg-muted-800 text-primary-500 shadow-sm rounded-md shadow-muted-200 dark:shadow-muted-950' : 'text-muted-400 hover:text-muted-600'"
-                    @click="pipelineTab = 'pie'"
-                  >
+                    @click="pipelineTab = 'pie'">
                     Pizza
                   </button>
                 </div>
@@ -860,8 +834,7 @@ const filteredMembers = computed(() => {
 
               <div
                 class="w-full mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-muted-100 dark:border-muted-800 transition-all duration-300"
-                :class="{ 'blur-md select-none pointer-events-none': !showRevenue }"
-              >
+                :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
                 <div class="flex flex-col">
                   <span class="text-[10px] uppercase  text-muted-400 mb-1">Receita Esperada</span>
                   <span class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ showRevenue
@@ -881,8 +854,7 @@ const filteredMembers = computed(() => {
 
               <div
                 class="mt-4 p-3 rounded-lg bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 text-center transition-all duration-300"
-                :class="{ 'blur-sm select-none pointer-events-none opacity-50': !showRevenue }"
-              >
+                :class="{ 'blur-sm select-none pointer-events-none opacity-50': !showRevenue }">
                 <span class="text-xs text-muted-500">
                   Faltam <span class=" text-primary-500">{{ showRevenue ? formatCurrency(stats.revenue
                     - stats.received) : 'R$ ••••••' }}</span> para receber
@@ -897,7 +869,6 @@ const filteredMembers = computed(() => {
           <div class="grid gap-4 lg:flex lg:flex-col">
             <!-- Widget -->
 
-
             <!-- Widget: Produtividade da Equipe -->
             <BaseCard v-if="canViewAll" rounded="md" class="p-4 md:p-6">
               <!-- Header -->
@@ -910,10 +881,8 @@ const filteredMembers = computed(() => {
                     Produtividade
                   </BaseHeading>
                 </div>
-                <NuxtLink
-                  to="/dashboard/settings/team"
-                  class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1"
-                >
+                <NuxtLink to="/dashboard/settings/team"
+                  class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
                   Ver equipe
                   <Icon name="solar:arrow-right-linear" class="size-3" />
                 </NuxtLink>
@@ -924,31 +893,21 @@ const filteredMembers = computed(() => {
                 <!-- Podium Container -->
                 <div class="relative">
                   <!-- Confetti Animation for Winner -->
-                  <div
-                    v-if="podiumFirst"
-                    class="absolute inset-x-0 top-0 flex justify-center pointer-events-none overflow-hidden h-16 opacity-50"
-                  >
+                  <div v-if="podiumFirst"
+                    class="absolute inset-x-0 top-0 flex justify-center pointer-events-none overflow-hidden h-16 opacity-50">
                     <div class="animate-pulse">
-                      <Icon
-                        name="solar:star-bold"
+                      <Icon name="solar:star-bold"
                         class="size-2 text-primary-400 absolute top-1 left-1/4 animate-bounce"
-                        style="animation-delay: 0.1s"
-                      />
-                      <Icon
-                        name="solar:star-bold"
+                        style="animation-delay: 0.1s" />
+                      <Icon name="solar:star-bold"
                         class="size-1.5 text-primary-300 absolute top-3 left-1/3 animate-bounce"
-                        style="animation-delay: 0.3s"
-                      />
-                      <Icon
-                        name="solar:star-bold"
+                        style="animation-delay: 0.3s" />
+                      <Icon name="solar:star-bold"
                         class="size-2 text-primary-400 absolute top-0 right-1/4 animate-bounce"
-                        style="animation-delay: 0.2s"
-                      />
-                      <Icon
-                        name="solar:star-bold"
+                        style="animation-delay: 0.2s" />
+                      <Icon name="solar:star-bold"
                         class="size-1.5 text-primary-300 absolute top-4 right-1/3 animate-bounce"
-                        style="animation-delay: 0.4s"
-                      />
+                        style="animation-delay: 0.4s" />
                     </div>
                   </div>
 
@@ -960,38 +919,31 @@ const filteredMembers = computed(() => {
                         <!-- Avatar with Silver Ring -->
                         <div class="relative mb-1 group">
                           <div
-                            class="absolute -inset-0.5 bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 rounded-full opacity-60 group-hover:opacity-100 blur-[2px] transition-opacity"
-                          />
-                          <BaseAvatar
-                            :src="podiumSecond.photo" :text="podiumSecond.name?.charAt(0) || '?'" size="sm"
-                            class="relative ring-1 ring-slate-300 shadow-md"
-                          />
+                            class="absolute -inset-0.5 bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 rounded-full opacity-60 group-hover:opacity-100 blur-[2px] transition-opacity" />
+                          <BaseAvatar :src="podiumSecond.photo" :text="podiumSecond.name?.charAt(0) || '?'" size="sm"
+                            class="relative ring-1 ring-slate-300 shadow-md" />
                           <!-- Silver Medal -->
                           <div
-                            class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 flex items-center justify-center shadow-sm border border-slate-200"
-                          >
+                            class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 flex items-center justify-center shadow-sm border border-slate-200">
                             <span class="text-[8px] font-bold text-slate-600">2</span>
                           </div>
                         </div>
                         <!-- Name -->
                         <span
-                          class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full"
-                        >{{
-                          podiumSecond.name?.split(' ')[0] }}</span>
+                          class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full">{{
+                            podiumSecond.name?.split(' ')[0] }}</span>
                         <!-- Stats -->
                         <span class="text-[9px] font-bold text-slate-500">{{ podiumSecond.completionRate }}%</span>
                       </template>
                       <!-- Empty 2nd Place -->
                       <template v-else>
                         <div
-                          class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1"
-                        />
+                          class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1" />
                         <span class="text-[9px] text-muted-400">-</span>
                       </template>
                       <!-- Silver Podium Stand -->
                       <div
-                        class="w-full h-10 mt-1 rounded-t-md bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 dark:from-slate-600 dark:via-slate-700 dark:to-slate-800 flex items-center justify-center shadow-inner relative overflow-hidden"
-                      >
+                        class="w-full h-10 mt-1 rounded-t-md bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 dark:from-slate-600 dark:via-slate-700 dark:to-slate-800 flex items-center justify-center shadow-inner relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         <span class="text-lg font-black text-slate-500 dark:text-slate-400 drop-shadow-sm">2</span>
                       </div>
@@ -1007,24 +959,19 @@ const filteredMembers = computed(() => {
                         <!-- Avatar with Primary Ring -->
                         <div class="relative group">
                           <div
-                            class="absolute -inset-1 bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 rounded-full opacity-60 group-hover:opacity-100 blur-[3px] animate-pulse transition-opacity"
-                          />
-                          <BaseAvatar
-                            :src="podiumFirst.photo" :text="podiumFirst.name?.charAt(0) || '?'" size="md"
-                            class="relative ring-2 ring-primary-400 shadow-lg"
-                          />
+                            class="absolute -inset-1 bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 rounded-full opacity-60 group-hover:opacity-100 blur-[3px] animate-pulse transition-opacity" />
+                          <BaseAvatar :src="podiumFirst.photo" :text="podiumFirst.name?.charAt(0) || '?'" size="md"
+                            class="relative ring-2 ring-primary-400 shadow-lg" />
                           <!-- Primary Medal -->
                           <div
-                            class="absolute -bottom-0.5 -right-0.5 size-5 rounded-full bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 flex items-center justify-center shadow-md border border-primary-300"
-                          >
+                            class="absolute -bottom-0.5 -right-0.5 size-5 rounded-full bg-gradient-to-br from-primary-300 via-primary-400 to-primary-500 flex items-center justify-center shadow-md border border-primary-300">
                             <Icon name="solar:star-bold" class="size-2.5 text-white" />
                           </div>
                         </div>
                         <!-- Name -->
                         <span
-                          class="text-xs font-bold text-muted-800 dark:text-white text-center truncate w-full mt-1"
-                        >{{
-                          podiumFirst.name?.split(' ')[0] }}</span>
+                          class="text-xs font-bold text-muted-800 dark:text-white text-center truncate w-full mt-1">{{
+                            podiumFirst.name?.split(' ')[0] }}</span>
                         <!-- Stats -->
                         <div class="flex items-center gap-0.5">
                           <span class="text-[10px] font-bold text-primary-500">{{ podiumFirst.completionRate }}%</span>
@@ -1034,14 +981,12 @@ const filteredMembers = computed(() => {
                       <!-- Empty 1st Place -->
                       <template v-else>
                         <div
-                          class="size-10 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1"
-                        />
+                          class="size-10 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1" />
                         <span class="text-[10px] text-muted-400">-</span>
                       </template>
                       <!-- Primary Podium Stand -->
                       <div
-                        class="w-full h-14 mt-1 rounded-t-md bg-gradient-to-b from-primary-300 via-primary-400 to-primary-500 dark:from-primary-500 dark:via-primary-600 dark:to-primary-700 flex items-center justify-center shadow-lg relative overflow-hidden"
-                      >
+                        class="w-full h-14 mt-1 rounded-t-md bg-gradient-to-b from-primary-300 via-primary-400 to-primary-500 dark:from-primary-500 dark:via-primary-600 dark:to-primary-700 flex items-center justify-center shadow-lg relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         <span class="text-xl font-black text-white drop-shadow-md">1</span>
                       </div>
@@ -1053,38 +998,31 @@ const filteredMembers = computed(() => {
                         <!-- Avatar with Bronze Ring -->
                         <div class="relative mb-1 group">
                           <div
-                            class="absolute -inset-0.5 bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-full opacity-50 group-hover:opacity-100 blur-[2px] transition-opacity"
-                          />
-                          <BaseAvatar
-                            :src="podiumThird.photo" :text="podiumThird.name?.charAt(0) || '?'" size="sm"
-                            class="relative ring-1 ring-orange-400 shadow-md"
-                          />
+                            class="absolute -inset-0.5 bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-full opacity-50 group-hover:opacity-100 blur-[2px] transition-opacity" />
+                          <BaseAvatar :src="podiumThird.photo" :text="podiumThird.name?.charAt(0) || '?'" size="sm"
+                            class="relative ring-1 ring-orange-400 shadow-md" />
                           <!-- Bronze Medal -->
                           <div
-                            class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600 flex items-center justify-center shadow-sm border border-orange-300"
-                          >
+                            class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600 flex items-center justify-center shadow-sm border border-orange-300">
                             <span class="text-[8px] font-bold text-orange-800">3</span>
                           </div>
                         </div>
                         <!-- Name -->
                         <span
-                          class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full"
-                        >{{
-                          podiumThird.name?.split(' ')[0] }}</span>
+                          class="text-[10px] font-medium text-muted-600 dark:text-muted-300 text-center truncate w-full">{{
+                            podiumThird.name?.split(' ')[0] }}</span>
                         <!-- Stats -->
                         <span class="text-[9px] font-bold text-orange-500">{{ podiumThird.completionRate }}%</span>
                       </template>
                       <!-- Empty 3rd Place -->
                       <template v-else>
                         <div
-                          class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1"
-                        />
+                          class="size-8 rounded-full bg-muted-100 dark:bg-muted-800 border border-dashed border-muted-300 dark:border-muted-600 mb-1" />
                         <span class="text-[9px] text-muted-400">-</span>
                       </template>
                       <!-- Bronze Podium Stand -->
                       <div
-                        class="w-full h-8 mt-1 rounded-t-md bg-gradient-to-b from-orange-300 via-orange-400 to-orange-500 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 flex items-center justify-center shadow-inner relative overflow-hidden"
-                      >
+                        class="w-full h-8 mt-1 rounded-t-md bg-gradient-to-b from-orange-300 via-orange-400 to-orange-500 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 flex items-center justify-center shadow-inner relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                         <span class="text-sm font-black text-orange-700 dark:text-orange-300 drop-shadow-sm">3</span>
                       </div>
@@ -1093,8 +1031,7 @@ const filteredMembers = computed(() => {
 
                   <!-- Podium Base -->
                   <div
-                    class="h-1 bg-gradient-to-r from-transparent via-muted-200 dark:via-muted-700 to-transparent rounded-full mx-2"
-                  />
+                    class="h-1 bg-gradient-to-r from-transparent via-muted-200 dark:via-muted-700 to-transparent rounded-full mx-2" />
                 </div>
 
                 <!-- Motivational Message -->
@@ -1121,24 +1058,18 @@ const filteredMembers = computed(() => {
                 <div v-for="user in teamProductivity" :key="user.id" class="flex items-center gap-2 mb-2">
                   <BaseAvatar :src="user.photo || '/img/avatars/11.svg'" size="sm" rounded="md" />
                   <div>
-                    <BaseHeading
-                      as="h3" size="sm" weight="medium" lead="tight"
-                      class="text-muted-900 dark:text-muted-100"
-                    >
+                    <BaseHeading as="h3" size="sm" weight="medium" lead="tight"
+                      class="text-muted-900 dark:text-muted-100">
                       <span>{{ user.name }}</span>
                     </BaseHeading>
                   </div>
                   <div>
-                    <BaseProgress
-                      size="xs" variant="primary"
-                      :model-value="user.count > 0 ? (user.completed / user.count) * 100 : 0" class="transition-all"
-                    />
+                    <BaseProgress size="xs" variant="primary"
+                      :model-value="user.count > 0 ? (user.completed / user.count) * 100 : 0" class="transition-all" />
                   </div>
                   <div class="ms-auto flex items-center justify-end gap-4">
-                    <BaseParagraph
-                      size="sm" weight="semibold"
-                      :class="user.count > 0 && user.completed === user.count ? 'text-success-500' : 'text-primary-500'"
-                    >
+                    <BaseParagraph size="sm" weight="semibold"
+                      :class="user.count > 0 && user.completed === user.count ? 'text-success-500' : 'text-primary-500'">
                       <span>{{ user.count > 0 ? Math.round((user.completed / user.count) * 100) : 0 }}% </span>
                     </BaseParagraph>
                     <div class="text-sm font-bold text-muted-900 dark:text-white tabular-nums">
@@ -1158,17 +1089,13 @@ const filteredMembers = computed(() => {
               </div>
               <div class="pb-2">
                 <div class="grid grid-cols-2 gap-4">
-                  <NuxtLink
-                    v-for="link in acessorapido" :key="link.name" :to="link.url"
-                    class="dark:bg-muted-950 border-muted-200 hover:border-primary-500 dark:hover:border-primary-500 dark:border-muted-800 hover:shadow-muted-300/30 dark:hover:shadow-muted-900/30 group flex flex-col border bg-white py-5 transition-all duration-300 hover:shadow-xl rounded"
-                  >
+                  <NuxtLink v-for="link in acessorapido" :key="link.name" :to="link.url"
+                    class="dark:bg-muted-950 border-muted-200 hover:border-primary-500 dark:hover:border-primary-500 dark:border-muted-800 hover:shadow-muted-300/30 dark:hover:shadow-muted-900/30 group flex flex-col border bg-white py-5 transition-all duration-300 hover:shadow-xl rounded">
                     <div class="text-center">
                       <div class="mb-2">
-                        <BaseIconBox
-                          variant="none"
+                        <BaseIconBox variant="none"
                           class="bg-primary-500/20 text-primary-500 group-hover:bg-primary-500 transition-colors duration-300 group-hover:text-white"
-                          rounded="none" mask="blob"
-                        >
+                          rounded="none" mask="blob">
                           <Icon :name="link.icon" />
                         </BaseIconBox>
                       </div>
@@ -1193,10 +1120,8 @@ const filteredMembers = computed(() => {
                     Últimos IRs
                   </BaseHeading>
                 </div>
-                <NuxtLink
-                  to="/imposto-de-renda"
-                  class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1"
-                >
+                <NuxtLink to="/imposto-de-renda"
+                  class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
                   Ver tudo
                   <Icon name="solar:arrow-right-linear" class="size-3" />
                 </NuxtLink>
@@ -1221,19 +1146,13 @@ const filteredMembers = computed(() => {
                   </div>
                 </div>
                 <div v-else>
-                  <div
-                    v-for="member in filteredMembers" :key="member.id"
-                    class="hover:bg-muted-100 focus-within:bg-muted-100 dark:hover:bg-muted-700/70 dark:focus-within:bg-muted-700/70 group flex items-center gap-3 p-2 rounded-md"
-                  >
-                    <BaseAvatar
-                      :src="member.client?.image" :text="member.client?.name?.charAt(0) || '?'" size="xs"
-                      class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 ms-1 shrink-0"
-                    />
+                  <div v-for="member in filteredMembers" :key="member.id"
+                    class="hover:bg-muted-100 focus-within:bg-muted-100 dark:hover:bg-muted-700/70 dark:focus-within:bg-muted-700/70 group flex items-center gap-3 p-2 rounded-md">
+                    <BaseAvatar :src="member.client?.image" :text="member.client?.name?.charAt(0) || '?'" size="xs"
+                      class="bg-primary-100 dark:bg-primary-500/20 text-primary-500 ms-1 shrink-0" />
                     <div>
-                      <BaseHeading
-                        as="h4" size="xs" weight="medium" lead="tight"
-                        class="text-muted-900 dark:text-white"
-                      >
+                      <BaseHeading as="h4" size="xs" weight="medium" lead="tight"
+                        class="text-muted-900 dark:text-white">
                         <span>
                           {{ member.client?.name || '?' }}.
                         </span>
@@ -1245,12 +1164,9 @@ const filteredMembers = computed(() => {
                       </BaseParagraph>
                     </div>
                     <div
-                      class="ms-auto flex -translate-x-1 items-center opacity-0 transition-all duration-300 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100"
-                    >
-                      <BaseButton
-                        rounded="sm" variant="default" size="icon-md" class="scale-75"
-                        @click="openDetails(member.id)"
-                      >
+                      class="ms-auto flex -translate-x-1 items-center opacity-0 transition-all duration-300 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100">
+                      <BaseButton rounded="sm" variant="default" size="icon-md" class="scale-75"
+                        @click="openDetails(member.id)">
                         <Icon name="lucide:arrow-right" class="size-4" />
                       </BaseButton>
                     </div>
@@ -1265,11 +1181,9 @@ const filteredMembers = computed(() => {
       <!-- Whitelabel Footer - Company Branding -->
       <div class="mt-8 pb-4 text-center">
         <div class="flex items-center justify-center gap-2 text-[10px] text-muted-400">
-          <img
-            v-if="companyLogo" :src="companyLogo" :alt="companyName"
+          <img v-if="companyLogo" :src="companyLogo" :alt="companyName"
             class="h-4 object-contain opacity-40 grayscale hover:opacity-60 hover:grayscale-0 transition-all duration-300"
-            @error="(e: any) => e.target.style.display = 'none'"
-          >
+            @error="(e: any) => e.target.style.display = 'none'">
           <span class="font-medium">{{ companyName }}</span>
           <span class="text-muted-300 dark:text-muted-600">•</span>
           <span>{{ new Date().getFullYear() }}</span>

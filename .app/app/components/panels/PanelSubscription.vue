@@ -50,7 +50,8 @@ function formatPaymentMethod(method: string) {
 }
 
 function formatDate(dateStr: string) {
-  if (!dateStr) return '-'
+  if (!dateStr)
+    return '-'
   return new Date(dateStr).toLocaleDateString('pt-BR')
 }
 
@@ -109,13 +110,17 @@ function calculatePercentage(current: number | undefined, max: number | undefine
 
           <div class="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <BaseParagraph size="xs" class="text-muted-500">Próxima Cobrança</BaseParagraph>
+              <BaseParagraph size="xs" class="text-muted-500">
+                Próxima Cobrança
+              </BaseParagraph>
               <BaseParagraph size="sm" weight="medium">
                 {{ formatDate(currentSubscription.currentPeriodEnd) }}
               </BaseParagraph>
             </div>
             <div>
-              <BaseParagraph size="xs" class="text-muted-500">Ciclo</BaseParagraph>
+              <BaseParagraph size="xs" class="text-muted-500">
+                Ciclo
+              </BaseParagraph>
               <BaseParagraph size="sm" weight="medium">
                 {{ currentSubscription.billingPeriod }}
               </BaseParagraph>

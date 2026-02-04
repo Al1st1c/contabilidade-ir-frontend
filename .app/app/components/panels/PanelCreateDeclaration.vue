@@ -71,7 +71,7 @@ const selectedClientEmail = computed(() => {
 
 const checklistTotals = computed(() => {
   const total = checklistDraft.value.length
-  const required = checklistDraft.value.filter((i) => i.isRequired).length
+  const required = checklistDraft.value.filter(i => i.isRequired).length
   return { total, required }
 })
 
@@ -173,7 +173,8 @@ async function fetchRecentClients() {
 }
 
 async function fetchChecklistTemplate() {
-  if (templateLoaded.value) return
+  if (templateLoaded.value)
+    return
   isLoadingTemplate.value = true
   try {
     const { data: response } = await useCustomFetch<any>('/declarations/templates')
@@ -196,7 +197,8 @@ async function fetchChecklistTemplate() {
 
 function addChecklistItem() {
   const title = (newChecklistItemTitle.value || '').trim()
-  if (!title) return
+  if (!title)
+    return
   checklistDraft.value.push({
     title,
     description: '',
@@ -288,8 +290,10 @@ async function consultCpf() {
 }
 
 function handleSearchKeydown(event: KeyboardEvent) {
-  if (isLoadingClients.value) return
-  if (!searchResults.value?.length) return
+  if (isLoadingClients.value)
+    return
+  if (!searchResults.value?.length)
+    return
 
   if (event.key === 'ArrowDown') {
     event.preventDefault()
@@ -309,7 +313,8 @@ function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter') {
     event.preventDefault()
     const client = searchResults.value[activeResultIndex.value]
-    if (client) selectClient(client)
+    if (client)
+      selectClient(client)
     return
   }
 
@@ -930,26 +935,26 @@ onMounted(() => {
                 <div class="flex items-center justify-center size-6 rounded-lg bg-muted-100 dark:bg-muted-800 text-[10px] font-bold text-muted-500 shrink-0 mt-0.5">
                   {{ idx + 1 }}
                 </div>
-                
+
                 <div class="flex-1 min-w-0">
-                  <input 
-                    v-model="item.title" 
+                  <input
+                    v-model="item.title"
                     class="w-full bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary-500 text-muted-800 dark:text-muted-100"
                     placeholder="Nome do documento"
-                  />
-                  <input 
-                    v-model="item.description" 
+                  >
+                  <input
+                    v-model="item.description"
                     class="w-full bg-transparent text-[11px] text-muted-500 focus:outline-none mt-1"
                     placeholder="Instruções curtas (ex: 'Pode ser PDF ou foto')"
-                  />
+                  >
                 </div>
 
                 <div class="flex items-center gap-3 shrink-0">
-                  <div 
-                    class="flex items-center gap-1.5 cursor-pointer select-none py-1 px-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors" 
+                  <div
+                    class="flex items-center gap-1.5 cursor-pointer select-none py-1 px-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
                     @click="item.isRequired = !item.isRequired"
                   >
-                    <div 
+                    <div
                       class="size-4 rounded border flex items-center justify-center transition-colors"
                       :class="item.isRequired ? 'bg-primary-500 border-primary-500 text-white' : 'border-muted-300 dark:border-muted-700'"
                     >
@@ -959,9 +964,9 @@ onMounted(() => {
                       Obrig.
                     </span>
                   </div>
-                  
-                  <button 
-                    class="p-1.5 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10 rounded-lg transition-all md:opacity-0 group-hover:opacity-100" 
+
+                  <button
+                    class="p-1.5 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10 rounded-lg transition-all md:opacity-0 group-hover:opacity-100"
                     @click="removeChecklistItem(idx)"
                   >
                     <Icon name="lucide:trash-2" class="size-3.5" />

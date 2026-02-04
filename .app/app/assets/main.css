@@ -20,17 +20,30 @@
   --color-chart-title: var(--color-muted-600);
   --color-chart-subtitle: var(--color-muted-900);
 
-  --color-primary-50: var(--color-amber-50);
-  --color-primary-100: var(--color-amber-100);
-  --color-primary-200: var(--color-amber-200);
-  --color-primary-300: var(--color-amber-300);
-  --color-primary-400: var(--color-amber-400);
-  --color-primary-500: var(--color-amber-500);
-  --color-primary-600: var(--color-amber-600);
-  --color-primary-700: var(--color-amber-700);
-  --color-primary-800: var(--color-amber-800);
-  --color-primary-900: var(--color-amber-900);
-  --color-primary-950: var(--color-amber-950);
+  /* Army Green Palette (Base: #0c201b) */
+  --color-army-50: #f2f4f4;
+  --color-army-100: #e4e8e8;
+  --color-army-200: #ccd1d1;
+  --color-army-300: #b3bab9;
+  --color-army-400: #808c8a;
+  --color-army-500: #4d5d5a;
+  --color-army-600: #3d4a48;
+  --color-army-700: #2d3735;
+  --color-army-800: #1d2422;
+  --color-army-900: #0c201b;
+  --color-army-950: #060d0b;
+
+  --color-primary-50: var(--color-army-50);
+  --color-primary-100: var(--color-army-100);
+  --color-primary-200: var(--color-army-200);
+  --color-primary-300: var(--color-army-300);
+  --color-primary-400: var(--color-army-400);
+  --color-primary-500: var(--color-army-500);
+  --color-primary-600: var(--color-army-600);
+  --color-primary-700: var(--color-army-700);
+  --color-primary-800: var(--color-army-800);
+  --color-primary-900: var(--color-army-900);
+  --color-primary-950: var(--color-army-950);
 
   --color-muted-50: var(--color-zinc-50);
   --color-muted-100: var(--color-zinc-100);
@@ -48,17 +61,17 @@
 @layer base {
   .dark {
     /* Set custom values for dark mode */
-    --color-primary-50: var(--color-amber-50);
-    --color-primary-100: var(--color-amber-100);
-    --color-primary-200: var(--color-amber-200);
-    --color-primary-300: var(--color-amber-300);
-    --color-primary-400: var(--color-amber-400);
-    --color-primary-500: var(--color-amber-500);
-    --color-primary-600: var(--color-amber-600);
-    --color-primary-700: var(--color-amber-700);
-    --color-primary-800: var(--color-amber-800);
-    --color-primary-900: var(--color-amber-900);
-    --color-primary-950: var(--color-amber-950);
+    --color-primary-50: var(--color-army-50);
+    --color-primary-100: var(--color-army-100);
+    --color-primary-200: var(--color-army-200);
+    --color-primary-300: var(--color-army-300);
+    --color-primary-400: var(--color-army-400);
+    --color-primary-500: var(--color-army-500);
+    --color-primary-600: var(--color-army-600);
+    --color-primary-700: var(--color-army-700);
+    --color-primary-800: var(--color-army-800);
+    --color-primary-900: var(--color-army-900);
+    --color-primary-950: var(--color-army-950);
 
     --color-chart-gradient: var(--color-muted-950);
     --color-chart-title: var(--color-muted-400);

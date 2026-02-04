@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useApi } from '~/composables/useAuth'
+import { useSubscription } from '~/composables/useSubscription'
 
 definePageMeta({
   title: 'Configurações da Empresa',
 })
 
 const { useCustomFetch } = useApi()
+const { fetchMySubscription, currentSubscription, loading: loadingSub } = useSubscription()
 const toaster = useNuiToasts()
 
 // State
@@ -24,43 +26,40 @@ const form = ref({
   city: '',
   state: '',
   zipCode: '',
+  pixKey: '',
 })
 
 // UF options
 const states = [
-  'AC',
-  'AL',
-  'AP',
-  'AM',
-  'BA',
-  'CE',
-  'DF',
-  'ES',
-  'GO',
-  'MA',
-  'MT',
-  'MS',
-  'MG',
-  'PA',
-  'PB',
-  'PR',
-  'PE',
-  'PI',
-  'RJ',
-  'RN',
-  'RS',
-  'RO',
-  'RR',
-  'SC',
-  'SP',
-  'SE',
-  'TO',
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+  'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+  'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ]
 
 // Masks
 const cnpjMask = { mask: '##.###.###/####-##' }
 const phoneMask = { mask: '(##) #####-####' }
 const cepMask = { mask: '#####-###' }
+
+// Helpers
+const statusMap: Record<string, { label: string, color: string }> = {
+  ACTIVE: { label: 'Ativo', color: 'text-success-500 bg-success-500/10' },
+  TRIAL: { label: 'Período de Teste', color: 'text-primary-500 bg-primary-500/10' },
+  PAST_DUE: { label: 'Atrasado', color: 'text-danger-500 bg-danger-500/10' },
+  CANCELED: { label: 'Cancelado', color: 'text-muted-500 bg-muted-500/10' },
+  EXPIRED: { label: 'Expirado', color: 'text-danger-500 bg-danger-500/10' },
+}
+
+function calculatePercentage(current: number | undefined, max: number | undefined) {
+  if (!max || max <= 0) return 0
+  const percent = ((current || 0) / max) * 100
+  return Math.min(100, Math.max(0, percent))
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('pt-BR')
+}
 
 // Fetch tenant data
 async function fetchTenant() {
@@ -80,6 +79,7 @@ async function fetchTenant() {
         city: source.city || '',
         state: source.state || '',
         zipCode: source.zipCode || '',
+        pixKey: source.pixKey || '',
       }
     }
   }
@@ -120,7 +120,10 @@ async function saveSettings() {
   }
 }
 
-onMounted(fetchTenant)
+onMounted(() => {
+  fetchTenant()
+  fetchMySubscription()
+})
 </script>
 
 <template>
@@ -146,10 +149,8 @@ onMounted(fetchTenant)
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="Razão Social" required>
-                  <TairoInput
-                    v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
-                    icon="solar:buildings-linear"
-                  />
+                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
+                    icon="solar:buildings-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
@@ -159,10 +160,14 @@ onMounted(fetchTenant)
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="CNPJ">
-                  <TairoInput
-                    v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
-                    icon="solar:document-text-linear"
-                  />
+                  <TairoInput v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
+                    icon="solar:document-text-linear" />
+                </BaseField>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <BaseField label="Chave PIX (Vai aparecer para o cliente pagar os honorários)">
+                  <TairoInput v-model="form.pixKey" placeholder="E-mail, CPF/CNPJ ou Aleatória"
+                    icon="solar:wallet-money-linear" />
                 </BaseField>
               </div>
             </div>
@@ -187,26 +192,20 @@ onMounted(fetchTenant)
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="E-mail de Contato">
-                  <TairoInput
-                    v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
-                    icon="solar:letter-linear"
-                  />
+                  <TairoInput v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
+                    icon="solar:letter-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="WhatsApp (Oficial)">
-                  <TairoInput
-                    v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
-                    icon="fa6-brands:whatsapp"
-                  />
+                  <TairoInput v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                    icon="fa6-brands:whatsapp" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="Telefone Fixo">
-                  <TairoInput
-                    v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
-                    icon="solar:phone-rounded-linear"
-                  />
+                  <TairoInput v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
+                    icon="solar:phone-rounded-linear" />
                 </BaseField>
               </div>
             </div>
@@ -245,10 +244,8 @@ onMounted(fetchTenant)
               </div>
               <div class="col-span-12 md:col-span-4">
                 <BaseField label="CEP">
-                  <TairoInput
-                    v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
-                    icon="solar:streets-navigation-linear"
-                  />
+                  <TairoInput v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
+                    icon="solar:streets-navigation-linear" />
                 </BaseField>
               </div>
             </div>
@@ -268,52 +265,110 @@ onMounted(fetchTenant)
         </div>
         <div class="col-span-12 lg:col-span-8">
           <BaseCard rounded="lg" class="p-8 bg-muted-50/50 dark:bg-muted-900 border-dashed">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <div class="flex items-center gap-3 mb-1">
-                  <BaseTag variant="none" rounded="lg" class="bg-primary-500/20 text-primary-500 font-bold uppercase">
-                    {{ tenant?.plan || 'Free Trial' }}
-                  </BaseTag>
-                  <span class="text-xs text-muted-400 font-medium">Desde {{ new
-                    Date(tenant?.createdAt).toLocaleDateString() }}</span>
-                </div>
-                <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400">
-                  Seu escritório tem acesso total às funcionalidades até o limite de contratado.
-                </BaseParagraph>
-              </div>
-              <BaseButton
-                variant="none"
-                class="bg-primary-500/20 text-primary-500 hover:bg-primary-500/30 transition-colors"
-              >
-                Alterar Plano
-              </BaseButton>
+            <div v-if="loadingSub" class="flex justify-center py-8">
+              <BaseLoader class="size-8 text-primary-500" />
             </div>
 
-            <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-muted-200 dark:border-muted-800">
-              <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">
-                  {{ tenant?._count?.users || 0 }}
+            <div v-else-if="currentSubscription">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <div class="flex items-center gap-3 mb-2">
+                    <BaseHeading as="h4" size="xl" weight="bold" class="text-muted-800 dark:text-white">
+                      {{ currentSubscription.plan?.name }}
+                    </BaseHeading>
+                    <BaseTag :class="statusMap[currentSubscription.status]?.color" rounded="full" variant="none"
+                      size="sm">
+                      {{ statusMap[currentSubscription.status]?.label }}
+                    </BaseTag>
+                  </div>
+                  <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400">
+                    Sua próxima cobrança será em <span class="font-medium text-muted-800 dark:text-white">{{
+                      formatDate(currentSubscription.currentPeriodEnd) }}</span>.
+                  </BaseParagraph>
                 </div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">
-                  Usuários
+                <BaseButton to="/dashboard/plans" variant="primary" class="shrink-0">
+                  <Icon name="lucide:arrow-up-right" class="size-4 mr-2" />
+                  Gerenciar Plano
+                </BaseButton>
+              </div>
+
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-8 pt-8 border-t border-muted-200 dark:border-muted-800">
+                <!-- Employees -->
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-muted-500">Equipe</span>
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ currentSubscription.monthlyUsage?.employees || 0 }} / {{ currentSubscription.employeesLimit }}
+                    </span>
+                  </div>
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="calculatePercentage(currentSubscription.monthlyUsage?.employees, currentSubscription.employeesLimit)" />
+                </div>
+
+                <!-- Clients -->
+                <!-- Assuming clients limit exists or using a placeholder if not explicitly in subscription type, but tenant count usually is tracked -->
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-muted-500">Clientes</span>
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ tenant?._count?.clients || 0 }} Cadastrados
+                    </span>
+                  </div>
+                  <!-- No explicit limit for clients usually in this model, or it's high. Showing count only or progress if limit exists. -->
+                  <BaseProgress size="xs" variant="primary" :model-value="100" class="opacity-50" />
+                </div>
+
+                <!-- Declarations -->
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-muted-500">Declarações (Anual)</span>
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ currentSubscription.yearlyUsage?.tax_declarations || 0 }} / {{
+                        currentSubscription.taxDeclarationsLimit }}
+                    </span>
+                  </div>
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.taxDeclarationsLimit)" />
+                </div>
+
+                <!-- SMS -->
+                <div class="space-y-1">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-muted-500">SMS (Mensal)</span>
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ currentSubscription.monthlyUsage?.sms || 0 }} / {{ currentSubscription.smsMonthlyLimit }}
+                    </span>
+                  </div>
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="calculatePercentage(currentSubscription.monthlyUsage?.sms, currentSubscription.smsMonthlyLimit)" />
+                </div>
+
+                <!-- Storage -->
+                <div class="space-y-1 md:col-span-2">
+                  <div class="flex justify-between text-xs">
+                    <span class="text-muted-500">Armazenamento</span>
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ currentSubscription.storageUsedMb || 0 }} MB / {{ currentSubscription.storageMbLimit }} MB
+                    </span>
+                  </div>
+                  <BaseProgress size="xs" variant="primary"
+                    :model-value="calculatePercentage(currentSubscription.storageUsedMb, currentSubscription.storageMbLimit)" />
                 </div>
               </div>
-              <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">
-                  {{ tenant?._count?.clients || 0 }}
-                </div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">
-                  Clientes
-                </div>
+            </div>
+
+            <div v-else class="text-center py-8">
+              <div
+                class="size-16 bg-muted-100 dark:bg-muted-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Icon name="lucide:alert-circle" class="size-8 text-muted-400" />
               </div>
-              <div class="text-center">
-                <div class="text-xl font-bold text-muted-800 dark:text-white">
-                  {{ tenant?._count?.taxDeclarations || 0 }}
-                </div>
-                <div class="text-[10px] uppercase text-muted-400 font-semibold">
-                  Declarações
-                </div>
-              </div>
+              <BaseHeading as="h4" size="md" weight="medium" class="mb-1">
+                Sem assinatura ativa
+              </BaseHeading>
+              <BaseButton to="/dashboard/plans" variant="link" color="primary">
+                Escolher um plano
+              </BaseButton>
             </div>
           </BaseCard>
         </div>

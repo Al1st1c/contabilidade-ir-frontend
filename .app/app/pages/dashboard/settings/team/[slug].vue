@@ -6,6 +6,7 @@ definePageMeta({
 })
 
 const { useCustomFetch } = useApi()
+const { user } = useAuth()
 const route = useRoute()
 const router = useRouter()
 const toaster = useNuiToasts()
@@ -234,7 +235,7 @@ function getRoleDetails(role: string): any[] {
       },
     ],
   }
-  return permissions[role] || permissions.viewer
+  return permissions[role] || permissions.viewer || []
 }
 
 // Format date
@@ -311,6 +312,50 @@ onMounted(() => {
 watch(slug, () => {
   fetchMember()
 })
+
+// Delete / Deactivate Logic
+const deleteDialog = ref(false)
+const deleting = ref(false)
+
+async function confirmDelete() {
+  if (!member.value?.id) return
+
+  deleting.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/tenant/members/${member.value.id}`, {
+      method: 'DELETE'
+    })
+
+    if (data?.success) {
+      toaster.add({
+        title: 'Sucesso',
+        description: data.message || (member.value.isActive ? 'Membro desativado' : 'Membro removido'),
+        icon: 'lucide:check-circle',
+        duration: 5000
+      })
+
+      deleteDialog.value = false
+
+      // If was pending or inactive, it was likely deleted or we want to go back
+      if (member.value.status === 'PENDING_INVITE' || !member.value.isActive) {
+        router.push('/dashboard/settings/team')
+      } else {
+        // Just refresh if it was a soft delete (active -> inactive)
+        fetchMember()
+      }
+    }
+  } catch (error: any) {
+    console.error('Erro ao excluir/desativar:', error)
+    toaster.add({
+      title: 'Erro',
+      description: error.data?.message || error.message || 'Erro ao processar solicitação',
+      icon: 'lucide:alert-triangle',
+      duration: 5000
+    })
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -325,10 +370,8 @@ watch(slug, () => {
     <!-- Member Details -->
     <BaseCard v-else-if="member" rounded="lg">
       <!-- Pending Invite Alert -->
-      <div
-        v-if="member.status === 'PENDING_INVITE'"
-        class="bg-warning-50 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800/50 p-4 flex items-center justify-between gap-4"
-      >
+      <div v-if="member.status === 'PENDING_INVITE'"
+        class="bg-warning-50 dark:bg-warning-900/20 border-b border-warning-200 dark:border-warning-800/50 p-4 flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <Icon name="lucide:clock" class="text-warning-500 size-5" />
           <div>
@@ -340,10 +383,8 @@ watch(slug, () => {
             </BaseText>
           </div>
         </div>
-        <BaseButton
-          size="sm" variant="muted" :loading="resendingInvite" :disabled="resendingInvite"
-          @click="resendInvite"
-        >
+        <BaseButton size="sm" variant="muted" :loading="resendingInvite" :disabled="resendingInvite"
+          @click="resendInvite">
           <Icon v-if="!resendingInvite" name="lucide:send" class="size-4 mr-1" />
           {{ resendingInvite ? 'Enviando...' : 'Reenviar Convite' }}
         </BaseButton>
@@ -372,11 +413,9 @@ watch(slug, () => {
                 <BaseTag v-if="member.status === 'PENDING_INVITE'" rounded="lg" color="warning" size="sm">
                   Pendente
                 </BaseTag>
-                <BaseTag
-                  v-else rounded="lg"
+                <BaseTag v-else rounded="lg"
                   :class="member.isActive ? 'bg-success-500 text-white' : 'bg-red-500 text-white'" variant="none"
-                  size="sm"
-                >
+                  size="sm">
                   {{ member.isActive ? 'Ativo' : 'Inativo' }}
                 </BaseTag>
               </div>
@@ -437,10 +476,8 @@ watch(slug, () => {
         </BaseHeading>
 
         <div class="space-y-6">
-          <div
-            v-for="roleDetail in member.role.details" :key="roleDetail.label"
-            class="border-muted-200 dark:border-muted-800 grid grid-cols-12 border-b pb-6 last:border-0"
-          >
+          <div v-for="roleDetail in member.role.details" :key="roleDetail.label"
+            class="border-muted-200 dark:border-muted-800 grid grid-cols-12 border-b pb-6 last:border-0">
             <div class="col-span-12 sm:col-span-4 mb-4 sm:mb-0">
               <BaseParagraph size="sm" class="text-muted-500">
                 {{ roleDetail.label }}
@@ -452,10 +489,8 @@ watch(slug, () => {
             <div class="col-span-12 sm:col-span-8">
               <ul class="space-y-2">
                 <li v-for="permission in roleDetail.permissions" :key="permission.label" class="flex gap-2 items-start">
-                  <Icon
-                    v-if="permission.status" name="lucide:check"
-                    class="text-success-500 relative top-0.5 size-4 shrink-0"
-                  />
+                  <Icon v-if="permission.status" name="lucide:check"
+                    class="text-success-500 relative top-0.5 size-4 shrink-0" />
                   <Icon v-else name="lucide:x" class="text-danger-500 relative top-0.5 size-4 shrink-0" />
                   <BaseParagraph size="sm" class="text-muted-500">
                     {{ permission.label }}
@@ -465,6 +500,16 @@ watch(slug, () => {
             </div>
           </div>
         </div>
+      </div>
+      <!-- Actions Footer -->
+      <div v-if="member?.id !== user?.id"
+        class="border-t border-muted-200 dark:border-muted-800 p-6 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-950/50 rounded-b-lg">
+        <BaseButton class="w-full sm:w-auto" :variant="member.isActive ? 'destructive' : 'muted'"
+          @click="deleteDialog = true">
+          <Icon :name="member.isActive ? 'lucide:ban' : 'lucide:trash-2'" class="size-4 mr-2" />
+          {{ member.status === 'PENDING_INVITE' ? 'Remover Convite' :
+            (member.isActive ? 'Desativar Membro' : 'Excluir Membro') }}
+        </BaseButton>
       </div>
     </BaseCard>
 
@@ -483,5 +528,50 @@ watch(slug, () => {
         </BaseButton>
       </div>
     </BaseCard>
+
+    <!-- Confirmation Dialog -->
+    <DialogRoot v-model:open="deleteDialog">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-50 bg-muted-900/50 backdrop-blur-sm" />
+        <DialogContent
+          class="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl dark:bg-muted-900 border border-muted-200 dark:border-muted-800 transition-all duration-200">
+          <div class="flex items-center gap-4 text-warning-500 mb-4">
+            <div
+              class="size-12 rounded-full bg-warning-100 dark:bg-warning-900/30 flex items-center justify-center shrink-0">
+              <Icon name="lucide:alert-triangle" class="size-6" />
+            </div>
+            <div>
+              <DialogTitle as="h3" class="text-lg font-medium text-muted-800 dark:text-muted-100">
+                Tem certeza?
+              </DialogTitle>
+              <DialogDescription class="text-sm text-muted-500 dark:text-muted-400 mt-1">
+                {{
+                  member?.status === 'PENDING_INVITE'
+                    ? 'Isso irá remover permanentemente o convite e liberar a vaga no seu plano.'
+                    : (member?.isActive
+                      ? 'Isso irá revogar o acesso deste usuário ao sistema. O histórico será mantido.'
+                      : 'Isso irá remover permanentemente este membro do histórico.')
+                }}
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <BaseButton :disabled="deleting" @click="deleteDialog = false">
+              Cancelar
+            </BaseButton>
+            <BaseButton variant="destructive" :loading="deleting" @click="confirmDelete">
+              Confirmar
+            </BaseButton>
+          </div>
+
+          <DialogClose
+            class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <Icon name="lucide:x" class="h-4 w-4" />
+            <span class="sr-only">Close</span>
+          </DialogClose>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </div>
 </template>

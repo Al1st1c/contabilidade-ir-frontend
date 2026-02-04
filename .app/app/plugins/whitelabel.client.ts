@@ -6,7 +6,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const { useCustomFetch } = useApi()
 
   // Default colors
-  const defaultPrimaryColor = 'amber'
+  const defaultPrimaryColor = 'army'
   const defaultSecondaryColor = 'zinc'
 
   // Apply whitelabel colors using Tailwind color names

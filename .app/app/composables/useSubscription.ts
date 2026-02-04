@@ -58,13 +58,13 @@ export interface Subscription {
   yearlyUsage: any
 }
 
+const plans = ref<Plan[]>([])
+const currentSubscription = ref<Subscription | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
+
 export function useSubscription() {
   const { useCustomFetch } = useApi()
-
-  const plans = ref<Plan[]>([])
-  const currentSubscription = ref<Subscription | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
 
   const fetchPlans = async () => {
     loading.value = true
@@ -93,17 +93,26 @@ export function useSubscription() {
   const fetchMySubscription = async () => {
     loading.value = true
     error.value = null
+    console.log('[Subscription] Iniciando busca da assinatura...')
     try {
-      const { data } = await useCustomFetch<any>('/subscriptions/my-subscription')
-      if (data && data.data) {
-        currentSubscription.value = data.data
-      }
-      else {
-        currentSubscription.value = data
+      const response = await useCustomFetch<any>('/subscriptions/my-subscription')
+      // Handle both { data: { ... } } and { ... }
+      const subData = response.data?.data || response.data || response
+
+      console.log('[Subscription] Dados recebidos:', subData)
+
+      if (subData && typeof subData === 'object' && ('id' in subData || 'storageMbLimit' in subData)) {
+        currentSubscription.value = subData
+        console.log('[Subscription] Assinatura ativa:', subData.id)
+      } else {
+        console.warn('[Subscription] Nenhum dado de assinatura válido encontrado')
+        currentSubscription.value = null
       }
     }
     catch (err: any) {
+      console.error('[Subscription] Erro ao buscar assinatura:', err)
       error.value = err.message || 'Erro ao carregar sua assinatura'
+      currentSubscription.value = null
     }
     finally {
       loading.value = false

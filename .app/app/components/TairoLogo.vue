@@ -9,8 +9,6 @@ const logoUrl = computed(() => {
 </script>
 
 <template>
-  <img
-    :src="logoUrl" alt="Logo" class="object-contain max-h-full max-w-full"
-    @error="(e: any) => e.target.src = '/img/logo.png'"
-  >
+  <img style="width: 130px;" :src="logoUrl" alt="Logo" class="object-contain max-h-full max-w-full"
+    @error="(e: any) => e.target.src = '/img/logo.png'">
 </template>

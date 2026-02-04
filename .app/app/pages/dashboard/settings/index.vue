@@ -22,7 +22,7 @@ const isUploadingLogo = ref(false)
 const form = ref({
   name: '',
   tradeName: '',
-  primaryColor: 'amber',
+  primaryColor: 'army',
   secondaryColor: 'zinc',
 })
 
@@ -46,7 +46,7 @@ async function fetchTenant() {
       form.value = {
         name: source.name || '',
         tradeName: source.tradeName || '',
-        primaryColor: source.primaryColor || 'amber',
+        primaryColor: source.primaryColor || 'army',
         secondaryColor: source.secondaryColor || 'zinc',
       }
     }
@@ -61,7 +61,9 @@ async function fetchTenant() {
 
 // Logo upload logic
 const logoInput = ref<HTMLInputElement | null>(null)
-function triggerLogoUpload() { logoInput.value?.click() }
+function triggerLogoUpload() {
+  logoInput.value?.click()
+}
 
 async function handleLogoUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -111,12 +113,27 @@ async function saveSettings() {
           ...form.value,
         }
       }
-      applyColors(form.value.primaryColor, form.value.secondaryColor)
+      applyColors(
+        form.value.primaryColor,
+        form.value.secondaryColor,
+        tenant.value?.logo,
+        form.value.name,
+        form.value.tradeName,
+        true,
+      )
       toaster.add({ title: 'Sucesso', description: 'Visual atualizado!', icon: 'solar:check-circle-linear' })
     }
   }
   catch (error: any) {
-    toaster.add({ title: 'Erro', description: 'Erro ao salvar', icon: 'solar:danger-circle-linear' })
+    toaster.add({
+      title: 'Erro',
+      description: error?.data?.message || error?.message || 'Erro ao salvar',
+      icon: 'solar:danger-circle-linear',
+    })
+    try {
+      await fetchTenant()
+    }
+    catch { }
   }
   finally {
     isSaving.value = false
@@ -124,8 +141,16 @@ async function saveSettings() {
 }
 
 // Real-time preview
-watchDebounced(() => form.value.primaryColor, (c: string) => applyColors(c, form.value.secondaryColor), { debounce: 100 })
-watchDebounced(() => form.value.secondaryColor, (c: string) => applyColors(form.value.primaryColor, c), { debounce: 100 })
+watchDebounced(
+  () => form.value.primaryColor,
+  (c: string) => applyColors(c, form.value.secondaryColor, undefined, undefined, undefined, false),
+  { debounce: 100 },
+)
+watchDebounced(
+  () => form.value.secondaryColor,
+  (c: string) => applyColors(form.value.primaryColor, c, undefined, undefined, undefined, false),
+  { debounce: 100 },
+)
 
 onMounted(fetchTenant)
 </script>
@@ -152,14 +177,12 @@ onMounted(fetchTenant)
             <div class="flex flex-col sm:flex-row items-center gap-10">
               <div class="relative group">
                 <div
-                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500"
-                >
+                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500">
                   <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-4">
                   <Icon v-else name="solar:gallery-linear" class="size-16 text-muted-300" />
 
                   <div
-                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
-                  >
+                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <BaseButton color="white" rounded="full" size="sm" @click="triggerLogoUpload">
                       Alterar
                     </BaseButton>
@@ -170,16 +193,12 @@ onMounted(fetchTenant)
               <div class="flex-1 space-y-6">
                 <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
                 <BaseField label="Nome por Extenso">
-                  <TairoInput
-                    v-model="form.name" placeholder="Ex: Contabilidade Silva"
-                    icon="solar:buildings-bold-duotone"
-                  />
+                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva"
+                    icon="solar:buildings-bold-duotone" />
                 </BaseField>
                 <BaseField label="Nome Curto (Menu)">
-                  <TairoInput
-                    v-model="form.tradeName" placeholder="Ex: Contábil Silva"
-                    icon="solar:shop-bold-duotone"
-                  />
+                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva"
+                    icon="solar:shop-bold-duotone" />
                 </BaseField>
               </div>
             </div>
@@ -208,13 +227,11 @@ onMounted(fetchTenant)
                   Cor Primária (Marca)
                 </BaseHeading>
                 <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
-                  <button
-                    v-for="c in primaryColors" :key="c.name" type="button"
+                  <button v-for="c in primaryColors" :key="c.name" type="button"
                     class="size-10 rounded-xl transition-all duration-200" :class="[
                       c.class,
                       form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100',
-                    ]" @click="form.primaryColor = c.name"
-                  />
+                    ]" @click="form.primaryColor = c.name" />
                 </div>
               </div>
 
@@ -223,19 +240,16 @@ onMounted(fetchTenant)
                   Tom de Fundo (Muted)
                 </BaseHeading>
                 <div class="flex flex-wrap gap-4">
-                  <button
-                    v-for="c in mutedColors" :key="c.name" type="button"
+                  <button v-for="c in mutedColors" :key="c.name" type="button"
                     class="size-14 rounded-xl border-2 transition-all duration-200" :class="[
                       c.class,
                       form.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110' : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
-                    ]" @click="form.secondaryColor = c.name"
-                  />
+                    ]" @click="form.secondaryColor = c.name" />
                 </div>
               </div>
 
               <div
-                class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner"
-              >
+                class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
                 <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
                   Preview em Tempo Real
                 </BaseHeading>
