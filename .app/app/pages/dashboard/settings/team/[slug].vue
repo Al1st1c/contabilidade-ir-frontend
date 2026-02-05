@@ -37,7 +37,7 @@ async function fetchMember() {
           role: {
             label: getRoleLabel(roleName),
             value: roleName,
-            details: getRoleDetails(roleName, found.role),
+            details: getRoleDetails(found.role),
             apiRole: found.role, // Keep original role object for permissions
           },
           isActive: found.isActive,
@@ -71,179 +71,68 @@ function getRoleLabel(roleName: string): string {
   return roles[roleName] || roleName || 'Membro'
 }
 
-// Helper to get role details with permissions
-function getRoleDetails(role: string, apiRole?: any): any[] {
-  // If we have API role with real permissions, use it to augment or replace
-  const canViewAll = apiRole?.canViewAllCards ?? false
-  const canManageTeam = apiRole?.canManageTeam ?? false
-  const canManageClients = apiRole?.canManageClients ?? false
-  const canManageSettings = apiRole?.canManageSettings ?? false
-  const canExportData = apiRole?.canExportData ?? false
-  const canDeleteRecords = apiRole?.canDeleteRecords ?? false
-
-  const permissions: Record<string, any[]> = {
-    master: [
-      {
-        label: 'Gestão da Empresa',
-        access: 'Acesso Total',
-        permissions: [
-          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
-          { label: 'Gerenciar membros da equipe', status: canManageTeam },
-          { label: 'Gerenciar planos e faturamento', status: true }, // Master always has this in theory
-          { label: 'Excluir empresa', status: true },
-        ],
-      },
-      {
-        label: 'Declarações de IR',
-        access: 'Acesso Total',
-        permissions: [
-          { label: 'Criar e editar declarações', status: true },
-          { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: canDeleteRecords },
-          { label: 'Ver todas as declarações', status: canViewAll },
-        ],
-      },
-      {
-        label: 'Clientes',
-        access: 'Acesso Total',
-        permissions: [
-          { label: 'Cadastrar clientes', status: true },
-          { label: 'Editar clientes', status: true },
-          { label: 'Excluir clientes', status: canDeleteRecords },
-          { label: 'Exportar dados', status: canExportData },
-        ],
-      },
-    ],
-    admin: [
-      {
-        label: 'Gestão da Empresa',
-        access: 'Acesso Parcial',
-        permissions: [
-          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
-          { label: 'Gerenciar membros da equipe', status: canManageTeam },
-          { label: 'Gerenciar planos e faturamento', status: false },
-          { label: 'Excluir empresa', status: false },
-        ],
-      },
-      {
-        label: 'Declarações de IR',
-        access: 'Acesso Total',
-        permissions: [
-          { label: 'Criar e editar declarações', status: true },
-          { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: canDeleteRecords },
-          { label: 'Ver todas as declarações', status: canViewAll },
-        ],
-      },
-      {
-        label: 'Clientes',
-        access: 'Acesso Total',
-        permissions: [
-          { label: 'Cadastrar clientes', status: true },
-          { label: 'Editar clientes', status: true },
-          { label: 'Excluir clientes', status: canDeleteRecords },
-          { label: 'Exportar dados', status: canExportData },
-        ],
-      },
-    ],
-    accountant: [
-      {
-        label: 'Gestão da Empresa',
-        access: 'Sem Acesso',
-        permissions: [
-          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
-          { label: 'Gerenciar membros da equipe', status: canManageTeam },
-          { label: 'Gerenciar planos e faturamento', status: false },
-          { label: 'Excluir empresa', status: false },
-        ],
-      },
-      {
-        label: 'Declarações de IR',
-        access: 'Acesso Parcial',
-        permissions: [
-          { label: 'Criar e editar declarações', status: true },
-          { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: canDeleteRecords },
-          { label: 'Ver todas as declarações', status: canViewAll },
-        ],
-      },
-      {
-        label: 'Clientes',
-        access: 'Acesso Parcial',
-        permissions: [
-          { label: 'Cadastrar clientes', status: true },
-          { label: 'Editar clientes', status: true },
-          { label: 'Excluir clientes', status: false },
-          { label: 'Exportar dados', status: canExportData },
-        ],
-      },
-    ],
-    assistant: [
-      {
-        label: 'Gestão da Empresa',
-        access: 'Sem Acesso',
-        permissions: [
-          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
-          { label: 'Gerenciar membros da equipe', status: canManageTeam },
-          { label: 'Gerenciar planos e faturamento', status: false },
-          { label: 'Excluir empresa', status: false },
-        ],
-      },
-      {
-        label: 'Declarações de IR',
-        access: 'Acesso Limitado',
-        permissions: [
-          { label: 'Criar e editar declarações', status: true },
-          { label: 'Enviar declarações', status: false },
-          { label: 'Excluir declarações', status: false },
-          { label: 'Ver todas as declarações', status: canViewAll },
-        ],
-      },
-      {
-        label: 'Clientes',
-        access: 'Acesso Limitado',
-        permissions: [
-          { label: 'Cadastrar clientes', status: true },
-          { label: 'Editar clientes', status: false },
-          { label: 'Excluir clientes', status: false },
-          { label: 'Exportar dados', status: false },
-        ],
-      },
-    ],
-    viewer: [
-      {
-        label: 'Gestão da Empresa',
-        access: 'Sem Acesso',
-        permissions: [
-          { label: 'Gerenciar configurações da empresa', status: false },
-          { label: 'Gerenciar membros da equipe', status: false },
-          { label: 'Gerenciar planos e faturamento', status: false },
-          { label: 'Excluir empresa', status: false },
-        ],
-      },
-      {
-        label: 'Declarações de IR',
-        access: 'Somente Visualização',
-        permissions: [
-          { label: 'Criar e editar declarações', status: false },
-          { label: 'Enviar declarações', status: false },
-          { label: 'Excluir declarações', status: false },
-          { label: 'Ver todas as declarações', status: canViewAll },
-        ],
-      },
-      {
-        label: 'Clientes',
-        access: 'Somente Visualização',
-        permissions: [
-          { label: 'Cadastrar clientes', status: false },
-          { label: 'Editar clientes', status: false },
-          { label: 'Excluir clientes', status: false },
-          { label: 'Exportar dados', status: false },
-        ],
-      },
-    ],
+// Permission groups for dynamic display (sync with roles.vue)
+const permissionGroups = [
+  {
+    name: 'Administração',
+    permissions: [
+      { key: 'canManageTeam', label: 'Gerenciar Equipe' },
+      { key: 'canManageSettings', label: 'Configurações da Empresa' },
+      { key: 'canManageKanban', label: 'Gerenciar Kanban' },
+      { key: 'canExportData', label: 'Exportar Dados' },
+    ]
+  },
+  {
+    name: 'Operação de IR',
+    permissions: [
+      { key: 'canCreateIR', label: 'Criar Novos Cards' },
+      { key: 'canEditIR', label: 'Editar Informações' },
+      { key: 'canMoveToFinalColumn', label: 'Concluir Declarações' },
+      { key: 'canImportDocs', label: 'Importar Documentos Oficiais' },
+      { key: 'canManageChecklist', label: 'Gerenciar Checklist' },
+      { key: 'canDeleteRecords', label: 'Excluir Registros' },
+    ]
+  },
+  {
+    name: 'Acesso e Visualização',
+    permissions: [
+      { key: 'canManageClients', label: 'Gerenciar Clientes' },
+      { key: 'canViewAllCards', label: 'Visualizar Todos os Cards' },
+      { key: 'canViewDrive', label: 'Acessar Drive' },
+      { key: 'canViewFinancialCharts', label: 'Dashboard Financeiro' },
+    ]
   }
-  return permissions[role] || permissions.viewer || []
+]
+
+// Helper to get role details with granular permissions
+function getRoleDetails(apiRole?: any): any[] {
+  if (!apiRole) return []
+
+  // Map database role flags to UI groups
+  return permissionGroups.map(group => {
+    // Determine access level based on permissions in group
+    const groupPerms = group.permissions.map(p => ({
+      label: p.label,
+      status: apiRole[p.key] ?? false
+    }))
+
+    const activeCount = groupPerms.filter(p => p.status).length
+    let access = 'Sem Acesso'
+    if (activeCount === group.permissions.length) access = 'Acesso Total'
+    else if (activeCount > 0) access = 'Acesso Parcial'
+
+    // Special case for Master/Admin
+    if (apiRole.name === 'master' || apiRole.name === 'admin') {
+      access = 'Acesso Total'
+      groupPerms.forEach(p => p.status = true)
+    }
+
+    return {
+      label: group.name,
+      access,
+      permissions: groupPerms
+    }
+  })
 }
 
 // Format date
