@@ -589,619 +589,391 @@ onMounted(async () => {
 </script>
 
 <template>
-  <TairoSidebarLayout
-    :toolbar="false"
-    :sidebar="false"
-    class="bg-muted-100 dark:bg-muted-900 min-h-[80vh] w-full rounded-3xl overflow-hidden shadow-xl"
-  >
-    <template #logo>
-      <NuxtLink
-        to="/dashboard"
-        class="text-muted-400 hover:text-primary-500 hover:bg-primary-500/20 flex size-12 items-center justify-center rounded-2xl transition-colors duration-300"
-        @click.prevent="router.push('/dashboard')"
-      >
-        <Icon name="lucide:arrow-left" class="size-5" />
-      </NuxtLink>
-    </template>
+  <div class="flex h-full max-h-[90vh] min-h-[500px] flex-col overflow-hidden bg-white dark:bg-muted-950">
+    <!-- Header: Progress -->
+    <div
+      class="flex shrink-0 items-center justify-between border-b border-muted-200 bg-muted-50/50 p-4 px-6 dark:border-muted-800 dark:bg-muted-900/50">
+      <div class="flex items-center gap-3">
+        <div class="flex size-10 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+          <Icon name="solar:stars-bold-duotone" class="size-6" />
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-muted-900 dark:text-white leading-tight">
+            Configuração Inicial
+          </h3>
+          <p class="text-xs text-muted-500 dark:text-muted-400">
+            Passo {{ currentStep + 1 }} de {{ totalSteps }} • {{ currentStepMeta?.name }}
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="hidden sm:block text-right">
+          <p class="text-[10px] uppercase tracking-wider font-bold text-muted-400">Progresso</p>
+          <p class="text-xs font-semibold text-primary-500">{{ Math.round(progress) }}%</p>
+        </div>
+        <div class="w-24 sm:w-32">
+          <BaseProgress :model-value="progress" size="xs" rounded="full" variant="primary" />
+        </div>
+      </div>
+    </div>
 
-
-    <form
-      action=""
-      method="POST"
-      novalidate
-      @submit.prevent="handleSubmit"
-    >
-      <div class="pb-12 pt-8">
-        <div class="mx-auto w-full max-w-3xl px-4 mb-5">
-          <BaseCard rounded="lg" class="p-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <BaseTag rounded="lg" variant="none" class="bg-primary-500/15 text-primary-600 px-3 py-1 text-xs font-semibold">
-                  Step {{ currentStep + 1 }} de {{ totalSteps }}
-                </BaseTag>
-                <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ currentStepMeta?.name }}
-                </BaseParagraph>
-              </div>
-              <BaseParagraph size="xs" class="text-muted-400">
-                {{ Math.round(progress) }}% concluído
-              </BaseParagraph>
-            </div>
-            <div class="mt-3">
-              <BaseProgress
-                :model-value="progress"
-                size="xs"
-                rounded="full"
-                variant="primary"
-              />
-            </div>
-          </BaseCard>
+    <!-- Main Content: Scrollable -->
+    <div class="flex-1 overflow-y-auto p-6 sm:p-10">
+      <form action="" method="POST" novalidate @submit.prevent="handleSubmit">
+        <!-- Step Header -->
+        <div class="mb-8 text-center sm:text-left">
+          <h1 class="text-2xl font-bold text-muted-900 dark:text-white sm:text-3xl">
+            {{ currentStepMeta?.title }}
+          </h1>
+          <p class="mt-2 text-muted-600 dark:text-muted-400">
+            {{ currentStepMeta?.subtitle }}
+          </p>
         </div>
 
-        <div class="mb-10 text-center">
-          <BaseHeading
-            tag="h1"
-            size="2xl"
-            weight="medium"
-            class="text-muted-900 dark:text-white"
-          >
-            <span>{{ currentStepMeta?.title }}</span>
-          </BaseHeading>
-          <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400">
-            <span>{{ currentStepMeta?.subtitle }}</span>
-          </BaseParagraph>
-        </div>
-
-        <div v-if="currentStep === 0" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <BaseCard rounded="lg" class="p-8">
-            <div class="grid grid-cols-12 gap-8">
-              <div class="col-span-12 lg:col-span-7">
-                <div class="mx-auto w-full max-w-2xl text-center lg:text-start">
-                  <div class="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted-100 dark:bg-muted-900 lg:mx-0">
-                    <Icon name="solar:stars-linear" class="size-7 text-primary-500" />
-                  </div>
-
-                  <BaseHeading
-                    tag="h2"
-                    size="xl"
-                    weight="medium"
-                    class="text-muted-900 dark:text-white"
-                  >
-                    <span>Vamos configurar sua conta</span>
-                  </BaseHeading>
-                  <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400 mt-2">
-                    <span>
-                      Em poucos passos você já consegue usar o sistema. Se preferir, você pode concluir agora e ajustar tudo depois em
-                      <strong>Configurações</strong>.
-                    </span>
-                  </BaseParagraph>
-
-                  <div class="mt-8 grid grid-cols-12 gap-4 text-start">
-                    <div class="col-span-12 md:col-span-4">
-                      <BaseCard rounded="lg" class="p-5">
-                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
-                          <Icon name="lucide:user" class="size-5 text-muted-500" />
-                        </div>
-                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
-                          Perfil
-                        </BaseHeading>
-                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-                          Foto e identificação para o time.
-                        </BaseParagraph>
-                      </BaseCard>
+        <!-- Step content -->
+        <Transition mode="out-in" enter-active-class="transition duration-200 ease-out"
+          enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-2">
+          <div :key="currentStep">
+            <!-- Step 0: Welcome -->
+            <div v-if="currentStep === 0" class="space-y-8">
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-muted-50/50 dark:bg-muted-900/40 p-6 rounded-2xl border border-muted-200 dark:border-muted-800">
+                <div>
+                  <h2 class="text-lg font-semibold text-muted-800 dark:text-white mb-4">
+                    Tudo pronto para começar?
+                  </h2>
+                  <p class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
+                    Bem-vindo ao <b>Contabilidade IR</b>. Projetamos este guia para ajudar você a configurar seu
+                    escritório em menos de 5 minutos.
+                  </p>
+                  <div class="space-y-4">
+                    <div v-for="(item, i) in [
+                      { icon: 'lucide:user', title: 'Perfil', desc: 'Sua foto e identificação' },
+                      { icon: 'lucide:building-2', title: 'Empresa', desc: 'Dados fiscais e PIX' },
+                      { icon: 'lucide:palette', title: 'Identidade', desc: 'Cores e Whitelabel' }
+                    ]" :key="i" class="flex items-center gap-3">
+                      <div
+                        class="flex size-8 items-center justify-center rounded-lg bg-white dark:bg-muted-800 shadow-sm border border-muted-200 dark:border-muted-700">
+                        <Icon :name="item.icon" class="size-4 text-primary-500" />
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium text-muted-800 dark:text-muted-100">{{ item.title }}</p>
+                        <p class="text-[11px] text-muted-500">{{ item.desc }}</p>
+                      </div>
                     </div>
-                    <div class="col-span-12 md:col-span-4">
-                      <BaseCard rounded="lg" class="p-5">
-                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
-                          <Icon name="lucide:building-2" class="size-5 text-muted-500" />
-                        </div>
-                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
-                          Empresa
-                        </BaseHeading>
-                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-                          Logo, CNPJ e chave PIX para honorários.
-                        </BaseParagraph>
-                      </BaseCard>
-                    </div>
-                    <div class="col-span-12 md:col-span-4">
-                      <BaseCard rounded="lg" class="p-5">
-                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
-                          <Icon name="lucide:palette" class="size-5 text-muted-500" />
-                        </div>
-                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
-                          Identidade
-                        </BaseHeading>
-                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
-                          Cores e whitelabel (se disponível no plano).
-                        </BaseParagraph>
-                      </BaseCard>
-                    </div>
-                  </div>
-
-                  <div class="mt-10 flex flex-wrap items-center gap-3">
-                    <BaseButton rounded="lg" variant="primary" size="lg" @click.prevent="startOnboarding">
-                      <span>Começar</span>
-                    </BaseButton>
-                    <BaseButton rounded="lg" size="lg" @click.prevent="router.push('/dashboard')">
-                      <span>Pular por enquanto</span>
-                    </BaseButton>
                   </div>
                 </div>
-              </div>
-              <div class="col-span-12 lg:col-span-5">
-                <BaseCard rounded="lg" class="p-3">
-                  <div class="relative overflow-hidden rounded-xl">
-                    <img
-                      src="/img/screens/dashboards-personal-2.png"
-                      alt="Dashboard"
-                      class="h-full w-full object-cover dark:hidden"
-                    >
-                    <img
-                      src="/img/screens/dashboards-personal-2-dark.png"
-                      alt="Dashboard"
-                      class="hidden h-full w-full object-cover dark:block"
-                    >
-                    <div class="absolute inset-0 bg-gradient-to-t from-muted-900/60 via-muted-900/20 to-transparent" />
-                  </div>
-                </BaseCard>
-              </div>
-            </div>
-          </BaseCard>
-        </div>
-
-        <div v-else-if="currentStep === 1" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <BaseCard rounded="lg" class="p-8">
-            <input
-              ref="photoInput"
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              class="hidden"
-              @change="handlePhotoChange"
-            >
-            <div class="flex flex-col items-center gap-6 text-center">
-              <div class="relative group">
-                <div
-                  class="relative size-24 rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-muted-200 dark:border-muted-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
-                  @click="triggerPhotoUpload"
-                >
-                  <img
-                    v-if="profile.photoPreview || user?.photo"
-                    :src="profile.photoPreview || user?.photo"
-                    class="w-full h-full object-cover"
-                  >
-                  <div v-else class="w-full h-full flex items-center justify-center bg-muted-100 dark:bg-muted-800">
-                    <BaseText size="2xl" weight="semibold" class="text-muted-400">
-                      {{ user?.name?.charAt(0) || 'U' }}
-                    </BaseText>
-                  </div>
-
+                <div class="hidden md:block relative group">
                   <div
-                    class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    :class="{ 'opacity-100': uploadingPhoto }"
-                  >
-                    <Icon v-if="uploadingPhoto" name="svg-spinners:ring-resize" class="size-8 text-white" />
-                    <Icon v-else name="lucide:camera" class="size-8 text-white" />
+                    class="aspect-video rounded-xl overflow-hidden shadow-2xl border-4 border-white dark:border-muted-800 rotate-2 group-hover:rotate-0 transition-transform duration-500">
+                    <img src="/img/screens/dashboards-personal-2.png" alt="Dashboard"
+                      class="w-full h-full object-cover dark:hidden">
+                    <img src="/img/screens/dashboards-personal-2-dark.png" alt="Dashboard"
+                      class="hidden w-full h-full object-cover dark:block">
+                    <div class="absolute inset-0 bg-gradient-to-t from-primary-500/20 to-transparent" />
                   </div>
+                  <div class="absolute -bottom-4 -right-4 size-20 bg-primary-500/10 rounded-full blur-3xl" />
                 </div>
               </div>
 
-              <div class="max-w-sm">
-                <BaseHeading size="lg" weight="medium" class="text-muted-800 dark:text-muted-100">
-                  Foto de perfil
-                </BaseHeading>
-                <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
-                  Envie uma imagem para personalizar seu perfil no sistema.
-                </BaseParagraph>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <BaseButton size="sm" rounded="lg" :disabled="uploadingPhoto" @click="triggerPhotoUpload">
-                  <Icon name="lucide:upload" class="size-3.5" />
-                  <span>{{ (profile.photoPreview || user?.photo) ? 'Alterar Foto' : 'Adicionar Foto' }}</span>
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                <BaseButton rounded="xl" variant="primary" size="lg" shadow="primary" class="w-full sm:w-64 h-14"
+                  @click.prevent="startOnboarding">
+                  <span>Vamos Começar</span>
+                  <Icon name="lucide:arrow-right" class="ms-2 size-5" />
+                </BaseButton>
+                <BaseButton rounded="xl" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
+                  @click.prevent="router.push('/dashboard')">
+                  <span>Pular Guia</span>
                 </BaseButton>
               </div>
-
-              <BaseParagraph size="xs" class="text-muted-400">
-                <Icon name="lucide:info" class="size-3 inline me-1" />
-                Formatos aceitos: JPEG, PNG, WebP. Tamanho máximo: 5MB.
-              </BaseParagraph>
             </div>
-          </BaseCard>
-        </div>
 
-        <div v-else-if="currentStep === 2" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <BaseCard rounded="lg" class="p-8">
-            <div class="flex flex-col sm:flex-row items-center gap-10">
-              <div class="relative group">
-                <div
-                  class="size-40 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500"
-                >
-                  <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-4">
-                  <Icon v-else name="solar:gallery-linear" class="size-16 text-muted-300" />
-
+            <!-- Step 1: User Profile -->
+            <div v-else-if="currentStep === 1" class="max-w-md mx-auto py-4">
+              <input ref="photoInput" type="file" accept="image/*" class="hidden" @change="handlePhotoChange">
+              <div class="flex flex-col items-center gap-8 text-center">
+                <div class="relative group">
                   <div
-                    class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
-                  >
-                    <BaseButton color="white" rounded="full" size="sm" :disabled="isUploadingLogo" @click="triggerLogoUpload">
-                      Alterar
+                    class="relative size-40 rounded-3xl overflow-hidden cursor-pointer border-2 border-dashed border-muted-200 dark:border-muted-700 hover:border-primary-500 dark:hover:border-primary-500 transition-all duration-300 shadow-xl"
+                    @click="triggerPhotoUpload">
+                    <img v-if="profile.photoPreview || user?.photo" :src="profile.photoPreview || user?.photo"
+                      class="w-full h-full object-cover">
+                    <div v-else
+                      class="w-full h-full flex items-center justify-center bg-muted-50 dark:bg-muted-900 text-muted-300 dark:text-muted-700">
+                      <Icon name="solar:user-circle-bold" class="size-24" />
+                    </div>
+                    <div
+                      class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Icon v-if="uploadingPhoto" name="svg-spinners:ring-resize" class="size-10 text-white" />
+                      <Icon v-else name="lucide:camera" class="size-10 text-white" />
+                    </div>
+                  </div>
+                  <div
+                    class="absolute -bottom-2 -right-2 flex size-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg">
+                    <Icon name="lucide:plus" class="size-5" />
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <p class="text-sm text-muted-600 dark:text-muted-400">
+                    Apareça para seu time e clientes! Uma foto profissional transmite mais confiança.
+                  </p>
+                  <BaseButton rounded="lg" shadow="flat" :disabled="uploadingPhoto" @click="triggerPhotoUpload"
+                    class="h-12 px-8">
+                    <Icon name="lucide:upload" class="size-4 me-2" />
+                    <span>{{ (profile.photoPreview || user?.photo) ? 'Trocar Foto' : 'Subir Foto' }}</span>
+                  </BaseButton>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Company Data -->
+            <div v-else-if="currentStep === 2" class="space-y-8">
+              <div class="flex flex-col md:flex-row gap-10">
+                <div class="shrink-0 flex flex-col items-center">
+                  <div class="relative group">
+                    <div
+                      class="size-44 rounded-2xl border-2 border-dashed border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500 shadow-sm">
+                      <img v-if="tenant?.logo" :src="tenant.logo" alt="Logo" class="size-full object-contain p-6">
+                      <div v-else class="text-center p-4">
+                        <Icon name="solar:gallery-bold-duotone" class="size-12 text-muted-300 mb-2 mx-auto" />
+                        <span class="text-[10px] text-muted-400 font-medium uppercase">Logo Empresa</span>
+                      </div>
+                      <div
+                        class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <BaseButton color="white" rounded="full" size="sm" :disabled="isUploadingLogo"
+                          @click="triggerLogoUpload">
+                          Subir Logo
+                        </BaseButton>
+                      </div>
+                    </div>
+                    <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
+                  </div>
+                  <p class="mt-3 text-[10px] text-muted-400 text-center max-w-[120px]">Recomendamos PNG transparente</p>
+                </div>
+
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div class="sm:col-span-2">
+                    <BaseField label="Razão Social" required>
+                      <TairoInput v-model="company.name" placeholder="Ex: Contabilidade Silva & Associados"
+                        icon="solar:buildings-bold-duotone" />
+                    </BaseField>
+                  </div>
+                  <div>
+                    <BaseField label="Nome Fantasia">
+                      <TairoInput v-model="company.tradeName" :disabled="!hasWhitelabel"
+                        placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
+                    </BaseField>
+                  </div>
+                  <div>
+                    <BaseField label="CNPJ">
+                      <TairoInput v-model="company.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
+                        icon="solar:document-text-bold-duotone" />
+                    </BaseField>
+                  </div>
+                  <div class="sm:col-span-2 bg-primary-500/5 p-4 rounded-xl border border-primary-500/20">
+                    <BaseField label="Chave PIX para Honorários" help="Seus clientes verão esta chave para pagar você.">
+                      <TairoInput v-model="company.pixKey" placeholder="E-mail, CPF/CNPJ ou Aleatória"
+                        icon="solar:wallet-money-bold-duotone" />
+                    </BaseField>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Team -->
+            <div v-else-if="currentStep === 3">
+              <AppPageLoading v-if="pendingMembers || loadingSub" message="Verificando seu plano..." />
+              <div v-else>
+                <div v-if="isTrial"
+                  class="bg-muted-50/50 dark:bg-muted-900/40 p-10 rounded-3xl border border-muted-200 dark:border-muted-800 text-center">
+                  <div
+                    class="mx-auto mb-6 flex size-20 items-center justify-center rounded-3xl bg-white dark:bg-muted-800 shadow-xl">
+                    <Icon name="solar:lock-bold-duotone" class="size-10 text-primary-500" />
+                  </div>
+                  <h3 class="text-xl font-bold text-muted-800 dark:text-white mb-3">
+                    Gestão de Equipe Bloqueada
+                  </h3>
+                  <p class="text-sm text-muted-500 dark:text-muted-400 mb-8 max-w-md mx-auto leading-relaxed">
+                    Durante o período de teste, apenas você pode acessar o sistema. Faça um upgrade para convidar seus
+                    colaboradores.
+                  </p>
+                  <div class="flex items-center justify-center gap-3">
+                    <BaseButton rounded="xl" variant="primary" size="lg" shadow="primary" class="px-10"
+                      @click.prevent="handleUpgrade">
+                      Assinar Agora
+                    </BaseButton>
+                    <BaseButton rounded="xl" size="lg" @click.prevent="continueFromTeamTrial">
+                      Pular por enquanto
                     </BaseButton>
                   </div>
                 </div>
-              </div>
-
-              <div class="flex-1 space-y-6">
-                <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
-
-                <div class="grid grid-cols-12 gap-6">
-                  <div class="col-span-12">
-                    <BaseField label="Razão Social" required>
-                      <TairoInput
-                        v-model="company.name"
-                        placeholder="Ex: Contabilidade Silva & Associados"
-                        icon="solar:buildings-linear"
-                      />
-                    </BaseField>
+                <div v-else class="space-y-6">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-muted-800 dark:text-white">Convidar Colaborador</span>
+                      <span class="text-[11px] bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full text-muted-500">
+                        {{ totalMembers }} / {{ currentSubscription?.employeesLimit }} usados
+                      </span>
+                    </div>
                   </div>
-
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Nome Fantasia">
-                      <TairoInput
-                        v-model="company.tradeName"
-                        :disabled="!hasWhitelabel"
-                        placeholder="Ex: Contábil Silva"
-                        icon="solar:shop-linear"
-                      />
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
+                    <BaseField label="Nome">
+                      <BaseInput v-model="teamForm.name" placeholder="Nome completo" />
                     </BaseField>
-                  </div>
-
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="CNPJ">
-                      <TairoInput
-                        v-model="company.document"
-                        v-maska="cnpjMask"
-                        placeholder="00.000.000/0000-00"
-                        icon="solar:document-text-linear"
-                      />
+                    <BaseField label="Email">
+                      <BaseInput v-model="teamForm.email" type="email" placeholder="email@trabalho.com" />
                     </BaseField>
-                  </div>
-
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Chave PIX (Vai aparecer para o cliente pagar os honorários)">
-                      <TairoInput
-                        v-model="company.pixKey"
-                        placeholder="E-mail, CPF/CNPJ ou Aleatória"
-                        icon="solar:wallet-money-linear"
-                      />
+                    <BaseField label="Telefone">
+                      <BaseInput v-model="teamForm.phone" placeholder="(00) 00000-0000" />
                     </BaseField>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </BaseCard>
-        </div>
-
-        <div v-else-if="currentStep === 3" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <AppPageLoading v-if="pendingMembers || loadingSub" message="Carregando equipe e limites..." />
-
-          <div v-else class="space-y-6">
-            <div class="flex items-center justify-between">
-              <div>
-                <BaseHeading tag="h2" size="lg" weight="medium" class="text-muted-800 dark:text-muted-100">
-                  Convites de Equipe
-                </BaseHeading>
-                <BaseParagraph size="sm" class="text-muted-400">
-                  <span v-if="currentSubscription" class="ms-2 text-xs bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full">
-                    {{ totalMembers }} / {{ currentSubscription.employeesLimit }}
-                  </span>
-                </BaseParagraph>
-              </div>
-            </div>
-
-            <BaseCard v-if="isTrial" rounded="lg" class="p-8">
-              <div class="mx-auto w-full max-w-2xl text-center">
-                <div class="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted-100 dark:bg-muted-900">
-                  <Icon name="lucide:lock" class="size-7 text-muted-500" />
-                </div>
-                <BaseHeading size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
-                  Gestão de equipe disponível nos planos pagos
-                </BaseHeading>
-                <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
-                  No período grátis você pode conhecer o sistema, mas ainda não é possível convidar funcionários.
-                  Ao fazer upgrade, você poderá cadastrar mais de um colaborador e organizar permissões por cargo.
-                </BaseParagraph>
-
-                <div class="mt-8 flex items-center justify-center gap-2">
-                  <BaseButton rounded="lg" variant="primary" class="w-40" @click.prevent="handleUpgrade">
-                    <span>Fazer Upgrade</span>
-                  </BaseButton>
-                  <BaseButton rounded="lg" class="w-56" @click.prevent="continueFromTeamTrial">
-                    <span>Continuar</span>
-                  </BaseButton>
-                </div>
-              </div>
-            </BaseCard>
-
-            <AppLimitAlert
-              v-else-if="!canAddMember"
-              title="Limite de Equipe Atingido"
-              description="Você atingiu o número máximo de colaboradores permitidos no seu plano atual. Ative um plano superior para adicionar mais membros e escalar sua operação."
-            />
-
-            <BaseCard v-else rounded="lg" class="p-6">
-              <div class="space-y-6">
-                <div class="grid grid-cols-12 gap-6">
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Nome completo *">
-                      <BaseInput v-model="teamForm.name" placeholder="Nome do funcionário" :disabled="isInviting || !canAddMember" />
-                    </BaseField>
-                  </div>
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Email *">
-                      <BaseInput v-model="teamForm.email" type="email" placeholder="email@exemplo.com" :disabled="isInviting || !canAddMember" />
-                    </BaseField>
-                  </div>
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Telefone *">
-                      <BaseInput v-model="teamForm.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="isInviting || !canAddMember" />
-                    </BaseField>
-                  </div>
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Cargo *">
-                      <BaseSelect v-model="teamForm.roleId" :disabled="isInviting || loadingRoles || !canAddMember">
-                        <BaseSelectItem value="placeholder" disabled>
-                          {{ loadingRoles ? 'Carregando...' : 'Selecione um cargo' }}
-                        </BaseSelectItem>
-                        <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">
-                          {{ role.name }}
+                    <BaseField label="Cargo">
+                      <BaseSelect v-model="teamForm.roleId">
+                        <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
+                        <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
                         </BaseSelectItem>
                       </BaseSelect>
                     </BaseField>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-3 pt-2">
-                  <BaseButton type="button" variant="primary" rounded="lg" :loading="isInviting" :disabled="isInviting || !canAddMember" @click="inviteMember">
-                    <Icon v-if="!isInviting" name="lucide:send" class="mr-2 size-4" />
-                    {{ isInviting ? 'Enviando...' : 'Enviar Convite' }}
-                  </BaseButton>
-                </div>
-              </div>
-            </BaseCard>
-          </div>
-        </div>
-
-        <div v-else-if="currentStep === 4" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <BaseCard rounded="lg" class="p-8">
-            <div v-if="hasWhitelabel" class="grid grid-cols-12 gap-8">
-              <div class="col-span-12 lg:col-span-7 space-y-10">
-                <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-2">
-                    Cor da marca
-                  </BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-4">
-                    Escolha a cor principal que vai aparecer em botões e destaques.
-                  </BaseParagraph>
-                  <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
-                    <button
-                      v-for="c in safeColors"
-                      :key="c.name"
-                      type="button"
-                      class="size-10 rounded-xl transition-all duration-200"
-                      :class="[
-                        c.class,
-                        whitelabel.primaryColor === c.name
-                          ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg'
-                          : 'hover:scale-110 opacity-80 hover:opacity-100',
-                      ]"
-                      @click="whitelabel.primaryColor = c.name"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-2">
-                    Cor do fundo (muted)
-                  </BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-4">
-                    Ajuste os tons neutros do sistema para combinar com sua marca.
-                  </BaseParagraph>
-                  <div class="flex flex-wrap gap-4">
-                    <button
-                      v-for="c in mutedColors"
-                      :key="c.name"
-                      type="button"
-                      class="size-14 rounded-xl border-2 transition-all duration-200"
-                      :class="[
-                        c.class,
-                        whitelabel.secondaryColor === c.name
-                          ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110'
-                          : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
-                      ]"
-                      @click="whitelabel.secondaryColor = c.name"
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-12 gap-6">
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Nome por Extenso">
-                      <TairoInput v-model="whitelabel.name" placeholder="Ex: Contabilidade Silva" icon="solar:buildings-bold-duotone" />
-                    </BaseField>
-                  </div>
-                  <div class="col-span-12 md:col-span-6">
-                    <BaseField label="Nome Fantasia (Menu)">
-                      <TairoInput v-model="whitelabel.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
-                    </BaseField>
+                    <div class="sm:col-span-2 flex justify-end">
+                      <BaseButton variant="primary" :loading="isInviting" :disabled="!canAddMember"
+                        @click="inviteMember">
+                        <Icon name="lucide:plus" class="me-2 size-4" />
+                        Adicionar à Equipe
+                      </BaseButton>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div class="col-span-12 lg:col-span-5">
-                <div class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
-                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-4 uppercase tracking-widest">
-                    Preview
-                  </BaseHeading>
-                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-6">
-                    Veja como os elementos principais ficam com sua identidade.
-                  </BaseParagraph>
-                  <div class="flex flex-col gap-4">
-                    <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20 w-full">
-                      Botão Principal
-                    </BaseButton>
-                    <BaseButton variant="muted" class="w-full">
-                      Botão Neutro
-                    </BaseButton>
-                    <div class="flex items-center justify-between gap-3">
-                      <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
-                        Badge
-                      </BaseTag>
+            <!-- Step 4: Whitelabel -->
+            <div v-else-if="currentStep === 4">
+              <div v-if="hasWhitelabel" class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div class="lg:col-span-8 space-y-8">
+                  <div
+                    class="p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
+                    <h3 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-6">Paleta de Cores</h3>
+                    <div class="space-y-8">
+                      <div>
+                        <p class="text-[11px] text-muted-500 font-medium mb-3">COR PRINCIPAL</p>
+                        <div class="flex flex-wrap gap-2">
+                          <button v-for="c in safeColors" :key="c.name" type="button"
+                            class="size-8 rounded-lg transition-all duration-200 hover:scale-110"
+                            :class="[c.class, whitelabel.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'opacity-80']"
+                            @click="whitelabel.primaryColor = c.name" />
+                        </div>
+                      </div>
+                      <div>
+                        <p class="text-[11px] text-muted-500 font-medium mb-3">TOM DE FUNDO</p>
+                        <div class="flex gap-3">
+                          <button v-for="c in mutedColors" :key="c.name" type="button"
+                            class="size-12 rounded-xl border-2 transition-all duration-200"
+                            :class="[c.class, whitelabel.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/10' : 'border-transparent opacity-60']"
+                            @click="whitelabel.secondaryColor = c.name" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <BaseField label="Nome Expositor">
+                      <TairoInput v-model="whitelabel.name" icon="solar:buildings-bold-duotone" />
+                    </BaseField>
+                    <BaseField label="Nome Menu">
+                      <TairoInput v-model="whitelabel.tradeName" icon="solar:shop-bold-duotone" />
+                    </BaseField>
+                  </div>
+                </div>
+                <div class="lg:col-span-4">
+                  <div class="sticky top-0 p-6 rounded-3xl bg-muted-900 text-white shadow-2xl space-y-6">
+                    <h3 class="text-xs font-bold text-primary-400 uppercase tracking-widest">Visualização</h3>
+                    <div class="space-y-4">
+                      <div
+                        class="h-10 w-full bg-primary-500 rounded-lg flex items-center justify-center text-xs font-bold">
+                        Botão Principal</div>
+                      <div
+                        class="h-10 w-full bg-white/10 rounded-lg flex items-center justify-center text-xs font-medium">
+                        Botão Secundário</div>
                       <div class="flex gap-2">
-                        <div class="size-10 rounded-full bg-primary-500 shadow-lg" />
-                        <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40" />
+                        <div class="size-8 rounded-full bg-primary-500" />
+                        <div class="flex-1 h-8 bg-white/5 rounded-lg" />
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+              <div v-else class="text-center py-10">
+                <div
+                  class="mx-auto mb-6 flex size-20 items-center justify-center rounded-3xl bg-muted-100 dark:bg-muted-900 animate-pulse">
+                  <Icon name="solar:pallete-bold-duotone" class="size-10 text-muted-300" />
+                </div>
+                <h3 class="text-xl font-bold text-muted-800 dark:text-white mb-2">Whitelabel Bloqueado</h3>
+                <p class="text-sm text-muted-500 mb-8 max-w-sm mx-auto">Sua marca e cores personalizadas disponíveis nos
+                  planos <b>Professional</b> e <b>Enterprise</b>.</p>
+                <BaseButton variant="primary" rounded="xl" shadow="primary" class="px-10 h-14"
+                  @click.prevent="handleUpgrade">Liberar Agora</BaseButton>
+              </div>
             </div>
 
-            <div v-else>
-              <div class="relative">
-                <div class="opacity-60 pointer-events-none">
-                  <div class="space-y-10">
-                    <div>
-                      <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                        Cor Primária (Marca)
-                      </BaseHeading>
-                      <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
-                        <button v-for="c in safeColors" :key="c.name" type="button" class="size-10 rounded-xl transition-all duration-200" :class="c.class" />
-                      </div>
-                    </div>
-
-                    <div>
-                      <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                        Tom de Fundo (Muted)
-                      </BaseHeading>
-                      <div class="flex flex-wrap gap-4">
-                        <button v-for="c in mutedColors" :key="c.name" type="button" class="size-14 rounded-xl border-2 transition-all duration-200" :class="c.class" />
-                      </div>
-                    </div>
-
-                    <div class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
-                      <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
-                        Preview em Tempo Real
-                      </BaseHeading>
-                      <div class="flex flex-wrap items-center gap-6">
-                        <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20">
-                          Botão Principal
-                        </BaseButton>
-                        <BaseButton variant="muted">
-                          Botão Neutro
-                        </BaseButton>
-                        <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
-                          Status Badge
-                        </BaseTag>
-                      </div>
-                    </div>
+            <!-- Step 5: Video / Finish -->
+            <div v-else-if="currentStep === 5" class="max-w-3xl mx-auto space-y-8">
+              <div v-if="isPreparing" class="py-20 flex flex-col items-center">
+                <Icon name="svg-spinners:ring-resize" class="size-16 text-primary-500 mb-6" />
+                <p class="text-lg font-medium text-muted-800 dark:text-white animate-pulse">Personalizando sua
+                  plataforma...</p>
+              </div>
+              <div v-else class="space-y-6">
+                <div class="aspect-video bg-muted-900 rounded-3xl overflow-hidden shadow-2xl relative group">
+                  <iframe v-if="readyForVideo" class="w-full h-full border-0"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Tour do Sistema"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen />
+                  <div v-else class="absolute inset-0 flex items-center justify-center">
+                    <Icon name="solar:play-bold" class="size-20 text-white/20" />
                   </div>
                 </div>
-
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <div class="rounded-2xl border border-muted-200 bg-white/80 p-6 text-center shadow-xl dark:border-muted-800 dark:bg-muted-950/80">
-                    <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted-100 dark:bg-muted-900">
-                      <Icon name="lucide:lock" class="size-6 text-muted-500" />
-                    </div>
-                    <BaseHeading size="md" weight="medium" class="text-muted-800 dark:text-white mb-2">
-                      Whitelabel bloqueado
-                    </BaseHeading>
-                    <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mb-6 max-w-sm mx-auto">
-                      Seu plano atual não inclui a funcionalidade de Whitelabel. Faça upgrade para liberar a personalização.
-                    </BaseParagraph>
-                    <div class="flex items-center justify-center gap-2">
-                      <BaseButton rounded="lg" variant="primary" class="w-40" @click.prevent="handleUpgrade">
-                        <span>Fazer Upgrade</span>
-                      </BaseButton>
-                      <BaseButton rounded="lg" class="w-56" @click.prevent="continueWithoutUpgrade">
-                        <span>Continuar sem Upgrade</span>
-                      </BaseButton>
-                    </div>
+                <div class="flex items-center gap-4 bg-primary-500/5 p-4 rounded-2xl border border-primary-500/10">
+                  <div class="flex size-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-lg">
+                    <Icon name="lucide:check" class="size-6" />
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold text-muted-900 dark:text-white">Tudo configurado!</p>
+                    <p class="text-xs text-muted-500">Assista este tour rápido de 60 segundos ou clique em concluir.</p>
                   </div>
                 </div>
               </div>
             </div>
-          </BaseCard>
-        </div>
-
-        <div v-else-if="currentStep === 5" class="mx-auto flex w-full max-w-3xl flex-col px-4">
-          <AppPageLoading v-if="isPreparing" message="Preparando seu ambiente..." />
-
-          <BaseCard v-else rounded="lg" class="p-8">
-            <div class="space-y-6">
-              <div>
-                <BaseHeading as="h2" size="xl" weight="medium" class="text-muted-800 dark:text-white mb-2">
-                  Veja como funciona o sistema
-                </BaseHeading>
-                <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
-                  Assista ao vídeo rápido e conclua o onboarding.
-                </BaseParagraph>
-              </div>
-
-              <div class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 flex items-center justify-center overflow-hidden">
-                <div class="w-full">
-                  <iframe
-                    v-if="readyForVideo"
-                    class="w-full h-[400px] rounded-lg border-0"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    title="Veja como funciona o sistema"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowfullscreen
-                  />
-                </div>
-              </div>
-            </div>
-          </BaseCard>
-        </div>
-      </div>
-
-      <div v-if="!complete && currentStep !== 0" class="mx-auto w-full max-w-3xl px-4 mt-5">
-        <BaseCard rounded="lg" class="p-4">
-          <div class="flex items-center justify-between gap-2">
-            <BaseButton
-              rounded="lg"
-              class="w-full"
-              :disabled="currentStep === 0 || loading"
-              @click.prevent="prevStep"
-            >
-              <span>Voltar</span>
-            </BaseButton>
-
-            <BaseButton
-              v-if="shouldShowFooterContinue && !isLastStep"
-              type="submit"
-              rounded="lg"
-              variant="primary"
-              class="w-full"
-              :loading="loading"
-              :disabled="loading"
-            >
-              <span>{{ nextButtonLabel }}</span>
-            </BaseButton>
-
-            <BaseButton
-              v-else-if="shouldShowFooterContinue && isLastStep"
-              type="submit"
-              rounded="lg"
-              variant="primary"
-              class="w-full"
-              :loading="loading"
-              :disabled="loading"
-            >
-              <span>Concluir</span>
-            </BaseButton>
           </div>
-        </BaseCard>
+        </Transition>
+      </form>
+    </div>
+
+    <!-- Footer: Navigation -->
+    <div v-if="!complete && currentStep !== 0"
+      class="shrink-0 border-t border-muted-200 bg-white p-6 px-10 dark:border-muted-800 dark:bg-muted-950">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <BaseButton rounded="xl" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">
+          <Icon name="lucide:chevron-left" class="me-2 size-4" />
+          <span>Voltar</span>
+        </BaseButton>
+
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <BaseButton v-if="currentStep === 4 && !hasWhitelabel" rounded="xl" class="h-12 px-8"
+            @click.prevent="continueWithoutUpgrade">
+            <span>Pular Customização</span>
+          </BaseButton>
+
+          <BaseButton v-if="shouldShowFooterContinue" type="submit" rounded="xl" variant="primary" shadow="primary"
+            class="w-full sm:w-48 h-12" :loading="loading" :disabled="loading" @click.prevent="handleSubmit">
+            <span>{{ isLastStep ? 'Concluir' : 'Continuar' }}</span>
+            <Icon v-if="!isLastStep" name="lucide:chevron-right" class="ms-2 size-4" />
+            <Icon v-else name="lucide:check" class="ms-2 size-4" />
+          </BaseButton>
+        </div>
       </div>
-    </form>
-  </TairoSidebarLayout>
+    </div>
+  </div>
 </template>
