@@ -24,13 +24,21 @@ const steps = [
   {
     id: 0,
     meta: {
+      name: 'Bem-vindo',
+      title: 'Bem-vindo ao Contabilidade IR',
+      subtitle: 'Vamos configurar seu ambiente em poucos passos. Você pode concluir agora e ajustar depois nas configurações.',
+    },
+  },
+  {
+    id: 1,
+    meta: {
       name: 'Perfil do Usuário',
       title: 'Configure seu perfil',
       subtitle: 'Envie uma foto para personalizar sua conta',
     },
   },
   {
-    id: 1,
+    id: 2,
     meta: {
       name: 'Dados da Empresa',
       title: 'Dados do seu escritório',
@@ -38,7 +46,7 @@ const steps = [
     },
   },
   {
-    id: 2,
+    id: 3,
     meta: {
       name: 'Cadastro de Equipe',
       title: 'Adicione sua equipe',
@@ -46,7 +54,7 @@ const steps = [
     },
   },
   {
-    id: 3,
+    id: 4,
     meta: {
       name: 'Whitelabel',
       title: 'Identidade visual',
@@ -54,7 +62,7 @@ const steps = [
     },
   },
   {
-    id: 4,
+    id: 5,
     meta: {
       name: 'Finalização',
       title: 'Veja como funciona o sistema',
@@ -67,6 +75,7 @@ const totalSteps = computed(() => steps.length)
 const progress = computed(() => ((currentStep.value + 1) / totalSteps.value) * 100)
 const isLastStep = computed(() => currentStep.value === totalSteps.value - 1)
 const currentStepMeta = computed(() => steps[currentStep.value]?.meta)
+const finalStepId = computed(() => totalSteps.value - 1)
 
 const target = ref(null)
 const open = ref(false)
@@ -125,6 +134,16 @@ async function handleLogoUpload(event: Event) {
     if (target)
       target.value = ''
   }
+}
+
+function startOnboarding() {
+  if (loading.value)
+    return
+  currentStep.value++
+}
+
+function continueFromTeamTrial() {
+  currentStep.value++
 }
 
 const photoInput = ref<HTMLInputElement | null>(null)
@@ -341,6 +360,7 @@ async function inviteMember() {
 }
 
 const hasWhitelabel = computed(() => Boolean(currentSubscription.value?.hasWhitelabel))
+const isTrial = computed(() => currentSubscription.value?.status === 'TRIAL')
 
 const whitelabel = ref({
   name: '',
@@ -434,7 +454,7 @@ function startPreparing() {
 watch(
   () => currentStep.value,
   (value) => {
-    if (value === 4) {
+    if (value === finalStepId.value) {
       startPreparing()
     }
   },
@@ -444,10 +464,20 @@ const shouldShowFooterContinue = computed(() => {
   if (complete.value)
     return false
 
-  if (currentStep.value === 3 && !hasWhitelabel.value)
+  if (currentStep.value === 4 && !hasWhitelabel.value)
+    return false
+
+  if (currentStep.value === 3 && isTrial.value)
     return false
 
   return true
+})
+
+const nextButtonLabel = computed(() => {
+  if (currentStep.value === 0)
+    return 'Começar'
+
+  return 'Continue'
 })
 
 function goToStep(id: number) {
@@ -470,11 +500,11 @@ async function handleSubmit() {
 
   loading.value = true
   try {
-    if (currentStep.value === 1) {
+    if (currentStep.value === 2) {
       await saveCompany()
     }
 
-    if (currentStep.value === 3 && hasWhitelabel.value) {
+    if (currentStep.value === 4 && hasWhitelabel.value) {
       await saveWhitelabel()
     }
 
@@ -562,7 +592,7 @@ onMounted(async () => {
   <TairoSidebarLayout
     :toolbar="false"
     :sidebar="false"
-    class="bg-muted-100 dark:bg-muted-900 min-h-screen w-full"
+    class="bg-muted-100 dark:bg-muted-900 min-h-[80vh] w-full rounded-3xl overflow-hidden shadow-xl"
   >
     <template #logo>
       <NuxtLink
@@ -574,77 +604,6 @@ onMounted(async () => {
       </NuxtLink>
     </template>
 
-    <div class="dark:bg-muted-950 absolute start-0 top-0 h-16 w-full bg-white">
-      <div class="relative flex h-16 w-full items-center justify-between px-4">
-        <div class="flex items-center">
-          <NuxtLink
-            to="/dashboard"
-            class="border-muted-200 dark:border-muted-800 flex w-14 items-center justify-center border-r pe-6"
-          >
-            <TairoLogo class="text-primary-600 h-8 shrink-0" />
-          </NuxtLink>
-          <div class="hidden items-center gap-2 ps-6 font-sans sm:flex">
-            <p class="text-muted-500 dark:text-muted-400">
-              Step {{ currentStep + 1 }}:
-            </p>
-            <h2 class="text-muted-800 font-semibold dark:text-white">
-              {{ currentStepMeta?.name }}
-            </h2>
-          </div>
-          <div ref="target" class="relative hidden sm:block">
-            <button
-              type="button"
-              class="flex size-10 items-center justify-center"
-              @click="openDropdown"
-            >
-              <Icon
-                name="lucide:chevron-down"
-                class="text-muted-400 size-4 transition-transform duration-300"
-                :class="open ? 'rotate-180' : ''"
-              />
-            </button>
-            <div
-              class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 shadow-muted-300/30 dark:shadow-muted-900/30 absolute start-0 top-8 z-20 w-52 rounded-xl border bg-white p-2 shadow-xl transition-all duration-300"
-              :class="
-                open
-                  ? 'opacity-100 translate-y-0'
-                  : 'opacity-0 pointer-events-none translate-y-1'
-              "
-            >
-              <div class="space-y-1">
-                <button
-                  v-for="step in steps"
-                  :key="step.id"
-                  type="button"
-                  class="cursor-pointer hover:bg-muted-100 dark:hover:bg-muted-900 flex w-full items-center gap-2 rounded-lg px-3 py-2 font-sans disabled:cursor-not-allowed disabled:opacity-70"
-                  :disabled="step.id > currentStep"
-                  @click="goToStep(step.id)"
-                >
-                  <p class="text-muted-500 dark:text-muted-400 text-xs">
-                    Step {{ step.id + 1 }}:
-                  </p>
-                  <h4 class="text-muted-800 text-xs font-medium dark:text-white">
-                    {{ step.meta.name }}
-                  </h4>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center justify-end gap-4">
-          <BaseThemeToggle />
-          <DemoAccountMenu horizontal />
-        </div>
-        <div class="absolute inset-x-0 bottom-0 z-10 w-full">
-          <BaseProgress
-            :model-value="progress"
-            size="xs"
-            rounded="full"
-            variant="primary"
-          />
-        </div>
-      </div>
-    </div>
 
     <form
       action=""
@@ -652,7 +611,33 @@ onMounted(async () => {
       novalidate
       @submit.prevent="handleSubmit"
     >
-      <div class="pb-32 pt-24">
+      <div class="pb-12 pt-8">
+        <div class="mx-auto w-full max-w-3xl px-4 mb-5">
+          <BaseCard rounded="lg" class="p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <BaseTag rounded="lg" variant="none" class="bg-primary-500/15 text-primary-600 px-3 py-1 text-xs font-semibold">
+                  Step {{ currentStep + 1 }} de {{ totalSteps }}
+                </BaseTag>
+                <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                  {{ currentStepMeta?.name }}
+                </BaseParagraph>
+              </div>
+              <BaseParagraph size="xs" class="text-muted-400">
+                {{ Math.round(progress) }}% concluído
+              </BaseParagraph>
+            </div>
+            <div class="mt-3">
+              <BaseProgress
+                :model-value="progress"
+                size="xs"
+                rounded="full"
+                variant="primary"
+              />
+            </div>
+          </BaseCard>
+        </div>
+
         <div class="mb-10 text-center">
           <BaseHeading
             tag="h1"
@@ -667,7 +652,104 @@ onMounted(async () => {
           </BaseParagraph>
         </div>
 
-        <div v-if="currentStep === 0" class="mx-auto flex w-full max-w-5xl flex-col px-4">
+        <div v-if="currentStep === 0" class="mx-auto flex w-full max-w-3xl flex-col px-4">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="grid grid-cols-12 gap-8">
+              <div class="col-span-12 lg:col-span-7">
+                <div class="mx-auto w-full max-w-2xl text-center lg:text-start">
+                  <div class="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted-100 dark:bg-muted-900 lg:mx-0">
+                    <Icon name="solar:stars-linear" class="size-7 text-primary-500" />
+                  </div>
+
+                  <BaseHeading
+                    tag="h2"
+                    size="xl"
+                    weight="medium"
+                    class="text-muted-900 dark:text-white"
+                  >
+                    <span>Vamos configurar sua conta</span>
+                  </BaseHeading>
+                  <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400 mt-2">
+                    <span>
+                      Em poucos passos você já consegue usar o sistema. Se preferir, você pode concluir agora e ajustar tudo depois em
+                      <strong>Configurações</strong>.
+                    </span>
+                  </BaseParagraph>
+
+                  <div class="mt-8 grid grid-cols-12 gap-4 text-start">
+                    <div class="col-span-12 md:col-span-4">
+                      <BaseCard rounded="lg" class="p-5">
+                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
+                          <Icon name="lucide:user" class="size-5 text-muted-500" />
+                        </div>
+                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
+                          Perfil
+                        </BaseHeading>
+                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                          Foto e identificação para o time.
+                        </BaseParagraph>
+                      </BaseCard>
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                      <BaseCard rounded="lg" class="p-5">
+                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
+                          <Icon name="lucide:building-2" class="size-5 text-muted-500" />
+                        </div>
+                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
+                          Empresa
+                        </BaseHeading>
+                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                          Logo, CNPJ e chave PIX para honorários.
+                        </BaseParagraph>
+                      </BaseCard>
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                      <BaseCard rounded="lg" class="p-5">
+                        <div class="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted-100 dark:bg-muted-900">
+                          <Icon name="lucide:palette" class="size-5 text-muted-500" />
+                        </div>
+                        <BaseHeading tag="h3" size="sm" weight="medium" class="text-muted-800 dark:text-muted-100">
+                          Identidade
+                        </BaseHeading>
+                        <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                          Cores e whitelabel (se disponível no plano).
+                        </BaseParagraph>
+                      </BaseCard>
+                    </div>
+                  </div>
+
+                  <div class="mt-10 flex flex-wrap items-center gap-3">
+                    <BaseButton rounded="lg" variant="primary" size="lg" @click.prevent="startOnboarding">
+                      <span>Começar</span>
+                    </BaseButton>
+                    <BaseButton rounded="lg" size="lg" @click.prevent="router.push('/dashboard')">
+                      <span>Pular por enquanto</span>
+                    </BaseButton>
+                  </div>
+                </div>
+              </div>
+              <div class="col-span-12 lg:col-span-5">
+                <BaseCard rounded="lg" class="p-3">
+                  <div class="relative overflow-hidden rounded-xl">
+                    <img
+                      src="/img/screens/dashboards-personal-2.png"
+                      alt="Dashboard"
+                      class="h-full w-full object-cover dark:hidden"
+                    >
+                    <img
+                      src="/img/screens/dashboards-personal-2-dark.png"
+                      alt="Dashboard"
+                      class="hidden h-full w-full object-cover dark:block"
+                    >
+                    <div class="absolute inset-0 bg-gradient-to-t from-muted-900/60 via-muted-900/20 to-transparent" />
+                  </div>
+                </BaseCard>
+              </div>
+            </div>
+          </BaseCard>
+        </div>
+
+        <div v-else-if="currentStep === 1" class="mx-auto flex w-full max-w-3xl flex-col px-4">
           <BaseCard rounded="lg" class="p-8">
             <input
               ref="photoInput"
@@ -727,7 +809,7 @@ onMounted(async () => {
           </BaseCard>
         </div>
 
-        <div v-else-if="currentStep === 1" class="mx-auto flex w-full max-w-5xl flex-col px-4">
+        <div v-else-if="currentStep === 2" class="mx-auto flex w-full max-w-3xl flex-col px-4">
           <BaseCard rounded="lg" class="p-8">
             <div class="flex flex-col sm:flex-row items-center gap-10">
               <div class="relative group">
@@ -798,7 +880,7 @@ onMounted(async () => {
           </BaseCard>
         </div>
 
-        <div v-else-if="currentStep === 2" class="mx-auto flex w-full max-w-5xl flex-col px-4">
+        <div v-else-if="currentStep === 3" class="mx-auto flex w-full max-w-3xl flex-col px-4">
           <AppPageLoading v-if="pendingMembers || loadingSub" message="Carregando equipe e limites..." />
 
           <div v-else class="space-y-6">
@@ -815,13 +897,37 @@ onMounted(async () => {
               </div>
             </div>
 
+            <BaseCard v-if="isTrial" rounded="lg" class="p-8">
+              <div class="mx-auto w-full max-w-2xl text-center">
+                <div class="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-muted-100 dark:bg-muted-900">
+                  <Icon name="lucide:lock" class="size-7 text-muted-500" />
+                </div>
+                <BaseHeading size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+                  Gestão de equipe disponível nos planos pagos
+                </BaseHeading>
+                <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+                  No período grátis você pode conhecer o sistema, mas ainda não é possível convidar funcionários.
+                  Ao fazer upgrade, você poderá cadastrar mais de um colaborador e organizar permissões por cargo.
+                </BaseParagraph>
+
+                <div class="mt-8 flex items-center justify-center gap-2">
+                  <BaseButton rounded="lg" variant="primary" class="w-40" @click.prevent="handleUpgrade">
+                    <span>Fazer Upgrade</span>
+                  </BaseButton>
+                  <BaseButton rounded="lg" class="w-56" @click.prevent="continueFromTeamTrial">
+                    <span>Continuar</span>
+                  </BaseButton>
+                </div>
+              </div>
+            </BaseCard>
+
             <AppLimitAlert
-              v-if="!canAddMember"
+              v-else-if="!canAddMember"
               title="Limite de Equipe Atingido"
               description="Você atingiu o número máximo de colaboradores permitidos no seu plano atual. Ative um plano superior para adicionar mais membros e escalar sua operação."
             />
 
-            <BaseCard rounded="lg" class="p-6">
+            <BaseCard v-else rounded="lg" class="p-6">
               <div class="space-y-6">
                 <div class="grid grid-cols-12 gap-6">
                   <div class="col-span-12 md:col-span-6">
@@ -864,81 +970,96 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-else-if="currentStep === 3" class="mx-auto flex w-full max-w-5xl flex-col px-4">
+        <div v-else-if="currentStep === 4" class="mx-auto flex w-full max-w-3xl flex-col px-4">
           <BaseCard rounded="lg" class="p-8">
-            <div v-if="hasWhitelabel" class="space-y-10">
-              <div>
-                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                  Cor Primária (Marca)
-                </BaseHeading>
-                <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
-                  <button
-                    v-for="c in safeColors"
-                    :key="c.name"
-                    type="button"
-                    class="size-10 rounded-xl transition-all duration-200"
-                    :class="[
-                      c.class,
-                      whitelabel.primaryColor === c.name
-                        ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg'
-                        : 'hover:scale-110 opacity-80 hover:opacity-100',
-                    ]"
-                    @click="whitelabel.primaryColor = c.name"
-                  />
+            <div v-if="hasWhitelabel" class="grid grid-cols-12 gap-8">
+              <div class="col-span-12 lg:col-span-7 space-y-10">
+                <div>
+                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-2">
+                    Cor da marca
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-4">
+                    Escolha a cor principal que vai aparecer em botões e destaques.
+                  </BaseParagraph>
+                  <div class="grid grid-cols-6 sm:grid-cols-11 gap-3">
+                    <button
+                      v-for="c in safeColors"
+                      :key="c.name"
+                      type="button"
+                      class="size-10 rounded-xl transition-all duration-200"
+                      :class="[
+                        c.class,
+                        whitelabel.primaryColor === c.name
+                          ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg'
+                          : 'hover:scale-110 opacity-80 hover:opacity-100',
+                      ]"
+                      @click="whitelabel.primaryColor = c.name"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-2">
+                    Cor do fundo (muted)
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-4">
+                    Ajuste os tons neutros do sistema para combinar com sua marca.
+                  </BaseParagraph>
+                  <div class="flex flex-wrap gap-4">
+                    <button
+                      v-for="c in mutedColors"
+                      :key="c.name"
+                      type="button"
+                      class="size-14 rounded-xl border-2 transition-all duration-200"
+                      :class="[
+                        c.class,
+                        whitelabel.secondaryColor === c.name
+                          ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110'
+                          : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
+                      ]"
+                      @click="whitelabel.secondaryColor = c.name"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-6">
+                  <div class="col-span-12 md:col-span-6">
+                    <BaseField label="Nome por Extenso">
+                      <TairoInput v-model="whitelabel.name" placeholder="Ex: Contabilidade Silva" icon="solar:buildings-bold-duotone" />
+                    </BaseField>
+                  </div>
+                  <div class="col-span-12 md:col-span-6">
+                    <BaseField label="Nome Fantasia (Menu)">
+                      <TairoInput v-model="whitelabel.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
+                    </BaseField>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 uppercase tracking-widest mb-4">
-                  Tom de Fundo (Muted)
-                </BaseHeading>
-                <div class="flex flex-wrap gap-4">
-                  <button
-                    v-for="c in mutedColors"
-                    :key="c.name"
-                    type="button"
-                    class="size-14 rounded-xl border-2 transition-all duration-200"
-                    :class="[
-                      c.class,
-                      whitelabel.secondaryColor === c.name
-                        ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110'
-                        : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
-                    ]"
-                    @click="whitelabel.secondaryColor = c.name"
-                  />
-                </div>
-              </div>
-
-              <div class="grid grid-cols-12 gap-6">
-                <div class="col-span-12 md:col-span-6">
-                  <BaseField label="Nome por Extenso">
-                    <TairoInput v-model="whitelabel.name" placeholder="Ex: Contabilidade Silva" icon="solar:buildings-bold-duotone" />
-                  </BaseField>
-                </div>
-                <div class="col-span-12 md:col-span-6">
-                  <BaseField label="Nome Curto (Menu)">
-                    <TairoInput v-model="whitelabel.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
-                  </BaseField>
-                </div>
-              </div>
-
-              <div class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
-                <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-6 uppercase tracking-widest">
-                  Preview em Tempo Real
-                </BaseHeading>
-                <div class="flex flex-wrap items-center gap-6">
-                  <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20">
-                    Botão Principal
-                  </BaseButton>
-                  <BaseButton variant="muted">
-                    Botão Neutro
-                  </BaseButton>
-                  <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
-                    Status Badge
-                  </BaseTag>
-                  <div class="flex gap-2">
-                    <div class="size-10 rounded-full bg-primary-500 shadow-lg" />
-                    <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40" />
+              <div class="col-span-12 lg:col-span-5">
+                <div class="p-6 rounded-2xl bg-muted-50/50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 shadow-inner">
+                  <BaseHeading as="h4" size="xs" weight="semibold" class="text-muted-400 mb-4 uppercase tracking-widest">
+                    Preview
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400 mb-6">
+                    Veja como os elementos principais ficam com sua identidade.
+                  </BaseParagraph>
+                  <div class="flex flex-col gap-4">
+                    <BaseButton variant="primary" class="shadow-lg shadow-primary-500/20 w-full">
+                      Botão Principal
+                    </BaseButton>
+                    <BaseButton variant="muted" class="w-full">
+                      Botão Neutro
+                    </BaseButton>
+                    <div class="flex items-center justify-between gap-3">
+                      <BaseTag variant="none" rounded="lg" class="px-4 py-2 font-bold bg-primary-500/20 text-primary-500">
+                        Badge
+                      </BaseTag>
+                      <div class="flex gap-2">
+                        <div class="size-10 rounded-full bg-primary-500 shadow-lg" />
+                        <div class="size-10 rounded-full bg-primary-200 dark:bg-primary-900/40" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1011,7 +1132,7 @@ onMounted(async () => {
           </BaseCard>
         </div>
 
-        <div v-else-if="currentStep === 4" class="mx-auto flex w-full max-w-4xl flex-col px-4">
+        <div v-else-if="currentStep === 5" class="mx-auto flex w-full max-w-3xl flex-col px-4">
           <AppPageLoading v-if="isPreparing" message="Preparando seu ambiente..." />
 
           <BaseCard v-else rounded="lg" class="p-8">
@@ -1043,28 +1164,16 @@ onMounted(async () => {
         </div>
       </div>
 
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="translate-y-20 opacity-0"
-        enter-to-class="translate-y-0 opacity-100"
-        leave-active-class="transition-all duration-100 ease-in"
-        leave-from-class="translate-y-0 opacity-100"
-        leave-to-class="translate-y-20 opacity-0"
-      >
-        <div
-          v-if="!complete"
-          class="fixed inset-x-0 bottom-6 z-20 mx-auto w-full max-w-[304px]"
-        >
-          <BaseCard
-            class="shadow-muted-300/30 dark:shadow-muted-800/30 flex items-center justify-between gap-2 rounded-2xl p-4 shadow-xl"
-          >
+      <div v-if="!complete && currentStep !== 0" class="mx-auto w-full max-w-3xl px-4 mt-5">
+        <BaseCard rounded="lg" class="p-4">
+          <div class="flex items-center justify-between gap-2">
             <BaseButton
               rounded="lg"
               class="w-full"
               :disabled="currentStep === 0 || loading"
               @click.prevent="prevStep"
             >
-              <span>Previous</span>
+              <span>Voltar</span>
             </BaseButton>
 
             <BaseButton
@@ -1076,7 +1185,7 @@ onMounted(async () => {
               :loading="loading"
               :disabled="loading"
             >
-              <span>Continue</span>
+              <span>{{ nextButtonLabel }}</span>
             </BaseButton>
 
             <BaseButton
@@ -1090,9 +1199,9 @@ onMounted(async () => {
             >
               <span>Concluir</span>
             </BaseButton>
-          </BaseCard>
-        </div>
-      </Transition>
+          </div>
+        </BaseCard>
+      </div>
     </form>
   </TairoSidebarLayout>
 </template>

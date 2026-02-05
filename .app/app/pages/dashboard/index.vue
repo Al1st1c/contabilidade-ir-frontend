@@ -5,6 +5,7 @@ import { useApi, useAuth } from '~/composables/useAuth'
 import { useTenant } from '~/composables/useTenant'
 
 import { resolveColor } from '~/utils/colors'
+// import OnboardingWizard from '~/components/onboarding/OnboardingWizard.vue'
 
 definePageMeta({
   title: 'My Projects',
@@ -46,6 +47,8 @@ const { user } = useAuth()
 const { open } = usePanels()
 const { selectedEmployeeId } = useAppState() // Global state
 const { tenant, fetchTenant } = useTenant()
+
+const isOnboardingOpen = computed(() => user.value?.onboardingStatus === 'PENDING')
 
 // Tenant computed properties for whitelabel
 const companyName = computed(() => tenant.value?.tradeName || tenant.value?.name || 'Seu Escritório')
@@ -1223,6 +1226,18 @@ const filteredMembers = computed(() => {
           <span>{{ new Date().getFullYear() }}</span>
         </div>
       </div>
+
+
+      <DialogRoot :open="isOnboardingOpen">
+        <DialogPortal>
+          <DialogOverlay class="bg-muted-900/60 fixed inset-0 z-[120] backdrop-blur-sm" />
+          <DialogContent class="fixed inset-0 z-[130] flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+            <div class="w-full max-w-3xl">
+              <OnboardingWizard />
+            </div>
+          </DialogContent>
+        </DialogPortal>
+      </DialogRoot>
     </ClientOnly>
   </div>
 </template>
