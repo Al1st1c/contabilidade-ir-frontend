@@ -119,8 +119,7 @@ const isMobileOpen = ref(false)
                         <div class="hidden sm:block sm:col-span-2">
                           <div class="flex flex-col justify-end h-full w-full bg-primary-800 rounded-xl p-4">
                             <div>
-                              <img :src="tenant?.logo || '/img/favicon-white.png'" alt=""
-                                class="w-40 h-35 rounded-lg mb-3">
+                              <img :src="tenant?.logo || '/img/favicon-white.png'" alt="" class=" rounded-lg mb-3">
                               <BaseHeading class="text-white mb-2 leading-tight">
                                 {{ tenant?.tradeName || tenant?.name || 'CONTSTAR' }}
                               </BaseHeading>

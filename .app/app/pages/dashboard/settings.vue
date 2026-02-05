@@ -12,6 +12,8 @@ const currentSection = computed(() => {
     return 'team'
   if (route.path.includes('/dashboard/settings/checklist'))
     return 'checklist'
+  if (route.path.includes('/dashboard/settings/roles'))
+    return 'roles'
   return 'whitelabel'
 })
 
@@ -32,6 +34,10 @@ const sectionTitles: Record<string, { title: string, description: string }> = {
     title: 'Checklist',
     description: 'Gerencie os checklists do seu escritório',
   },
+  roles: {
+    title: 'Cargos',
+    description: 'Gerencie os cargos do seu escritório',
+  },
 }
 
 const tabs = [
@@ -39,6 +45,7 @@ const tabs = [
   { id: 'account', label: 'Empresa', icon: 'lucide:building-2', to: '/dashboard/settings/account' },
   { id: 'team', label: 'Equipe', icon: 'lucide:users', to: '/dashboard/settings/team' },
   { id: 'checklist', label: 'Checklist', icon: 'lucide:list-checks', to: '/dashboard/settings/checklist' },
+  { id: 'roles', label: 'Cargos', icon: 'lucide:briefcase', to: '/dashboard/settings/roles' },
 ]
 </script>
 
@@ -66,14 +73,12 @@ const tabs = [
     <!-- Horizontal Tab Navigation -->
     <div class="border-b border-muted-200 dark:border-muted-800 px-4 md:px-6 lg:px-8 mb-8">
       <nav class="flex gap-1 -mb-px">
-        <NuxtLink
-          v-for="tab in tabs" :key="tab.id" :to="tab.to"
+        <NuxtLink v-for="tab in tabs" :key="tab.id" :to="tab.to"
           class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors" :class="[
             currentSection === tab.id
               ? 'border-primary-500 text-primary-600 dark:text-primary-400'
               : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300 hover:border-muted-300 dark:hover:border-muted-600',
-          ]"
-        >
+          ]">
           <Icon :name="tab.icon" class="size-4" />
           {{ tab.label }}
         </NuxtLink>
