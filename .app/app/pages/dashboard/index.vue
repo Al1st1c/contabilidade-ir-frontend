@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs } from '#components'
+import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs, PanelsPanelSubscription } from '#components'
 import { useAppState } from '~/composables/useAppState'
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useTenant } from '~/composables/useTenant'
@@ -78,7 +78,18 @@ const planLabel = computed(() => {
     return 'Plano Enterprise'
   return plan
 })
+const isPaidPlan = computed(() => tenant.value?.plan && tenant.value?.plan !== 'trial')
+const planColor = computed(() => {
+  const plan = tenant.value?.plan
+  if (plan === 'starter') return 'text-sky-400'
+  if (plan === 'professional') return 'text-amber-400'
+  if (plan === 'enterprise') return 'text-emerald-400'
+  return 'text-primary-100'
+})
 
+function openSubscription() {
+  open(PanelsPanelSubscription)
+}
 // State
 const isLoading = ref(true)
 const stats = ref({
@@ -610,6 +621,29 @@ const filteredMembers = computed(() => {
                       <BaseParagraph size="xs" class="text-primary-100 hidden sm:block">
                         Sua campanha de IR {{ new Date().getFullYear() }} está a todo vapor.
                       </BaseParagraph>
+
+                      <!-- Subscription Status / Upgrade Promotion -->
+                      <div class="mt-2">
+                        <template v-if="!isPaidPlan">
+                          <button
+                            class="group flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white transition-all hover:bg-white/20 active:scale-95 border border-white/20"
+                            @click="navigateTo('/dashboard/plans')">
+                            <Icon name="solar:crown-minimalistic-bold-duotone"
+                              class="size-3 text-amber-400 group-hover:scale-110 transition-transform" />
+                            <span>Upgrade de Plano</span>
+                            <Icon name="solar:arrow-right-linear"
+                              class="size-2.5 opacity-60 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                        </template>
+                        <template v-else>
+                          <div
+                            class="flex cursor-pointer items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-opacity hover:opacity-80"
+                            @click="openSubscription">
+                            <div class="size-1.5 rounded-full bg-success-500 animate-pulse" />
+                            <span :class="planColor">{{ planLabel }}</span>
+                          </div>
+                        </template>
+                      </div>
                     </div>
 
                     <!-- New Rookies (Team Members) -->
