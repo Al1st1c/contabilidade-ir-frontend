@@ -2,6 +2,7 @@
 import { useTenant } from '~/composables/useTenant'
 
 const { tenant } = useTenant()
+const { user } = useAuth()
 const isMobileOpen = ref(false)
 </script>
 
@@ -19,7 +20,7 @@ const isMobileOpen = ref(false)
           </button>
         </div>
         <div class="flex items-center gap-3">
-          <NuxtLink to="/dashboard" class="flex items-center gap-3">
+          <NuxtLink to="/dashboard" class="flex items-center gap-3 mt-2">
             <TairoLogo class="size-8 text-primary-heavy dark:text-primary-light" />
           </NuxtLink>
         </div>
@@ -31,7 +32,7 @@ const isMobileOpen = ref(false)
     <TairoTopnavNavbar class="hidden md:flex">
       <TairoTopnavHeader hide="scroll" class="px-4 md:px-6 lg:px-8 xl:px-10 !z-[50] relative">
         <div class="flex items-center gap-3 flex-1">
-          <NuxtLink to="/dashboard" class="flex items-center gap-3">
+          <NuxtLink to="/dashboard" class="flex items-center gap-3 mt-2">
             <TairoLogo class="size-20 text-primary-heavy dark:text-primary-light" />
           </NuxtLink>
           <DemoWorkspaceDropdown class="ms-auto max-w-[170px] md:ms-0 me-4 md:me-0 md:max-w-[240px]" />
@@ -59,7 +60,7 @@ const isMobileOpen = ref(false)
                 </TairoMenuLink>
               </TairoMenuItem>
 
-              <TairoMenuItem>
+              <TairoMenuItem v-if="user?.role?.canViewDrive">
                 <TairoMenuLink as-child :active="$route.path === '/dashboard/drive'">
                   <NuxtLink to="/dashboard/drive">
                     Drive
@@ -130,7 +131,7 @@ const isMobileOpen = ref(false)
                           </div>
                         </div>
                         <div class="sm:col-span-3 flex flex-col gap-2">
-                          <TairoMenuLink as-child>
+                          <TairoMenuLink v-if="user?.role?.canManageSettings" as-child>
                             <NuxtLink to="/dashboard/settings"
                               class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
@@ -168,7 +169,7 @@ const isMobileOpen = ref(false)
                               </div>
                             </NuxtLink>
                           </TairoMenuLink>
-                          <TairoMenuLink as-child>
+                          <TairoMenuLink v-if="user?.role?.canManageTeam" as-child>
                             <NuxtLink to="/dashboard/settings/team"
                               class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
@@ -187,7 +188,26 @@ const isMobileOpen = ref(false)
                               </div>
                             </NuxtLink>
                           </TairoMenuLink>
-                          <TairoMenuLink as-child>
+                          <TairoMenuLink v-if="user?.role?.canManageTeam" as-child>
+                            <NuxtLink to="/dashboard/settings/roles"
+                              class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                              <div class="flex items-center gap-3">
+                                <div class="size-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                  <Icon name="lucide:shield-check" class="size-4 text-indigo-500" />
+                                </div>
+                                <div>
+                                  <BaseHeading size="sm" weight="medium"
+                                    class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                                    Cargos
+                                  </BaseHeading>
+                                  <BaseParagraph size="xs" class="text-muted-500">
+                                    Níveis e permissões
+                                  </BaseParagraph>
+                                </div>
+                              </div>
+                            </NuxtLink>
+                          </TairoMenuLink>
+                          <TairoMenuLink v-if="user?.role?.canManageChecklist" as-child>
                             <NuxtLink to="/dashboard/settings/checklist"
                               class="p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
                               <div class="flex items-center gap-3">
@@ -252,7 +272,7 @@ const isMobileOpen = ref(false)
               Imposto de Renda
             </NuxtLink>
           </li>
-          <li>
+          <li v-if="user?.role?.canViewDrive">
             <NuxtLink to="/dashboard/drive"
               class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
@@ -282,12 +302,20 @@ const isMobileOpen = ref(false)
               Minha Empresa
             </NuxtLink>
           </li>
-          <li>
+          <li v-if="user?.role?.canManageChecklist">
             <NuxtLink to="/dashboard/settings/checklist"
               class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
               <Icon name="solar:clipboard-check-bold-duotone" class="size-5" />
               Checklist Padrão
+            </NuxtLink>
+          </li>
+          <li v-if="user?.role?.canManageTeam">
+            <NuxtLink to="/dashboard/settings/roles"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:shield-check-bold-duotone" class="size-5" />
+              Cargos e Permissões
             </NuxtLink>
           </li>
         </ul>

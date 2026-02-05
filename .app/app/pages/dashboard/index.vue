@@ -148,10 +148,10 @@ async function fetchDashboard() {
       url += `&assignedToId=${selectedEmployeeId.value}`
     }
 
-    const response = await useCustomFetch<any>(url)
+    const { data: response } = await useCustomFetch<any>(url)
 
-    if (response && response.data && response.data.success) {
-      const payload = response.data.data
+    if (response && response.success) {
+      const payload = response.data
 
       // Update stats with explicit number coercion for safety
       stats.value = {
@@ -818,7 +818,7 @@ const filteredMembers = computed(() => {
               </div>
             </BaseCard>
             <!-- Revenue Chart -->
-            <BaseCard rounded="md" class="p-4 md:p-5">
+            <BaseCard v-if="user?.role?.canViewFinancialCharts" rounded="md" class="p-4 md:p-5">
               <div class="mb-4 flex items-center justify-between">
                 <BaseHeading as="h3" size="md" lead="tight" class="text-muted-800 dark:text-white">
                   <span>Honorários Projetados</span>

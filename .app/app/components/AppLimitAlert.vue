@@ -18,13 +18,13 @@ const props = withDefaults(defineProps<Props>(), {
       <div class="flex items-start gap-3 sm:items-center">
         <!-- Minimalist Icon -->
         <div
-          class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-muted-500 shadow-sm ring-1 ring-muted-200 dark:bg-muted-950 dark:text-muted-400 dark:ring-muted-800">
+          class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-orange-500 shadow-sm ring-1 ring-muted-200 dark:bg-muted-950 dark:text-muted-400 dark:ring-muted-800">
           <Icon :name="icon" class="size-5" />
         </div>
 
         <!-- Professional Text -->
         <div class="grow">
-          <BaseHeading as="h5" size="sm" weight="semibold" class="text-muted-800 dark:text-muted-100">
+          <BaseHeading as="h5" size="sm" class="text-muted-800 dark:text-muted-100">
             {{ title }}
           </BaseHeading>
           <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">

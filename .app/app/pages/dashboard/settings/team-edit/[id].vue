@@ -8,6 +8,7 @@ definePageMeta({
 })
 
 const { useCustomFetch } = useApi()
+const { user } = useAuth()
 const route = useRoute()
 const router = useRouter()
 const toaster = useNuiToasts()
@@ -348,6 +349,10 @@ async function reactivateMember() {
 
 // Fetch on mount
 onMounted(async () => {
+  if (!user.value?.role?.canManageTeam) {
+    router.push('/dashboard')
+    return
+  }
   await fetchRoles()
   await fetchMember()
 })
@@ -382,18 +387,15 @@ onMounted(async () => {
         <!-- Member Info Card with Photo Upload -->
         <BaseCard rounded="lg" class="p-6 mb-6">
           <!-- Hidden file input -->
-          <input
-            ref="photoInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
-            @change="handlePhotoChange"
-          >
+          <input ref="photoInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+            @change="handlePhotoChange">
 
           <div class="flex items-start gap-6">
             <!-- Photo Upload Area -->
             <div class="relative group">
               <div
                 class="relative size-24 rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-muted-200 dark:border-muted-700 hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
-                @click="triggerPhotoUpload"
-              >
+                @click="triggerPhotoUpload">
                 <!-- Photo or Placeholder -->
                 <img v-if="photoPreview" :src="photoPreview" :alt="member.name" class="w-full h-full object-cover">
                 <div v-else class="w-full h-full flex items-center justify-center bg-muted-100 dark:bg-muted-800">
@@ -405,19 +407,16 @@ onMounted(async () => {
                 <!-- Upload Overlay -->
                 <div
                   class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  :class="{ 'opacity-100': uploadingPhoto }"
-                >
+                  :class="{ 'opacity-100': uploadingPhoto }">
                   <Icon v-if="uploadingPhoto" name="svg-spinners:ring-resize" class="size-8 text-white" />
                   <Icon v-else name="lucide:camera" class="size-8 text-white" />
                 </div>
               </div>
 
               <!-- Remove Photo Button -->
-              <button
-                v-if="photoPreview && !uploadingPhoto"
+              <button v-if="photoPreview && !uploadingPhoto"
                 class="absolute -top-2 -right-2 size-6 rounded-full bg-danger-500 text-white flex items-center justify-center hover:bg-danger-600 transition-colors shadow-lg"
-                @click.stop="removePhoto"
-              >
+                @click.stop="removePhoto">
                 <Icon name="lucide:x" class="size-3" />
               </button>
             </div>
@@ -437,10 +436,8 @@ onMounted(async () => {
                   <Icon name="lucide:upload" class="size-3.5" />
                   <span>{{ photoPreview ? 'Alterar Foto' : 'Adicionar Foto' }}</span>
                 </BaseButton>
-                <BaseButton
-                  v-if="photoPreview" size="sm" rounded="lg" color="danger" :disabled="uploadingPhoto"
-                  @click="removePhoto"
-                >
+                <BaseButton v-if="photoPreview" size="sm" rounded="lg" color="danger" :disabled="uploadingPhoto"
+                  @click="removePhoto">
                   <Icon name="lucide:trash-2" class="size-3.5" />
                   <span>Remover</span>
                 </BaseButton>
@@ -476,34 +473,28 @@ onMounted(async () => {
           </BaseParagraph>
 
           <div class="space-y-3">
-            <div
-              v-for="role in availableRoles" :key="role.id"
+            <div v-for="role in availableRoles" :key="role.id"
               class="border-2 rounded-xl p-4 cursor-pointer transition-all" :class="{
                 'border-primary-500 bg-primary-500/5 ring-2 ring-primary-500/20': selectedRoleId === role.id,
                 'border-muted-200 dark:border-muted-700 hover:border-muted-300 dark:hover:border-muted-600': selectedRoleId !== role.id,
-              }" @click="selectedRoleId = role.id"
-            >
+              }" @click="selectedRoleId = role.id">
               <div class="flex items-start gap-4">
                 <!-- Radio button -->
-                <div
-                  class="size-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0" :class="{
-                    'border-primary-500 bg-primary-500': selectedRoleId === role.id,
-                    'border-muted-300 dark:border-muted-600': selectedRoleId !== role.id,
-                  }"
-                >
+                <div class="size-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0" :class="{
+                  'border-primary-500 bg-primary-500': selectedRoleId === role.id,
+                  'border-muted-300 dark:border-muted-600': selectedRoleId !== role.id,
+                }">
                   <Icon v-if="selectedRoleId === role.id" name="lucide:check" class="size-3 text-white" />
                 </div>
 
                 <!-- Role icon -->
-                <div
-                  class="size-10 rounded-lg flex items-center justify-center shrink-0" :class="{
-                    'bg-primary-500/10 text-primary-500': role.name === 'master',
-                    'bg-info-500/10 text-info-500': role.name === 'admin',
-                    'bg-success-500/10 text-success-500': role.name === 'contador',
-                    'bg-warning-500/10 text-warning-500': role.name === 'assistente',
-                    'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(role.name),
-                  }"
-                >
+                <div class="size-10 rounded-lg flex items-center justify-center shrink-0" :class="{
+                  'bg-primary-500/10 text-primary-500': role.name === 'master',
+                  'bg-info-500/10 text-info-500': role.name === 'admin',
+                  'bg-success-500/10 text-success-500': role.name === 'contador',
+                  'bg-warning-500/10 text-warning-500': role.name === 'assistente',
+                  'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(role.name),
+                }">
                   <Icon :name="getRoleIcon(role.name)" class="size-5" />
                 </div>
 
@@ -524,55 +515,43 @@ onMounted(async () => {
                   <!-- Permissions -->
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canViewAllCards ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canViewAllCards ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canViewAllCards ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canViewAllCards ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Ver todos cards
                       </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canManageTeam ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageTeam ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canManageTeam ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageTeam ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Gerenciar equipe
                       </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canManageClients ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageClients ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canManageClients ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageClients ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Gerenciar clientes
                       </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canManageSettings ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canManageSettings ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canManageSettings ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canManageSettings ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Configurações
                       </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canExportData ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canExportData ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canExportData ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canExportData ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Exportar dados
                       </BaseText>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <Icon
-                        :name="role.canDeleteRecords ? 'lucide:check' : 'lucide:x'" class="size-3.5"
-                        :class="role.canDeleteRecords ? 'text-success-500' : 'text-muted-300'"
-                      />
+                      <Icon :name="role.canDeleteRecords ? 'lucide:check' : 'lucide:x'" class="size-3.5"
+                        :class="role.canDeleteRecords ? 'text-success-500' : 'text-muted-300'" />
                       <BaseText size="xs" class="text-muted-500">
                         Excluir registros
                       </BaseText>
@@ -604,15 +583,13 @@ onMounted(async () => {
             Função Atual
           </BaseHeading>
           <div class="flex items-center gap-3">
-            <div
-              class="size-12 rounded-xl flex items-center justify-center" :class="{
-                'bg-primary-500/10 text-primary-500': member.role?.name === 'master',
-                'bg-info-500/10 text-info-500': member.role?.name === 'admin',
-                'bg-success-500/10 text-success-500': member.role?.name === 'contador',
-                'bg-warning-500/10 text-warning-500': member.role?.name === 'assistente',
-                'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(member.role?.name),
-              }"
-            >
+            <div class="size-12 rounded-xl flex items-center justify-center" :class="{
+              'bg-primary-500/10 text-primary-500': member.role?.name === 'master',
+              'bg-info-500/10 text-info-500': member.role?.name === 'admin',
+              'bg-success-500/10 text-success-500': member.role?.name === 'contador',
+              'bg-warning-500/10 text-warning-500': member.role?.name === 'assistente',
+              'bg-muted-500/10 text-muted-500': !['master', 'admin', 'contador', 'assistente'].includes(member.role?.name),
+            }">
               <Icon :name="getRoleIcon(member.role?.name)" class="size-6" />
             </div>
             <div>

@@ -55,12 +55,12 @@ const errors = ref<Record<string, string>>({})
 async function fetchRoles() {
   loadingRoles.value = true
   try {
-    const { data } = await useCustomFetch<any>('/tenant/roles', {
+    const { data: response } = await useCustomFetch<any>('/tenant/roles', {
       method: 'GET',
     })
 
-    if (data?.success && data?.data) {
-      roles.value = data.data
+    if (response?.success && response?.data) {
+      roles.value = response.data
     }
   }
   catch (error) {
@@ -144,7 +144,7 @@ async function saveUser() {
   loading.value = true
 
   try {
-    const { data } = await useCustomFetch<any>('/tenant/members/invite', {
+    const { data: response } = await useCustomFetch<any>('/tenant/members/invite', {
       method: 'POST',
       body: {
         name: form.value.name,
@@ -154,18 +154,18 @@ async function saveUser() {
       },
     })
 
-    if (data?.success) {
+    if (response?.success) {
       // Mostrar tela de sucesso com link de convite
       inviteSent.value = true
       inviteData.value = {
         name: form.value.name,
         email: form.value.email,
-        inviteLink: data.data?.inviteLink || '',
-        expiresAt: data.data?.expiresAt || '',
-        emailSent: data.data?.emailSent || false,
+        inviteLink: response.data?.inviteLink || '',
+        expiresAt: response.data?.expiresAt || '',
+        emailSent: response.data?.emailSent || false,
       }
 
-      const emailSent = data.data?.emailSent
+      const emailSent = response.data?.emailSent
       toaster.add({
         title: emailSent ? '✅ Convite enviado!' : '⚠️ Convite criado',
         description: emailSent
@@ -263,11 +263,9 @@ onMounted(() => {
       </BaseHeading>
 
       <!-- Close button -->
-      <button
-        type="button"
+      <button type="button"
         class="nui-mask nui-mask-blob hover:bg-muted-100 focus:bg-muted-100 dark:hover:bg-muted-700 dark:focus:bg-muted-700 text-muted-700 dark:text-muted-400 flex size-10 cursor-pointer items-center justify-center outline-transparent transition-colors duration-300"
-        @click="closePanel"
-      >
+        @click="closePanel">
         <Icon name="lucide:arrow-right" class="size-4" />
       </button>
     </div>
@@ -277,16 +275,12 @@ onMounted(() => {
       <div v-if="inviteSent && inviteData" class="space-y-6">
         <!-- Ícone de sucesso -->
         <div class="flex flex-col items-center justify-center py-8">
-          <div
-            :class="inviteData.emailSent
-              ? 'bg-success-100 dark:bg-success-900/30'
-              : 'bg-warning-100 dark:bg-warning-900/30'"
-            class="mb-4 flex size-20 items-center justify-center rounded-full"
-          >
-            <Icon
-              :name="inviteData.emailSent ? 'lucide:mail-check' : 'lucide:mail-warning'"
-              :class="inviteData.emailSent ? 'text-success-500' : 'text-warning-500'" class="size-10"
-            />
+          <div :class="inviteData.emailSent
+            ? 'bg-success-100 dark:bg-success-900/30'
+            : 'bg-warning-100 dark:bg-warning-900/30'"
+            class="mb-4 flex size-20 items-center justify-center rounded-full">
+            <Icon :name="inviteData.emailSent ? 'lucide:mail-check' : 'lucide:mail-warning'"
+              :class="inviteData.emailSent ? 'text-success-500' : 'text-warning-500'" class="size-10" />
           </div>
           <BaseHeading as="h4" size="lg" weight="semibold" class="text-center">
             {{ inviteData.emailSent ? 'Convite enviado!' : 'Convite criado!' }}
@@ -349,8 +343,7 @@ onMounted(() => {
       <form v-else class="space-y-6" @submit.prevent="saveUser">
         <!-- Info box -->
         <div
-          class="bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50 flex items-start gap-3 rounded-lg border p-4"
-        >
+          class="bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50 flex items-start gap-3 rounded-lg border p-4">
           <Icon name="lucide:info" class="text-info-500 mt-0.5 size-5 shrink-0" />
           <div class="text-sm">
             <p class="text-info-700 dark:text-info-300 font-medium">
@@ -364,29 +357,23 @@ onMounted(() => {
 
         <!-- Nome -->
         <BaseField label="Nome completo *" :error="errors.name">
-          <BaseInput
-            v-model="form.name" placeholder="Nome do funcionário" :disabled="loading" :classes="{
-              input: errors.name ? 'border-red-500' : '',
-            }"
-          />
+          <BaseInput v-model="form.name" placeholder="Nome do funcionário" :disabled="loading" :classes="{
+            input: errors.name ? 'border-red-500' : '',
+          }" />
         </BaseField>
 
         <!-- Email -->
         <BaseField label="Email *" :error="errors.email">
-          <BaseInput
-            v-model="form.email" type="email" placeholder="email@exemplo.com" :disabled="loading" :classes="{
-              input: errors.email ? 'border-red-500' : '',
-            }"
-          />
+          <BaseInput v-model="form.email" type="email" placeholder="email@exemplo.com" :disabled="loading" :classes="{
+            input: errors.email ? 'border-red-500' : '',
+          }" />
         </BaseField>
 
         <!-- Telefone -->
         <BaseField label="Telefone *" :error="errors.phone">
-          <BaseInput
-            v-model="form.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="loading" :classes="{
-              input: errors.phone ? 'border-red-500' : '',
-            }"
-          />
+          <BaseInput v-model="form.phone" placeholder="(00) 00000-0000" maxlength="15" :disabled="loading" :classes="{
+            input: errors.phone ? 'border-red-500' : '',
+          }" />
         </BaseField>
 
         <!-- CPF (opcional) -->
@@ -396,10 +383,8 @@ onMounted(() => {
 
         <!-- Cargo -->
         <BaseField label="Cargo *" :error="errors.roleId">
-          <BaseSelect
-            v-model="form.roleId" :disabled="loading || loadingRoles"
-            :class="errors.roleId ? 'border-red-500' : ''"
-          >
+          <BaseSelect v-model="form.roleId" :disabled="loading || loadingRoles"
+            :class="errors.roleId ? 'border-red-500' : ''">
             <BaseSelectItem value="placeholder" disabled>
               {{ loadingRoles ? 'Carregando...' : 'Selecione um cargo' }}
             </BaseSelectItem>

@@ -18,6 +18,7 @@ const { useCustomFetch } = useApi()
 const route = useRoute()
 const router = useRouter()
 const { open } = usePanels()
+const { user } = useAuth()
 
 const page = computed(() => Number.parseInt((route.query.page as string) ?? '1', 10))
 const filter = ref('')
@@ -127,6 +128,10 @@ function handleOpenAddMember() {
 
 // Fetch on mount
 onMounted(() => {
+  if (!user.value?.role?.canManageTeam) {
+    router.push('/dashboard')
+    return
+  }
   fetchMembers()
   fetchMySubscription()
 })
@@ -168,7 +173,7 @@ function openAddMemberPanel() {
         </BaseParagraph>
       </div>
       <!-- Buttons -->
-      <div class="hidden items-center gap-2 md:flex">
+      <div v-if="user?.role?.canManageTeam" class="hidden items-center gap-2 md:flex">
         <BaseButton rounded="md" size="sm" variant="primary" :disabled="!canAddMember || loadingSub"
           @click="handleOpenAddMember">
           <Icon name="solar:user-plus-rounded-linear" class="size-4" />
@@ -194,7 +199,7 @@ function openAddMemberPanel() {
           <img class="hidden dark:block" src="/img/illustrations/placeholders/flat/accounting-empty-search-v2-dark.png"
             alt="Sem membros">
         </template>
-        <template #action>
+        <template v-if="user?.role?.canManageTeam" #action>
           <BaseButton variant="primary" :disabled="!canAddMember || loadingSub" @click="handleOpenAddMember">
             <Icon name="solar:user-plus-rounded-linear" class="size-4" />
             <span>Convidar Membro</span>

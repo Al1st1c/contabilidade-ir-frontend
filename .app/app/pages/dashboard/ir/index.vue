@@ -52,6 +52,11 @@ interface Column {
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const taxYearFilter = ref(new Date().getFullYear())
+const irEndDate = ref('2026-05-31T23:59:59')
+
+const isOverdue = computed(() => {
+  return new Date() > new Date(irEndDate.value)
+})
 
 const availableYears = computed(() => {
   const currentYear = new Date().getFullYear()
@@ -623,6 +628,13 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                       class="bg-white dark:bg-muted-950 group relative flex cursor-pointer flex-col items-start rounded-md border border-muted-200 dark:border-muted-800 p-3 hover:shadow-md hover:border-muted-300 dark:hover:border-muted-700 transition-all duration-200 shadow-sm border-l-4"
                       :class="[column.color && cardBorderColors[column.color] ? cardBorderColors[column.color] : 'border-l-primary-500']"
                       @click="openDeclarationDetails(task.id)">
+                      <!-- Overdue Badge -->
+                      <div
+                        v-if="isOverdue && task.taxYear === 2026 && column.title !== 'Concluído' && column.title !== 'Declarações Transmitidas'"
+                        class="absolute -top-2 -right-2 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-500 text-white shadow-lg z-[5] animate-pulse ring-2 ring-white dark:ring-muted-950">
+                        ATRASADO
+                      </div>
+
                       <!-- JIRA Style: Summary (Client Name) -->
                       <div class="w-full mb-3">
                         <BaseHeading as="h4" size="sm" weight="normal"

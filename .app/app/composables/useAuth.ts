@@ -17,6 +17,15 @@ interface User {
     canManageSettings: boolean
     canExportData: boolean
     canDeleteRecords: boolean
+    // Novas permissões
+    canCreateIR: boolean
+    canEditIR: boolean
+    canMoveToFinalColumn: boolean
+    canImportDocs: boolean
+    canViewFinancialCharts: boolean
+    canViewDrive: boolean
+    canManageChecklist: boolean
+    canManageKanban: boolean
   }
 }
 
@@ -283,7 +292,7 @@ export function useApi() {
     const data = await $fetch<T>(url, finalOptions)
 
     // Verifica se há erro no payload (API NestJS retorna error: 1)
-    if (data && typeof data === 'object' && 'error' in data && data.error === 1) {
+    if (data && typeof data === 'object' && 'error' in data && (data as any).error === 1) {
       const errorData = data as any
       const errorMessage = errorData.message || 'Erro na requisição'
       throw new Error(errorMessage)

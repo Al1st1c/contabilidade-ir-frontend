@@ -220,6 +220,7 @@ const form = ref({
   govPassword: '',
   tags: [] as string[],
   rectificationDescription: '',
+  isPenaltyOffset: false,
 })
 const newTag = ref('')
 
@@ -315,6 +316,7 @@ async function fetchDeclaration() {
         govPassword: result.govPassword || '',
         tags: result.tags || [],
         rectificationDescription: result.rectificationDescription || '',
+        isPenaltyOffset: result.isPenaltyOffset || false,
       }
       lastSavedForm.value = JSON.parse(JSON.stringify(form.value))
       if (result.collectionLinks?.length > 0)
@@ -714,7 +716,7 @@ onMounted(() => {
           <!-- Badge documentos oficiais -->
           <span v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
             class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500">{{
-            officialDocumentsCount }}</span>
+              officialDocumentsCount }}</span>
 
           <span v-if="activeTab === tab.key"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />
@@ -1290,6 +1292,22 @@ onMounted(() => {
                   R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
                 </p>
               </div>
+
+              <!-- Multa Compensada Checkbox -->
+              <div v-if="form.result === 'tax_to_pay'"
+                class="mt-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800">
+                <div class="flex items-start gap-3">
+                  <BaseCheckbox v-model="form.isPenaltyOffset" color="warning" @change="saveDebounced" />
+                  <div class="space-y-1">
+                    <p class="text-xs font-bold text-orange-800 dark:text-orange-400">Multa Compensada</p>
+                    <p class="text-[10px] text-orange-700/70 dark:text-orange-400/60 leading-tight">
+                      Marque se o valor à restituir compensou o valor da multa. Isso indica que o cliente não precisa
+                      pagar o
+                      DARF.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="border-t border-muted-200 dark:border-muted-800" />
@@ -1368,7 +1386,7 @@ onMounted(() => {
               <!-- Honorários -->
               <div class="space-y-1.5">
                 <BaseText size="xs" class="text-muted-400 font-semibold">
-                  Valor do Serviço
+                  Valor dos Honorários
                 </BaseText>
                 <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
                   icon="lucide:dollar-sign" placeholder="0,00" @blur="saveDebounced" />

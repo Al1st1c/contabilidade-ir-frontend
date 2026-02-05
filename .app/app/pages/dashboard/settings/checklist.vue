@@ -138,14 +138,11 @@ onMounted(fetchTemplate)
             <div class="space-y-6">
               <!-- Add Item -->
               <div
-                class="flex gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800"
-              >
+                class="flex gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800">
                 <div class="flex-1">
                   <BaseField label="Novo Documento">
-                    <TairoInput
-                      v-model="newItemTitle" placeholder="Ex: Extrato Bancário, Escritura..."
-                      @keyup.enter="addItem"
-                    />
+                    <TairoInput v-model="newItemTitle" placeholder="Ex: Extrato Bancário, Escritura..."
+                      @keyup.enter="addItem" />
                   </BaseField>
                 </div>
                 <div class="flex items-end mb-1">
@@ -158,23 +155,18 @@ onMounted(fetchTemplate)
 
               <!-- List -->
               <div class="space-y-3 mt-8">
-                <div
-                  v-if="templateItems.length === 0"
-                  class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl"
-                >
+                <div v-if="templateItems.length === 0"
+                  class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl">
                   <Icon name="solar:document-add-linear" class="size-12 text-muted-300 mb-2 mx-auto" />
                   <p class="text-muted-500">
                     Nenhum documento no template padrão.
                   </p>
                 </div>
 
-                <div
-                  v-for="(item, idx) in templateItems" :key="idx"
-                  class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all group"
-                >
+                <div v-for="(item, idx) in templateItems" :key="idx"
+                  class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all group">
                   <div
-                    class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center text-muted-400 group-hover:bg-primary-500/10 group-hover:text-primary-500 transition-colors"
-                  >
+                    class="size-10 rounded-lg bg-muted-100 dark:bg-muted-900 flex items-center justify-center text-muted-400 group-hover:bg-primary-500/10 group-hover:text-primary-500 transition-colors">
                     <span class="text-xs font-bold">{{ idx + 1 }}</span>
                   </div>
 

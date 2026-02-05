@@ -37,7 +37,7 @@ async function fetchMember() {
           role: {
             label: getRoleLabel(roleName),
             value: roleName,
-            details: getRoleDetails(roleName),
+            details: getRoleDetails(roleName, found.role),
             apiRole: found.role, // Keep original role object for permissions
           },
           isActive: found.isActive,
@@ -72,16 +72,24 @@ function getRoleLabel(roleName: string): string {
 }
 
 // Helper to get role details with permissions
-function getRoleDetails(role: string): any[] {
+function getRoleDetails(role: string, apiRole?: any): any[] {
+  // If we have API role with real permissions, use it to augment or replace
+  const canViewAll = apiRole?.canViewAllCards ?? false
+  const canManageTeam = apiRole?.canManageTeam ?? false
+  const canManageClients = apiRole?.canManageClients ?? false
+  const canManageSettings = apiRole?.canManageSettings ?? false
+  const canExportData = apiRole?.canExportData ?? false
+  const canDeleteRecords = apiRole?.canDeleteRecords ?? false
+
   const permissions: Record<string, any[]> = {
     master: [
       {
         label: 'Gestão da Empresa',
         access: 'Acesso Total',
         permissions: [
-          { label: 'Gerenciar configurações da empresa', status: true },
-          { label: 'Gerenciar membros da equipe', status: true },
-          { label: 'Gerenciar planos e faturamento', status: true },
+          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
+          { label: 'Gerenciar membros da equipe', status: canManageTeam },
+          { label: 'Gerenciar planos e faturamento', status: true }, // Master always has this in theory
           { label: 'Excluir empresa', status: true },
         ],
       },
@@ -91,8 +99,8 @@ function getRoleDetails(role: string): any[] {
         permissions: [
           { label: 'Criar e editar declarações', status: true },
           { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: true },
-          { label: 'Ver todas as declarações', status: true },
+          { label: 'Excluir declarações', status: canDeleteRecords },
+          { label: 'Ver todas as declarações', status: canViewAll },
         ],
       },
       {
@@ -101,8 +109,8 @@ function getRoleDetails(role: string): any[] {
         permissions: [
           { label: 'Cadastrar clientes', status: true },
           { label: 'Editar clientes', status: true },
-          { label: 'Excluir clientes', status: true },
-          { label: 'Exportar dados', status: true },
+          { label: 'Excluir clientes', status: canDeleteRecords },
+          { label: 'Exportar dados', status: canExportData },
         ],
       },
     ],
@@ -111,8 +119,8 @@ function getRoleDetails(role: string): any[] {
         label: 'Gestão da Empresa',
         access: 'Acesso Parcial',
         permissions: [
-          { label: 'Gerenciar configurações da empresa', status: true },
-          { label: 'Gerenciar membros da equipe', status: true },
+          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
+          { label: 'Gerenciar membros da equipe', status: canManageTeam },
           { label: 'Gerenciar planos e faturamento', status: false },
           { label: 'Excluir empresa', status: false },
         ],
@@ -123,8 +131,8 @@ function getRoleDetails(role: string): any[] {
         permissions: [
           { label: 'Criar e editar declarações', status: true },
           { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: true },
-          { label: 'Ver todas as declarações', status: true },
+          { label: 'Excluir declarações', status: canDeleteRecords },
+          { label: 'Ver todas as declarações', status: canViewAll },
         ],
       },
       {
@@ -133,8 +141,8 @@ function getRoleDetails(role: string): any[] {
         permissions: [
           { label: 'Cadastrar clientes', status: true },
           { label: 'Editar clientes', status: true },
-          { label: 'Excluir clientes', status: true },
-          { label: 'Exportar dados', status: true },
+          { label: 'Excluir clientes', status: canDeleteRecords },
+          { label: 'Exportar dados', status: canExportData },
         ],
       },
     ],
@@ -143,20 +151,20 @@ function getRoleDetails(role: string): any[] {
         label: 'Gestão da Empresa',
         access: 'Sem Acesso',
         permissions: [
-          { label: 'Gerenciar configurações da empresa', status: false },
-          { label: 'Gerenciar membros da equipe', status: false },
+          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
+          { label: 'Gerenciar membros da equipe', status: canManageTeam },
           { label: 'Gerenciar planos e faturamento', status: false },
           { label: 'Excluir empresa', status: false },
         ],
       },
       {
         label: 'Declarações de IR',
-        access: 'Acesso Total',
+        access: 'Acesso Parcial',
         permissions: [
           { label: 'Criar e editar declarações', status: true },
           { label: 'Enviar declarações', status: true },
-          { label: 'Excluir declarações', status: false },
-          { label: 'Ver todas as declarações', status: true },
+          { label: 'Excluir declarações', status: canDeleteRecords },
+          { label: 'Ver todas as declarações', status: canViewAll },
         ],
       },
       {
@@ -166,7 +174,7 @@ function getRoleDetails(role: string): any[] {
           { label: 'Cadastrar clientes', status: true },
           { label: 'Editar clientes', status: true },
           { label: 'Excluir clientes', status: false },
-          { label: 'Exportar dados', status: true },
+          { label: 'Exportar dados', status: canExportData },
         ],
       },
     ],
@@ -175,8 +183,8 @@ function getRoleDetails(role: string): any[] {
         label: 'Gestão da Empresa',
         access: 'Sem Acesso',
         permissions: [
-          { label: 'Gerenciar configurações da empresa', status: false },
-          { label: 'Gerenciar membros da equipe', status: false },
+          { label: 'Gerenciar configurações da empresa', status: canManageSettings },
+          { label: 'Gerenciar membros da equipe', status: canManageTeam },
           { label: 'Gerenciar planos e faturamento', status: false },
           { label: 'Excluir empresa', status: false },
         ],
@@ -188,7 +196,7 @@ function getRoleDetails(role: string): any[] {
           { label: 'Criar e editar declarações', status: true },
           { label: 'Enviar declarações', status: false },
           { label: 'Excluir declarações', status: false },
-          { label: 'Ver todas as declarações', status: false },
+          { label: 'Ver todas as declarações', status: canViewAll },
         ],
       },
       {
@@ -220,7 +228,7 @@ function getRoleDetails(role: string): any[] {
           { label: 'Criar e editar declarações', status: false },
           { label: 'Enviar declarações', status: false },
           { label: 'Excluir declarações', status: false },
-          { label: 'Ver todas as declarações', status: true },
+          { label: 'Ver todas as declarações', status: canViewAll },
         ],
       },
       {
@@ -396,7 +404,7 @@ async function confirmDelete() {
         <div class="flex-1">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <BaseHeading weight="semibold" size="xl" lead="none" class="text-muted-800 dark:text-muted-100 mb-1">
+              <BaseHeading size="xl" lead="none" class="text-muted-800 dark:text-muted-100 mb-1">
                 {{ member.name }}
               </BaseHeading>
               <BaseParagraph size="sm" class="text-muted-500 mb-3">
@@ -420,7 +428,7 @@ async function confirmDelete() {
                 </BaseTag>
               </div>
             </div>
-            <BaseButton rounded="lg" size="sm" @click="editMember">
+            <BaseButton v-if="user?.role?.canManageTeam" rounded="lg" size="sm" @click="editMember">
               <Icon name="solar:pen-2-linear" class="size-4" />
               <span>Editar</span>
             </BaseButton>
@@ -502,7 +510,7 @@ async function confirmDelete() {
         </div>
       </div>
       <!-- Actions Footer -->
-      <div v-if="member?.id !== user?.id"
+      <div v-if="member?.id !== user?.id && user?.role?.canManageTeam"
         class="border-t border-muted-200 dark:border-muted-800 p-6 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-950/50 rounded-b-lg">
         <BaseButton class="w-full sm:w-auto" :variant="member.isActive ? 'destructive' : 'muted'"
           @click="deleteDialog = true">
