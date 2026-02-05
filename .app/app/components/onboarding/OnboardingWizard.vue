@@ -25,7 +25,7 @@ const steps = [
     id: 0,
     meta: {
       name: 'Bem-vindo',
-      title: 'Bem-vindo ao Contabilidade IR',
+      title: 'Bem-vindo ao Gestor IRPF',
       subtitle: 'Vamos configurar seu ambiente em poucos passos. Você pode concluir agora e ajustar depois nas configurações.',
     },
   },
@@ -645,7 +645,7 @@ onMounted(async () => {
                     Tudo pronto para começar?
                   </h2>
                   <p class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
-                    Bem-vindo ao <b>Contabilidade IR</b>. Projetamos este guia para ajudar você a configurar seu
+                    Bem-vindo ao <b>Gestor IRPF</b>. Projetamos este guia para ajudar você a configurar seu
                     escritório em menos de 5 minutos.
                   </p>
                   <div class="space-y-4">
@@ -679,12 +679,12 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <BaseButton rounded="xl" variant="primary" size="lg" shadow="primary" class="w-full sm:w-64 h-14"
+                <BaseButton rounded="sm" variant="primary" size="lg" shadow="primary" class="w-full sm:w-64 h-14"
                   @click.prevent="startOnboarding">
                   <span>Vamos Começar</span>
                   <Icon name="lucide:arrow-right" class="ms-2 size-5" />
                 </BaseButton>
-                <BaseButton rounded="xl" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
+                <BaseButton rounded="sm" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
                   @click.prevent="router.push('/dashboard')">
                   <span>Pular Guia</span>
                 </BaseButton>
@@ -721,7 +721,7 @@ onMounted(async () => {
                   <p class="text-sm text-muted-600 dark:text-muted-400">
                     Apareça para seu time e clientes! Uma foto profissional transmite mais confiança.
                   </p>
-                  <BaseButton rounded="lg" shadow="flat" :disabled="uploadingPhoto" @click="triggerPhotoUpload"
+                  <BaseButton rounded="sm" shadow="flat" :disabled="uploadingPhoto" @click="triggerPhotoUpload"
                     class="h-12 px-8">
                     <Icon name="lucide:upload" class="size-4 me-2" />
                     <span>{{ (profile.photoPreview || user?.photo) ? 'Trocar Foto' : 'Subir Foto' }}</span>
@@ -744,7 +744,7 @@ onMounted(async () => {
                       </div>
                       <div
                         class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <BaseButton color="white" rounded="full" size="sm" :disabled="isUploadingLogo"
+                        <BaseButton color="white" rounded="sm" size="sm" :disabled="isUploadingLogo"
                           @click="triggerLogoUpload">
                           Subir Logo
                         </BaseButton>
@@ -802,119 +802,237 @@ onMounted(async () => {
                     colaboradores.
                   </p>
                   <div class="flex items-center justify-center gap-3">
-                    <BaseButton rounded="xl" variant="primary" size="lg" shadow="primary" class="px-10"
+                    <BaseButton rounded="sm" variant="primary" size="lg" shadow="primary" class="px-10"
                       @click.prevent="handleUpgrade">
                       Assinar Agora
                     </BaseButton>
-                    <BaseButton rounded="xl" size="lg" @click.prevent="continueFromTeamTrial">
+                    <BaseButton rounded="sm" size="lg" @click.prevent="continueFromTeamTrial">
                       Pular por enquanto
                     </BaseButton>
                   </div>
                 </div>
                 <div v-else class="space-y-6">
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-muted-800 dark:text-white">Convidar Colaborador</span>
-                      <span class="text-[11px] bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full text-muted-500">
-                        {{ totalMembers }} / {{ currentSubscription?.employeesLimit }} usados
-                      </span>
+                  <!-- Limit Reached / Upgrade State -->
+                  <div v-if="!canAddMember"
+                    class="bg-primary-500/5 p-8 rounded-3xl border border-primary-500/10 text-center">
+                    <div
+                      class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-lg">
+                      <Icon name="solar:users-group-rounded-bold-duotone" class="size-8 text-primary-500" />
                     </div>
-                  </div>
-                  <div
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
-                    <BaseField label="Nome">
-                      <BaseInput v-model="teamForm.name" placeholder="Nome completo" />
-                    </BaseField>
-                    <BaseField label="Email">
-                      <BaseInput v-model="teamForm.email" type="email" placeholder="email@trabalho.com" />
-                    </BaseField>
-                    <BaseField label="Telefone">
-                      <BaseInput v-model="teamForm.phone" placeholder="(00) 00000-0000" />
-                    </BaseField>
-                    <BaseField label="Cargo">
-                      <BaseSelect v-model="teamForm.roleId">
-                        <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
-                        <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
-                        </BaseSelectItem>
-                      </BaseSelect>
-                    </BaseField>
-                    <div class="sm:col-span-2 flex justify-end">
-                      <BaseButton variant="primary" :loading="isInviting" :disabled="!canAddMember"
-                        @click="inviteMember">
-                        <Icon name="lucide:plus" class="me-2 size-4" />
-                        Adicionar à Equipe
+                    <h3 class="text-lg font-bold text-muted-800 dark:text-white mb-2">
+                      {{ currentSubscription?.employeesLimit === 1 ? 'Plano Individual' : 'Limite de Equipe Atingido' }}
+                    </h3>
+                    <p class="text-sm text-muted-500 dark:text-muted-400 mb-6 max-w-sm mx-auto">
+                      <template v-if="currentSubscription?.employeesLimit === 1">
+                        Seu plano atual permite apenas <b>1 colaborador</b> (você). Para adicionar sócios ou
+                        funcionários, você precisará de um plano superior.
+                      </template>
+                      <template v-else>
+                        Você já utilizou todos os <b>{{ currentSubscription?.employeesLimit }} slots</b> de equipe
+                        disponíveis no seu plano.
+                      </template>
+                    </p>
+                    <div class="flex items-center justify-center gap-3">
+                      <BaseButton rounded="sm" variant="primary" size="md" shadow="primary" class="px-8"
+                        @click.prevent="handleUpgrade">
+                        <Icon name="solar:crown-minimalistic-bold-duotone" class="me-2 size-4 text-amber-300" />
+                        Fazer Upgrade
                       </BaseButton>
                     </div>
                   </div>
+
+                  <!-- Invite Form (Only if has slots) -->
+                  <template v-else>
+                    <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-muted-800 dark:text-white">Convidar Colaborador</span>
+                        <span
+                          class="text-[11px] bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full text-muted-500">
+                          {{ totalMembers }} / {{ currentSubscription?.employeesLimit }} usados
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
+                      <BaseField label="Nome">
+                        <BaseInput v-model="teamForm.name" placeholder="Nome completo" />
+                      </BaseField>
+                      <BaseField label="Email">
+                        <BaseInput v-model="teamForm.email" type="email" placeholder="email@trabalho.com" />
+                      </BaseField>
+                      <BaseField label="Telefone">
+                        <BaseInput v-model="teamForm.phone" placeholder="(00) 00000-0000" />
+                      </BaseField>
+                      <BaseField label="Cargo">
+                        <BaseSelect v-model="teamForm.roleId">
+                          <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
+                          <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
+                          </BaseSelectItem>
+                        </BaseSelect>
+                      </BaseField>
+                      <div class="sm:col-span-2 flex justify-end">
+                        <BaseButton variant="primary" rounded="sm" :loading="isInviting" @click="inviteMember">
+                          <Icon name="lucide:plus" class="me-2 size-4" />
+                          Adicionar à Equipe
+                        </BaseButton>
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>
 
             <!-- Step 4: Whitelabel -->
             <div v-else-if="currentStep === 4">
-              <div v-if="hasWhitelabel" class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                <div class="lg:col-span-8 space-y-8">
-                  <div
-                    class="p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
-                    <h3 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-6">Paleta de Cores</h3>
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <!-- Config / Upgrade Column -->
+                <div class="lg:col-span-6">
+                  <div v-if="hasWhitelabel"
+                    class="p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800 space-y-8">
+                    <h3 class="text-xs font-bold text-muted-400 uppercase tracking-widest leading-none">Personalização
+                      Visual</h3>
                     <div class="space-y-8">
                       <div>
-                        <p class="text-[11px] text-muted-500 font-medium mb-3">COR PRINCIPAL</p>
-                        <div class="flex flex-wrap gap-2">
+                        <p class="text-[11px] text-muted-500 font-medium mb-3">COR DA MARCA (PRIMÁRIA)</p>
+                        <div class="grid grid-cols-6 sm:grid-cols-11 gap-2">
                           <button v-for="c in safeColors" :key="c.name" type="button"
                             class="size-8 rounded-lg transition-all duration-200 hover:scale-110"
                             :class="[c.class, whitelabel.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'opacity-80']"
                             @click="whitelabel.primaryColor = c.name" />
                         </div>
                       </div>
-                      <div>
-                        <p class="text-[11px] text-muted-500 font-medium mb-3">TOM DE FUNDO</p>
-                        <div class="flex gap-3">
-                          <button v-for="c in mutedColors" :key="c.name" type="button"
-                            class="size-12 rounded-xl border-2 transition-all duration-200"
-                            :class="[c.class, whitelabel.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/10' : 'border-transparent opacity-60']"
-                            @click="whitelabel.secondaryColor = c.name" />
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <BaseField label="Nome da Empresa (Expositor)">
+                          <TairoInput v-model="whitelabel.name" icon="solar:buildings-bold-duotone"
+                            placeholder="Ex: Contabilidade Silva" />
+                        </BaseField>
+                        <BaseField label="Nome reduzido (Menu)">
+                          <TairoInput v-model="whitelabel.tradeName" icon="solar:shop-bold-duotone"
+                            placeholder="Ex: Silva Contábil" />
+                        </BaseField>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else
+                    class="h-full flex flex-col justify-center p-10 bg-primary-500/5 rounded-3xl border border-primary-500/10 text-center lg:text-left">
+                    <div
+                      class="mb-6 flex size-16 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-xl">
+                      <Icon name="solar:pallete-bold-duotone" class="size-8 text-primary-500" />
+                    </div>
+                    <h3 class="text-2xl font-bold text-muted-800 dark:text-white mb-2">Sua Marca Aqui</h3>
+                    <p class="text-muted-500 dark:text-muted-400 mb-8 max-w-sm">
+                      Dê uma cara profissional ao sistema com seu <b>Logo, Cores e Nome</b> personalizados para seus
+                      clientes e
+                      equipe.
+                    </p>
+                    <div>
+                      <BaseButton variant="primary" rounded="sm" shadow="primary" class="px-10 h-12"
+                        @click.prevent="handleUpgrade">
+                        <Icon name="solar:crown-minimalistic-bold-duotone" class="me-2 size-4 text-amber-300" />
+                        Liberar Whitelabel
+                      </BaseButton>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Preview Column -->
+                <div class="lg:col-span-6 relative">
+                  <!-- Premium Real-time Preview Mockup -->
+                  <div class="relative h-full flex items-center justify-center p-4"
+                    :class="!hasWhitelabel ? 'opacity-80 grayscale-[0.3]' : ''">
+                    <div
+                      class="w-full max-w-[400px] aspect-[4/3] rounded-2xl bg-white dark:bg-muted-900 shadow-2xl border border-muted-200 dark:border-muted-800 overflow-hidden transform perspective-[1000px] rotate-y-[-5deg] rotate-x-[2deg] hover:rotate-0 transition-transform duration-700">
+                      <!-- Navbar Mock -->
+                      <div
+                        class="h-10 border-b border-muted-100 dark:border-muted-800 flex items-center px-4 justify-between bg-muted-50/50 dark:bg-muted-900/50">
+                        <div class="flex items-center gap-2">
+                          <div class="size-5 rounded bg-muted-200 dark:bg-muted-700 animate-pulse" />
+                          <div class="h-2 w-16 bg-muted-100 dark:bg-muted-800 rounded" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <div class="size-5 rounded-full bg-muted-200 dark:bg-muted-700" />
+                        </div>
+                      </div>
+
+                      <div class="flex h-full">
+                        <!-- Sidebar Mock -->
+                        <div
+                          class="w-16 border-r border-muted-100 dark:border-muted-800 flex flex-col items-center py-4 gap-4 bg-muted-50 dark:bg-muted-900">
+                          <div
+                            class="size-8 rounded-lg flex items-center justify-center overflow-hidden mb-2 bg-white dark:bg-muted-800 border border-muted-200 dark:border-muted-700">
+                            <img v-if="tenant?.logo" :src="tenant.logo" class="size-full object-contain p-1">
+                            <div v-else :class="`bg-${whitelabel.primaryColor}-500`"
+                              class="size-full flex items-center justify-center">
+                              <Icon name="solar:buildings-bold" class="size-4 text-white" />
+                            </div>
+                          </div>
+                          <div v-for="i in 4" :key="i"
+                            :class="i === 1 ? `text-${whitelabel.primaryColor}-500 bg-${whitelabel.primaryColor}-500/10` : 'text-muted-400'"
+                            class="size-8 rounded-lg flex items-center justify-center">
+                            <Icon name="solar:widget-3-bold-duotone" class="size-4" />
+                          </div>
+                        </div>
+
+                        <!-- Content Mock -->
+                        <div class="flex-1 p-4 space-y-4">
+                          <div class="flex items-center justify-between">
+                            <div class="space-y-1">
+                              <p class="text-[10px] font-bold text-muted-900 dark:text-white">{{ whitelabel.tradeName ||
+                                'Sua
+                                Empresa' }}</p>
+                              <div class="h-1 w-12 bg-muted-100 dark:bg-muted-800 rounded" />
+                            </div>
+                            <div :class="`bg-${whitelabel.primaryColor}-500 shadow-${whitelabel.primaryColor}-500/20`"
+                              class="h-6 px-3 rounded-md flex items-center text-[8px] font-bold text-white shadow-lg">
+                              Novo Projeto
+                            </div>
+                          </div>
+
+                          <div class="grid grid-cols-2 gap-3">
+                            <div v-for="i in 2" :key="i"
+                              class="p-3 rounded-xl border border-muted-100 dark:border-muted-800 bg-white dark:bg-muted-950 space-y-2">
+                              <div :class="`bg-${whitelabel.primaryColor}-500/10 text-${whitelabel.primaryColor}-500`"
+                                class="size-6 rounded-lg flex items-center justify-center">
+                                <Icon :name="i === 1 ? 'solar:chart-bold-duotone' : 'solar:user-bold-duotone'"
+                                  class="size-3" />
+                              </div>
+                              <div class="h-2 w-full bg-muted-100 dark:bg-muted-800 rounded" />
+                              <div class="h-1.5 w-1/2 bg-muted-50 dark:bg-muted-900 rounded" />
+                            </div>
+                          </div>
+
+                          <div
+                            class="p-3 rounded-xl border border-muted-100 dark:border-muted-800 bg-muted-50/30 dark:bg-muted-900/30">
+                            <div class="flex items-center gap-2 mb-2">
+                              <div class="h-2 w-20 bg-muted-200 dark:bg-muted-700 rounded" />
+                              <div :class="`bg-${whitelabel.primaryColor}-500`"
+                                class="h-2 w-2 rounded-full animate-pulse" />
+                            </div>
+                            <div class="space-y-1.5">
+                              <div class="h-1 w-full bg-muted-100 dark:bg-muted-800 rounded" />
+                              <div class="h-1 w-full bg-muted-100 dark:bg-muted-800 rounded" />
+                              <div class="h-1 w-2/3 bg-muted-100 dark:bg-muted-800 rounded" />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <BaseField label="Nome Expositor">
-                      <TairoInput v-model="whitelabel.name" icon="solar:buildings-bold-duotone" />
-                    </BaseField>
-                    <BaseField label="Nome Menu">
-                      <TairoInput v-model="whitelabel.tradeName" icon="solar:shop-bold-duotone" />
-                    </BaseField>
-                  </div>
-                </div>
-                <div class="lg:col-span-4">
-                  <div class="sticky top-0 p-6 rounded-3xl bg-muted-900 text-white shadow-2xl space-y-6">
-                    <h3 class="text-xs font-bold text-primary-400 uppercase tracking-widest">Visualização</h3>
-                    <div class="space-y-4">
+
+                    <!-- Lock Overlay for non-whitelabel -->
+                    <div v-if="!hasWhitelabel" class="absolute inset-0 z-10 flex flex-col items-center justify-center">
                       <div
-                        class="h-10 w-full bg-primary-500 rounded-lg flex items-center justify-center text-xs font-bold">
-                        Botão Principal</div>
-                      <div
-                        class="h-10 w-full bg-white/10 rounded-lg flex items-center justify-center text-xs font-medium">
-                        Botão Secundário</div>
-                      <div class="flex gap-2">
-                        <div class="size-8 rounded-full bg-primary-500" />
-                        <div class="flex-1 h-8 bg-white/5 rounded-lg" />
+                        class="size-16 rounded-full bg-white dark:bg-muted-800 shadow-2xl flex items-center justify-center mb-4">
+                        <Icon name="solar:lock-bold-duotone" class="size-8 text-primary-500" />
                       </div>
                     </div>
+
+                    <!-- Decorative elements -->
+                    <div :class="`bg-${whitelabel.primaryColor}-500/20`"
+                      class="absolute -top-4 -right-4 size-32 rounded-full blur-3xl -z-10" />
+                    <div :class="`bg-${whitelabel.primaryColor}-500/10`"
+                      class="absolute -bottom-8 -left-8 size-40 rounded-full blur-3xl -z-10" />
                   </div>
                 </div>
-              </div>
-              <div v-else class="text-center py-10">
-                <div
-                  class="mx-auto mb-6 flex size-20 items-center justify-center rounded-3xl bg-muted-100 dark:bg-muted-900 animate-pulse">
-                  <Icon name="solar:pallete-bold-duotone" class="size-10 text-muted-300" />
-                </div>
-                <h3 class="text-xl font-bold text-muted-800 dark:text-white mb-2">Whitelabel Bloqueado</h3>
-                <p class="text-sm text-muted-500 mb-8 max-w-sm mx-auto">Sua marca e cores personalizadas disponíveis nos
-                  planos <b>Professional</b> e <b>Enterprise</b>.</p>
-                <BaseButton variant="primary" rounded="xl" shadow="primary" class="px-10 h-14"
-                  @click.prevent="handleUpgrade">Liberar Agora</BaseButton>
               </div>
             </div>
 
@@ -955,18 +1073,18 @@ onMounted(async () => {
     <div v-if="!complete && currentStep !== 0"
       class="shrink-0 border-t border-muted-200 bg-white p-6 px-10 dark:border-muted-800 dark:bg-muted-950">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <BaseButton rounded="xl" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">
+        <BaseButton rounded="sm" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">
           <Icon name="lucide:chevron-left" class="me-2 size-4" />
           <span>Voltar</span>
         </BaseButton>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <BaseButton v-if="currentStep === 4 && !hasWhitelabel" rounded="xl" class="h-12 px-8"
+          <BaseButton v-if="currentStep === 4 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
             @click.prevent="continueWithoutUpgrade">
             <span>Pular Customização</span>
           </BaseButton>
 
-          <BaseButton v-if="shouldShowFooterContinue" type="submit" rounded="xl" variant="primary" shadow="primary"
+          <BaseButton v-if="shouldShowFooterContinue" type="submit" rounded="sm" variant="primary" shadow="primary"
             class="w-full sm:w-48 h-12" :loading="loading" :disabled="loading" @click.prevent="handleSubmit">
             <span>{{ isLastStep ? 'Concluir' : 'Continuar' }}</span>
             <Icon v-if="!isLastStep" name="lucide:chevron-right" class="ms-2 size-4" />
@@ -977,3 +1095,4 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+```
