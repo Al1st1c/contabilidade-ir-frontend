@@ -7,6 +7,7 @@ interface User {
   email: string
   name: string
   photo?: string
+  onboardingStatus?: string
   level?: string
   role?: {
     id: string
@@ -26,6 +27,16 @@ interface User {
     canViewDrive: boolean
     canManageChecklist: boolean
     canManageKanban: boolean
+  }
+  tenant?: {
+    id: string
+    name: string
+    tradeName?: string
+    document?: string
+    logo?: string
+    primaryColor?: string
+    secondaryColor?: string
+    pixKey?: string
   }
 }
 
