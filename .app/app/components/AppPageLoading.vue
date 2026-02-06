@@ -12,7 +12,7 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="flex flex-col items-center justify-center p-8 transition-all duration-300" :style="{ minHeight }">
-    <BaseSpinner class="mb-4 size-10 text-primary-500" />
+    <Icon name="svg-spinners:blocks-shuffle-3" class="size-8 text-primary-500" />
     <BaseParagraph v-if="message" size="sm" class="text-muted-500 font-medium animate-pulse">
       {{ message }}
     </BaseParagraph>

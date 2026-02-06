@@ -148,155 +148,218 @@ function prevStep() {
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20 max-w-5xl mx-auto">
     <!-- Header -->
-    <div class="mb-8">
-      <BaseHeading as="h1" size="2xl" weight="medium">
+    <div class="mb-10 text-center md:text-left">
+      <BaseHeading as="h1" size="2xl" weight="medium" class="text-muted-800 dark:text-white">
         Novo Cliente
       </BaseHeading>
-      <BaseParagraph size="sm" class="text-muted-500">
-        Cadastre um novo cliente para gestão de IR
+      <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+        Preencha os dados abaixo para cadastrar um novo cliente no sistema.
       </BaseParagraph>
     </div>
 
     <!-- Multi-step Form -->
-    <BaseCard rounded="lg" class="p-6 md:p-10 shadow-sm overflow-hidden">
+    <BaseCard rounded="lg"
+      class="p-6 md:p-10 shadow-sm border border-muted-200 dark:border-muted-800 overflow-hidden relative">
       <!-- Steps Indicator -->
-      <div class="flex items-center justify-between mb-10 relative">
-        <div class="absolute top-1/2 left-0 w-full h-0.5 bg-muted-200 dark:bg-muted-800 -translate-y-1/2 z-0" />
-        <div
-          v-for="i in 4" :key="i"
-          class="relative z-10 size-10 rounded-full flex items-center justify-center border-4 border-white dark:border-muted-900 transition-colors duration-300"
-          :class="step >= i ? 'bg-primary-500 text-white' : 'bg-muted-200 dark:bg-muted-800 text-muted-400'"
-        >
-          <span class="text-xs font-bold">{{ i }}</span>
+      <div class="flex items-center justify-between mb-12 relative max-w-sm mx-auto">
+        <div class="absolute top-1/2 left-0 w-full h-0.5 bg-muted-100 dark:bg-muted-800 -translate-y-1/2 z-0" />
+        <div v-for="i in 4" :key="i"
+          class="relative z-10 size-10 rounded-full flex items-center justify-center border-4 border-white dark:border-muted-900 transition-all duration-300 ring-1"
+          :class="step === i
+            ? 'bg-primary-500 text-white ring-primary-500/30'
+            : step > i
+              ? 'bg-emerald-500 text-white ring-emerald-500/20'
+              : 'bg-muted-100 dark:bg-muted-800 text-muted-400 ring-transparent'">
+          <Icon v-if="step > i" name="lucide:check" class="size-4" />
+          <span v-else class="text-xs font-medium">{{ i }}</span>
+
+          <!-- Label below tooltip-style -->
+          <div v-if="step === i"
+            class="absolute -bottom-6 whitespace-nowrap text-[10px] uppercase tracking-wider text-primary-500 font-medium">
+            Passo {{ i }}
+          </div>
         </div>
       </div>
 
       <!-- Step 1: CPF / Busca -->
-      <div v-if="step === 1" class="space-y-6">
-        <div class="flex flex-col md:flex-row items-center gap-10">
-          <div class="flex-1 space-y-4">
-            <BaseHeading as="h2" size="xl" weight="medium" class="text-muted-800 dark:text-muted-100">
-              Comece pelo CPF
-            </BaseHeading>
-            <BaseParagraph class="text-muted-500">
-              Nosso sistema busca automaticamente o nome e data de nascimento do cliente direto na Receita Federal para
-              facilitar seu trabalho.
-            </BaseParagraph>
+      <div v-if="step === 1" class="space-y-8 py-4">
+        <div class="flex flex-col md:flex-row items-center gap-12">
+          <div class="flex-1 space-y-6">
+            <div class="space-y-2">
+              <BaseHeading as="h2" size="xl" weight="medium" class="text-muted-800 dark:text-muted-100">
+                Identificação Inicial
+              </BaseHeading>
+              <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+                Inicie digitando o CPF. Nosso sistema tentará recuperar os dados básicos automaticamente para agilizar o
+                processo.
+              </BaseParagraph>
+            </div>
 
-            <BaseField label="CPF do Cliente">
-              <BaseInput
-                v-model="form.cpf" placeholder="000.000.000-00" :masks="masks" size="lg"
-                @keyup.enter="consultCpf"
-              />
-            </BaseField>
+            <div class="max-w-md">
+              <BaseField label="CPF do Cliente">
+                <BaseInput v-model="form.cpf" placeholder="000.000.000-00" :masks="masks" size="lg"
+                  icon="lucide:fingerprint" @keyup.enter="consultCpf" />
+              </BaseField>
+            </div>
 
-            <div class="flex gap-3">
-              <BaseButton variant="primary" size="lg" class="flex-1" :loading="isLoadingCpf" @click="consultCpf">
+            <div class="flex flex-wrap gap-3">
+              <BaseButton variant="primary" size="lg" class="px-8 shadow-lg shadow-primary-500/20"
+                :loading="isLoadingCpf" @click="consultCpf">
                 {{ isLoadingCpf ? 'Consultando...' : 'Consultar e Iniciar' }}
               </BaseButton>
-              <BaseButton variant="ghost" @click="nextStep">
-                Pular busca
+              <BaseButton variant="muted" size="lg" @click="nextStep">
+                Preencher Manualmente
               </BaseButton>
             </div>
           </div>
-          <div class="hidden md:block w-72">
-            <img src="/img/illustrations/placeholders/flat/placeholder-search-1.svg" alt="Busca" class="w-full">
+          <div class="hidden md:flex w-64 items-center justify-center">
+            <div class="relative">
+              <div class="absolute inset-0 bg-primary-500/10 blur-3xl rounded-full" />
+              <img src="/img/logo-icon.png" alt="Busca" class="relative z-10 w-full drop-shadow-xl">
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Step 2: Dados Pessoais -->
-      <div v-if="step === 2" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">
-          Dados Pessoais
-        </BaseHeading>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div v-if="step === 2" class="space-y-8 py-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-muted-100 dark:border-muted-800">
+          <Icon name="solar:user-id-linear" class="size-5 text-primary-500" />
+          <BaseHeading as="h2" size="xl" weight="medium">
+            Dados Pessoais
+          </BaseHeading>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <BaseField label="Nome Completo">
-            <BaseInput v-model="form.name" placeholder="Nome do cliente" />
+            <BaseInput v-model="form.name" placeholder="Ex: João da Silva" icon="lucide:user" />
           </BaseField>
           <BaseField label="Data de Nascimento">
-            <BaseInput v-model="form.birthDate" type="date" />
+            <BaseInput v-model="form.birthDate" type="date" icon="lucide:calendar" />
           </BaseField>
-          <BaseField label="Email">
-            <BaseInput v-model="form.email" type="email" placeholder="email@exemplo.com" />
+          <BaseField label="Email Principal">
+            <BaseInput v-model="form.email" type="email" placeholder="contato@exemplo.com" icon="lucide:mail" />
           </BaseField>
           <BaseField label="Telefone / WhatsApp">
-            <BaseInput v-model="form.phone" placeholder="(11) 99999-9999" />
+            <BaseInput v-model="form.phone" placeholder="(00) 00000-0000" icon="lucide:phone" />
           </BaseField>
         </div>
-        <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">
+
+        <div class="flex justify-between items-center pt-8 border-t border-muted-100 dark:border-muted-800 mt-10">
+          <BaseButton variant="muted" @click="prevStep">
+            <Icon name="lucide:arrow-left" class="size-4 mr-1" />
             Voltar
           </BaseButton>
-          <BaseButton variant="primary" @click="nextStep">
+          <BaseButton variant="primary" class="px-8" @click="nextStep">
             Continuar
+            <Icon name="lucide:arrow-right" class="size-4 ml-1" />
           </BaseButton>
         </div>
       </div>
 
       <!-- Step 3: Endereço -->
-      <div v-if="step === 3" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">
-          Endereço
-        </BaseHeading>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <BaseField label="CEP" class="md:col-span-1">
-            <BaseInput v-model="form.zipCode" placeholder="00000-000" />
-          </BaseField>
-          <BaseField label="Endereço" class="md:col-span-2">
-            <BaseInput v-model="form.address" placeholder="Rua, Avenida..." />
-          </BaseField>
-          <BaseField label="Número">
-            <BaseInput v-model="form.addressNumber" />
-          </BaseField>
-          <BaseField label="Bairro">
-            <BaseInput v-model="form.neighborhood" />
-          </BaseField>
-          <BaseField label="Cidade">
-            <BaseInput v-model="form.city" />
-          </BaseField>
-          <BaseField label="Estado">
-            <BaseInput v-model="form.state" />
-          </BaseField>
+      <div v-if="step === 3" class="space-y-8 py-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-muted-100 dark:border-muted-800">
+          <Icon name="solar:map-point-linear" class="size-5 text-primary-500" />
+          <BaseHeading as="h2" size="xl" weight="medium">
+            Endereço Residencial
+          </BaseHeading>
         </div>
-        <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
+          <div class="md:col-span-4">
+            <BaseField label="CEP">
+              <BaseInput v-model="form.zipCode" placeholder="00000-000" icon="lucide:map-pin" />
+            </BaseField>
+          </div>
+          <div class="md:col-span-8">
+            <BaseField label="Logradouro">
+              <BaseInput v-model="form.address" placeholder="Rua, Avenida, etc." />
+            </BaseField>
+          </div>
+          <div class="md:col-span-3">
+            <BaseField label="Número">
+              <BaseInput v-model="form.addressNumber" placeholder="Ex: 123" />
+            </BaseField>
+          </div>
+          <div class="md:col-span-4">
+            <BaseField label="Bairro">
+              <BaseInput v-model="form.neighborhood" placeholder="Bairro" />
+            </BaseField>
+          </div>
+          <div class="md:col-span-5">
+            <BaseField label="Complemento">
+              <BaseInput v-model="form.addressComplement" placeholder="Apt, Bloco, etc." />
+            </BaseField>
+          </div>
+          <div class="md:col-span-8">
+            <BaseField label="Cidade">
+              <BaseInput v-model="form.city" placeholder="Cidade" icon="lucide:building" />
+            </BaseField>
+          </div>
+          <div class="md:col-span-4">
+            <BaseField label="Estado / UF">
+              <BaseInput v-model="form.state" placeholder="UF" />
+            </BaseField>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center pt-8 border-t border-muted-100 dark:border-muted-800 mt-10">
+          <BaseButton variant="muted" @click="prevStep">
+            <Icon name="lucide:arrow-left" class="size-4 mr-1" />
             Voltar
           </BaseButton>
-          <BaseButton variant="primary" @click="nextStep">
+          <BaseButton variant="primary" class="px-8" @click="nextStep">
             Continuar
+            <Icon name="lucide:arrow-right" class="size-4 ml-1" />
           </BaseButton>
         </div>
       </div>
 
       <!-- Step 4: Dados Finais -->
-      <div v-if="step === 4" class="space-y-6">
-        <BaseHeading as="h2" size="xl" weight="medium">
-          Profissional e Bancário
-        </BaseHeading>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div v-if="step === 4" class="space-y-8 py-4">
+        <div class="flex items-center gap-2 pb-2 border-b border-muted-100 dark:border-muted-800">
+          <Icon name="solar:wallet-linear" class="size-5 text-primary-500" />
+          <BaseHeading as="h2" size="xl" weight="medium">
+            Profissão e Dados Bancários
+          </BaseHeading>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <BaseField label="Profissão / Ocupação">
-            <BaseInput v-model="form.occupation" placeholder="Ex: Contador" />
+            <BaseInput v-model="form.occupation" placeholder="Ex: Advogado" icon="lucide:briefcase" />
           </BaseField>
-          <BaseField label="Fonte Pagadora">
-            <BaseInput v-model="form.employer" placeholder="Nome da empresa" />
+          <BaseField label="Principal Fonte Pagadora">
+            <BaseInput v-model="form.employer" placeholder="Nome da empresa" icon="lucide:building-2" />
           </BaseField>
-          <BaseField label="Banco">
-            <BaseInput v-model="form.bankName" />
+          <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <BaseField label="Banco">
+              <BaseInput v-model="form.bankName" placeholder="Ex: Nubank" />
+            </BaseField>
+            <BaseField label="Agência">
+              <BaseInput v-model="form.bankAgency" placeholder="0001" />
+            </BaseField>
+            <BaseField label="Conta">
+              <BaseInput v-model="form.bankAccount" placeholder="00000000-0" />
+            </BaseField>
+          </div>
+          <BaseField label="Chave PIX (Para restituir)" class="md:col-span-2">
+            <BaseInput v-model="form.pixKey" placeholder="CPF, e-mail ou telefone" icon="logos:pix" />
           </BaseField>
-          <BaseField label="Chave PIX (Para restituição)">
-            <BaseInput v-model="form.pixKey" placeholder="CPF, e-mail ou telefone" />
-          </BaseField>
-          <BaseField label="Observações Internas" class="md:col-span-2">
-            <BaseTextarea v-model="form.notes" rows="3" />
+          <BaseField label="Observações de Uso Interno" class="md:col-span-2">
+            <BaseTextarea v-model="form.notes" rows="4" placeholder="Algum detalhe importante sobre este cliente..." />
           </BaseField>
         </div>
-        <div class="flex justify-between pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseButton variant="ghost" @click="prevStep">
+
+        <div class="flex justify-between items-center pt-8 border-t border-muted-100 dark:border-muted-800 mt-10">
+          <BaseButton variant="muted" @click="prevStep">
+            <Icon name="lucide:arrow-left" class="size-4 mr-1" />
             Voltar
           </BaseButton>
-          <BaseButton variant="primary" :loading="isSaving" @click="saveClient">
+          <BaseButton variant="primary" size="lg" class="px-10 shadow-lg shadow-primary-500/20" :loading="isSaving"
+            @click="saveClient">
             Finalizar Cadastro
+            <Icon name="lucide:check" class="size-4 ml-2" />
           </BaseButton>
         </div>
       </div>
