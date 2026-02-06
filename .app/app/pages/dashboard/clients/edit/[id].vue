@@ -156,7 +156,7 @@ onMounted(fetchClient)
 
       <!-- Loading State -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-4">
-        <Icon name="svg-spinners:blocks-shuffle-3" class="size-8 text-primary-500" />
+        <video src="/img/loading.webm#t=3" autoplay loop muted playsinline class="size-20" />
         <p class="text-xs text-muted-400 uppercase tracking-widest">Carregando dados</p>
       </div>
 
