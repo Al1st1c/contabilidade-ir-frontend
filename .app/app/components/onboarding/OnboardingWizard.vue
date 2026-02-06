@@ -120,9 +120,24 @@ async function handleLogoUpload(event: Event) {
     })
     if (data.success || data) {
       const source = data.data || data
-      if (tenant.value) {
-        tenant.value.logo = source.logo
+      const logoUrl = source.logo || source.photoUrl || source.url
+
+      if (!tenant.value) {
+        tenant.value = {}
       }
+
+      tenant.value.logo = logoUrl
+
+      // Aplicar cores e logo para persistir no cookie e CSS
+      applyColors(
+        tenant.value?.primaryColor || 'army',
+        tenant.value?.secondaryColor || 'zinc',
+        logoUrl,
+        company.value.name,
+        company.value.tradeName,
+        true,
+      )
+
       toaster.add({ title: 'Sucesso', description: 'Logo atualizado!', icon: 'solar:check-circle-linear' })
     }
   }
@@ -285,7 +300,13 @@ async function fetchMembers() {
   }
 }
 
-const totalMembers = computed(() => teamData.value?.total || 0)
+const totalMembers = computed(() => {
+  // Include the owner (current user) in the count
+  const membersCount = teamData.value?.total || 0
+  // Always add 1 for the owner if we have a user
+  return user.value ? membersCount + 1 : membersCount
+})
+
 const canAddMember = computed(() => {
   if (!currentSubscription.value)
     return true
@@ -393,6 +414,7 @@ async function saveCompany() {
     name: company.value.name,
     document: company.value.document,
     pixKey: company.value.pixKey,
+    logo: tenant.value?.logo,
     ...(hasWhitelabel.value ? { tradeName: company.value.tradeName } : {}),
   }
 
@@ -414,6 +436,7 @@ async function saveWhitelabel() {
     tradeName: whitelabel.value.tradeName,
     primaryColor: whitelabel.value.primaryColor,
     secondaryColor: whitelabel.value.secondaryColor,
+    logo: tenant.value?.logo,
   }
 
   await useCustomFetch<any>('/tenant', {
@@ -497,6 +520,19 @@ function prevStep() {
 async function handleSubmit() {
   if (loading.value)
     return
+
+  // Validação: Dados da Empresa (Passo 2)
+  if (currentStep.value === 2) {
+    if (!company.value.name.trim() || !company.value.document.trim()) {
+      toaster.add({
+        title: 'Dados Obrigatórios',
+        description: 'Por favor, preencha a Razão Social e o CNPJ para continuar.',
+        icon: 'solar:danger-circle-bold-duotone',
+        duration: 5000,
+      })
+      return
+    }
+  }
 
   loading.value = true
   try {
@@ -594,8 +630,9 @@ onMounted(async () => {
     <div
       class="flex shrink-0 items-center justify-between border-b border-muted-200 bg-muted-50/50 p-4 px-6 dark:border-muted-800 dark:bg-muted-900/50">
       <div class="flex items-center gap-3">
-        <div class="flex size-10 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
-          <Icon name="solar:stars-bold-duotone" class="size-6" />
+        <div
+          class="flex size-12 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-sm border border-muted-200 dark:border-muted-700 overflow-hidden shrink-0">
+          <img src="/img/logo-icon.png" alt="Gestor IRPF" class="size-full object-contain p-2">
         </div>
         <div>
           <h3 class="text-sm font-semibold text-muted-900 dark:text-white leading-tight">
@@ -608,7 +645,7 @@ onMounted(async () => {
       </div>
       <div class="flex items-center gap-4">
         <div class="hidden sm:block text-right">
-          <p class="text-[10px] uppercase tracking-wider font-bold text-muted-400">Progresso</p>
+          <p class="text-[10px] uppercase tracking-wider  text-muted-400">Progresso</p>
           <p class="text-xs font-semibold text-primary-500">{{ Math.round(progress) }}%</p>
         </div>
         <div class="w-24 sm:w-32">
@@ -622,7 +659,7 @@ onMounted(async () => {
       <form action="" method="POST" novalidate @submit.prevent="handleSubmit">
         <!-- Step Header -->
         <div class="mb-8 text-center sm:text-left">
-          <h1 class="text-2xl font-bold text-muted-900 dark:text-white sm:text-3xl">
+          <h1 class="text-2xl  text-muted-900 dark:text-white sm:text-3xl">
             {{ currentStepMeta?.title }}
           </h1>
           <p class="mt-2 text-muted-600 dark:text-muted-400">
@@ -788,96 +825,176 @@ onMounted(async () => {
             <div v-else-if="currentStep === 3">
               <AppPageLoading v-if="pendingMembers || loadingSub" message="Verificando seu plano..." />
               <div v-else>
+                <!-- Trial State -->
                 <div v-if="isTrial"
-                  class="bg-muted-50/50 dark:bg-muted-900/40 p-10 rounded-3xl border border-muted-200 dark:border-muted-800 text-center">
+                  class="bg-muted-50/50 dark:bg-muted-900/40 p-12 rounded-3xl border border-muted-200 dark:border-muted-800 text-center">
                   <div
-                    class="mx-auto mb-6 flex size-20 items-center justify-center rounded-3xl bg-white dark:bg-muted-800 shadow-xl">
-                    <Icon name="solar:lock-bold-duotone" class="size-10 text-primary-500" />
+                    class="mx-auto mb-6 flex size-24 items-center justify-center rounded-3xl bg-white dark:bg-muted-800 shadow-2xl">
+                    <Icon name="solar:users-group-rounded-bold-duotone" class="size-12 text-primary-500" />
                   </div>
-                  <h3 class="text-xl font-bold text-muted-800 dark:text-white mb-3">
-                    Gestão de Equipe Bloqueada
-                  </h3>
-                  <p class="text-sm text-muted-500 dark:text-muted-400 mb-8 max-w-md mx-auto leading-relaxed">
-                    Durante o período de teste, apenas você pode acessar o sistema. Faça um upgrade para convidar seus
-                    colaboradores.
+                  <h3 class="text-2xl  text-muted-800 dark:text-white mb-3">Expanda seu Time</h3>
+                  <p class="text-muted-500 dark:text-muted-400 mb-10 max-w-sm mx-auto leading-relaxed">
+                    No modo demonstração, o acesso é individual. Libere o suporte multi-usuário para trabalhar com sua
+                    equipe.
                   </p>
-                  <div class="flex items-center justify-center gap-3">
-                    <BaseButton rounded="sm" variant="primary" size="lg" shadow="primary" class="px-10"
+                  <div class="flex items-center justify-center gap-4">
+                    <BaseButton rounded="sm" variant="primary" size="lg" shadow="primary" class="px-10 h-14"
                       @click.prevent="handleUpgrade">
-                      Assinar Agora
+                      <Icon name="solar:crown-minimalistic-bold-duotone" class="me-2 size-5 text-amber-300" />
+                      Assinar Plano
                     </BaseButton>
-                    <BaseButton rounded="sm" size="lg" @click.prevent="continueFromTeamTrial">
-                      Pular por enquanto
+                    <BaseButton rounded="sm" size="lg" class="h-14 px-8" @click.prevent="continueFromTeamTrial">
+                      Pular Passo
                     </BaseButton>
                   </div>
                 </div>
-                <div v-else class="space-y-6">
-                  <!-- Limit Reached / Upgrade State -->
-                  <div v-if="!canAddMember"
-                    class="bg-primary-500/5 p-8 rounded-3xl border border-primary-500/10 text-center">
-                    <div
-                      class="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-lg">
-                      <Icon name="solar:users-group-rounded-bold-duotone" class="size-8 text-primary-500" />
-                    </div>
-                    <h3 class="text-lg font-bold text-muted-800 dark:text-white mb-2">
-                      {{ currentSubscription?.employeesLimit === 1 ? 'Plano Individual' : 'Limite de Equipe Atingido' }}
-                    </h3>
-                    <p class="text-sm text-muted-500 dark:text-muted-400 mb-6 max-w-sm mx-auto">
-                      <template v-if="currentSubscription?.employeesLimit === 1">
-                        Seu plano atual permite apenas <b>1 colaborador</b> (você). Para adicionar sócios ou
-                        funcionários, você precisará de um plano superior.
-                      </template>
-                      <template v-else>
-                        Você já utilizou todos os <b>{{ currentSubscription?.employeesLimit }} slots</b> de equipe
-                        disponíveis no seu plano.
-                      </template>
-                    </p>
-                    <div class="flex items-center justify-center gap-3">
-                      <BaseButton rounded="sm" variant="primary" size="md" shadow="primary" class="px-8"
+
+                <!-- Active State -->
+                <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                  <!-- Invite Section -->
+                  <div class="lg:col-span-7 space-y-8">
+                    <div v-if="!canAddMember"
+                      class="bg-primary-500/5 p-8 rounded-3xl border border-primary-500/10 text-center lg:text-left">
+                      <div
+                        class="mb-4 flex size-14 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-lg">
+                        <Icon name="solar:users-group-rounded-bold-duotone" class="size-7 text-primary-500" />
+                      </div>
+                      <h3 class="text-xl  text-muted-800 dark:text-white mb-2">
+                        {{ currentSubscription?.employeesLimit === 1 ? 'Plano Individual' : 'Limite Atingido' }}
+                      </h3>
+                      <p class="text-sm text-muted-500 dark:text-muted-400 mb-8 max-w-md">
+                        {{ currentSubscription?.employeesLimit === 1
+                          ? 'Seu plano atual permite apenas 1 usuário. Para adicionar colaboradores, faça o upgrade.'
+                          : `Você já preencheu todos os ${currentSubscription?.employeesLimit} slots da sua equipe.` }}
+                      </p>
+                      <BaseButton rounded="sm" variant="primary" shadow="primary" class="px-8 h-12"
                         @click.prevent="handleUpgrade">
                         <Icon name="solar:crown-minimalistic-bold-duotone" class="me-2 size-4 text-amber-300" />
-                        Fazer Upgrade
+                        Aumentar Equipe
                       </BaseButton>
+                    </div>
+
+                    <div v-else class="space-y-6">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-xs  text-muted-400 uppercase tracking-widest leading-none">Novo
+                          Colaborador</h3>
+                        <span class="text-[10px] bg-muted-100 dark:bg-muted-800 px-2 py-1 rounded-md text-muted-500 ">
+                          {{ totalMembers }} / {{ currentSubscription?.employeesLimit }} SLOTS USADOS
+                        </span>
+                      </div>
+
+                      <div
+                        class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-8 bg-muted-50 dark:bg-muted-900/40 rounded-3xl border border-muted-200 dark:border-muted-800 shadow-sm">
+                        <BaseField label="Nome">
+                          <TairoInput v-model="teamForm.name" placeholder="Nome completo"
+                            icon="solar:user-bold-duotone" />
+                        </BaseField>
+                        <BaseField label="Email Profissional">
+                          <TairoInput v-model="teamForm.email" type="email" placeholder="email@empresa.com"
+                            icon="solar:letter-bold-duotone" />
+                        </BaseField>
+                        <BaseField label="WhatsApp">
+                          <TairoInput v-model="teamForm.phone" placeholder="(00) 00000-0000"
+                            icon="solar:phone-bold-duotone" />
+                        </BaseField>
+                        <BaseField label="Cargo / Função">
+                          <BaseSelect v-model="teamForm.roleId">
+                            <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
+                            <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
+                            </BaseSelectItem>
+                          </BaseSelect>
+                        </BaseField>
+                        <div class="sm:col-span-2 pt-2 flex justify-end">
+                          <BaseButton variant="primary" rounded="sm" shadow="primary"
+                            class="w-full sm:w-auto px-10 h-12" :loading="isInviting" @click="inviteMember">
+                            <Icon name="solar:add-circle-bold-duotone" class="me-2 size-5" />
+                            Convidar Agora
+                          </BaseButton>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Invite Form (Only if has slots) -->
-                  <template v-else>
-                    <div class="flex items-center justify-between mb-2">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-muted-800 dark:text-white">Convidar Colaborador</span>
-                        <span
-                          class="text-[11px] bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-full text-muted-500">
-                          {{ totalMembers }} / {{ currentSubscription?.employeesLimit }} usados
-                        </span>
+                  <!-- Members List -->
+                  <div class="lg:col-span-5 space-y-6">
+                    <h3 class="text-xs  text-muted-400 uppercase tracking-widest leading-none">Membros Atuais
+                    </h3>
+                    <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                      <!-- Owner (Current User) -->
+                      <div v-if="user"
+                        class="group flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-muted-900 border border-primary-500/30 dark:border-primary-500/30 transition-all duration-300">
+                        <div class="relative shrink-0">
+                          <img v-if="user.photo" :src="user.photo"
+                            class="size-12 rounded-xl object-cover border border-muted-200 dark:border-muted-700">
+                          <div v-else
+                            class="size-12 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center  text-lg">
+                            {{ user.name?.charAt(0) || 'U' }}
+                          </div>
+                          <div
+                            class="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white dark:border-muted-900 bg-emerald-500" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm  text-muted-800 dark:text-white truncate">{{ user.name }} (Você)
+                          </p>
+                          <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-muted-500 truncate">{{ user.email }}</span>
+                          </div>
+                        </div>
+                        <div class="ms-auto flex flex-col items-end gap-1">
+                          <span
+                            class="text-[9px]  px-2 py-0.5 rounded-md bg-primary-500/10 text-primary-500 uppercase tracking-tighter">
+                            {{ user.role?.name || 'Proprietário' }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Other Team Members -->
+                      <div v-for="member in teamData.data" :key="member.id"
+                        class="group flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 hover:border-primary-500/50 transition-all duration-300">
+                        <div class="relative shrink-0">
+                          <img v-if="member.photo" :src="member.photo"
+                            class="size-12 rounded-xl object-cover border border-muted-200 dark:border-muted-700">
+                          <div v-else
+                            class="size-12 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center  text-lg">
+                            {{ member.name.charAt(0) }}
+                          </div>
+                          <div
+                            class="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white dark:border-muted-900 bg-emerald-500" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm  text-muted-800 dark:text-white truncate">{{ member.name }}</p>
+                          <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-muted-500 truncate">{{ member.email }}</span>
+                          </div>
+                        </div>
+                        <div class="ms-auto flex flex-col items-end gap-1">
+                          <span
+                            class="text-[9px]  px-2 py-0.5 rounded-md bg-muted-100 dark:bg-muted-800 text-muted-500 uppercase tracking-tighter">
+                            {{ member.role?.name || 'Membro' }}
+                          </span>
+                          <span v-if="member.status === 'PENDING_INVITE'"
+                            class="text-[8px]  text-amber-500 flex items-center bg-amber-500/5 px-1.5 rounded">
+                            <Icon name="solar:clock-circle-bold" class="size-2 me-1" /> CONVITE
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Empty State (should not show since owner is always there) -->
+                      <div v-if="!user && teamData.data.length === 0"
+                        class="flex flex-col items-center justify-center py-10 opacity-40">
+                        <Icon name="solar:users-group-two-rounded-bold-duotone" class="size-12 mb-2" />
+                        <p class="text-xs font-medium">Nenhum membro adicionado</p>
                       </div>
                     </div>
-                    <div
-                      class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
-                      <BaseField label="Nome">
-                        <BaseInput v-model="teamForm.name" placeholder="Nome completo" />
-                      </BaseField>
-                      <BaseField label="Email">
-                        <BaseInput v-model="teamForm.email" type="email" placeholder="email@trabalho.com" />
-                      </BaseField>
-                      <BaseField label="Telefone">
-                        <BaseInput v-model="teamForm.phone" placeholder="(00) 00000-0000" />
-                      </BaseField>
-                      <BaseField label="Cargo">
-                        <BaseSelect v-model="teamForm.roleId">
-                          <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
-                          <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
-                          </BaseSelectItem>
-                        </BaseSelect>
-                      </BaseField>
-                      <div class="sm:col-span-2 flex justify-end">
-                        <BaseButton variant="primary" rounded="sm" :loading="isInviting" @click="inviteMember">
-                          <Icon name="lucide:plus" class="me-2 size-4" />
-                          Adicionar à Equipe
-                        </BaseButton>
-                      </div>
-                    </div>
-                  </template>
+                  </div>
+                </div>
+
+                <!-- Upgrade teaser for non-limit reached but low slots -->
+                <div v-if="canAddMember && totalMembers >= 2"
+                  class="p-4 rounded-2xl bg-amber-500/5 border border-dashed border-amber-500/20 text-center">
+                  <p class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                    Precisa de mais colaboradores? Faça o upgrade para planos com limite estendido.
+                  </p>
                 </div>
               </div>
             </div>
@@ -889,7 +1006,7 @@ onMounted(async () => {
                 <div class="lg:col-span-6">
                   <div v-if="hasWhitelabel"
                     class="p-6 bg-muted-50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800 space-y-8">
-                    <h3 class="text-xs font-bold text-muted-400 uppercase tracking-widest leading-none">Personalização
+                    <h3 class="text-xs  text-muted-400 uppercase tracking-widest leading-none">Personalização
                       Visual</h3>
                     <div class="space-y-8">
                       <div>
@@ -919,7 +1036,7 @@ onMounted(async () => {
                       class="mb-6 flex size-16 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-xl">
                       <Icon name="solar:pallete-bold-duotone" class="size-8 text-primary-500" />
                     </div>
-                    <h3 class="text-2xl font-bold text-muted-800 dark:text-white mb-2">Sua Marca Aqui</h3>
+                    <h3 class="text-2xl  text-muted-800 dark:text-white mb-2">Sua Marca Aqui</h3>
                     <p class="text-muted-500 dark:text-muted-400 mb-8 max-w-sm">
                       Dê uma cara profissional ao sistema com seu <b>Logo, Cores e Nome</b> personalizados para seus
                       clientes e
@@ -977,13 +1094,12 @@ onMounted(async () => {
                         <div class="flex-1 p-4 space-y-4">
                           <div class="flex items-center justify-between">
                             <div class="space-y-1">
-                              <p class="text-[10px] font-bold text-muted-900 dark:text-white">{{ whitelabel.tradeName ||
-                                'Sua
-                                Empresa' }}</p>
+                              <p class="text-[10px]  text-muted-900 dark:text-white">{{ whitelabel.tradeName ||
+                                'Sua Empresa' }}</p>
                               <div class="h-1 w-12 bg-muted-100 dark:bg-muted-800 rounded" />
                             </div>
                             <div :class="`bg-${whitelabel.primaryColor}-500 shadow-${whitelabel.primaryColor}-500/20`"
-                              class="h-6 px-3 rounded-md flex items-center text-[8px] font-bold text-white shadow-lg">
+                              class="h-6 px-3 rounded-md flex items-center text-[8px]  text-white shadow-lg">
                               Novo Projeto
                             </div>
                           </div>
@@ -1058,7 +1174,7 @@ onMounted(async () => {
                     <Icon name="lucide:check" class="size-6" />
                   </div>
                   <div>
-                    <p class="text-sm font-bold text-muted-900 dark:text-white">Tudo configurado!</p>
+                    <p class="text-sm  text-muted-900 dark:text-white">Tudo configurado!</p>
                     <p class="text-xs text-muted-500">Assista este tour rápido de 60 segundos ou clique em concluir.</p>
                   </div>
                 </div>
