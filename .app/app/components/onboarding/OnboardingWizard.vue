@@ -593,9 +593,15 @@ function continueWithoutUpgrade() {
 }
 
 async function completeOnboarding() {
-  await useCustomFetch<any>('/tenant/onboarding/complete', {
+  const { data } = await useCustomFetch<any>('/tenant/onboarding/complete', {
     method: 'POST',
   })
+
+  // CRÍTICO: Atualizar o token com tenantId
+  const { token } = useAuth()
+  if (data?.access_token) {
+    token.value = data.access_token
+  }
 
   if (userCookie.value) {
     userCookie.value = {
