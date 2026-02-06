@@ -317,7 +317,8 @@ async function confirmDelete() {
                 </BaseTag>
               </div>
             </div>
-            <BaseButton v-if="user?.role?.canManageTeam" rounded="lg" size="sm" @click="editMember">
+            <BaseButton v-if="user?.role?.canManageTeam && member.role.value !== 'master'" rounded="lg" size="sm"
+              @click="editMember">
               <Icon name="solar:pen-2-linear" class="size-4" />
               <span>Editar</span>
             </BaseButton>
@@ -399,7 +400,7 @@ async function confirmDelete() {
         </div>
       </div>
       <!-- Actions Footer -->
-      <div v-if="member?.id !== user?.id && user?.role?.canManageTeam"
+      <div v-if="member?.id !== user?.id && user?.role?.canManageTeam && member.role.value !== 'master'"
         class="border-t border-muted-200 dark:border-muted-800 p-6 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-950/50 rounded-b-lg">
         <BaseButton class="w-full sm:w-auto" :variant="member.isActive ? 'destructive' : 'muted'"
           @click="deleteDialog = true">

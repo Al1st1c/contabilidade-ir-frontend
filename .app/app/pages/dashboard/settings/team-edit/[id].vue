@@ -355,6 +355,16 @@ onMounted(async () => {
   }
   await fetchRoles()
   await fetchMember()
+
+  // Bloquear edição de master
+  if (member.value?.role?.name === 'master') {
+    toaster.add({
+      title: 'Acesso Negado',
+      description: 'O cargo do administrador principal não pode ser alterado.',
+      icon: 'ph:warning-fill',
+    })
+    router.push('/dashboard/settings/team')
+  }
 })
 </script>
 
@@ -477,6 +487,7 @@ onMounted(async () => {
               class="border-2 rounded-xl p-4 cursor-pointer transition-all" :class="{
                 'border-primary-500 bg-primary-500/5 ring-2 ring-primary-500/20': selectedRoleId === role.id,
                 'border-muted-200 dark:border-muted-700 hover:border-muted-300 dark:hover:border-muted-600': selectedRoleId !== role.id,
+                'opacity-50 cursor-not-allowed pointer-events-none': member?.role?.name === 'master'
               }" @click="selectedRoleId = role.id">
               <div class="flex items-start gap-4">
                 <!-- Radio button -->
