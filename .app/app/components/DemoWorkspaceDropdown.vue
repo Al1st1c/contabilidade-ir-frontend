@@ -129,11 +129,9 @@ const selectedMemberName = computed(() => {
 
 <template>
   <div ref="target" class="group/workspace relative w-full !z-[60]">
-    <button
-      type="button"
+    <button type="button"
       class="w-full max-w-[170px] rounded-lg py-1.5 pe-3 ps-2 border border-muted-200 dark:border-muted-800 transition-colors duration-300 hover:bg-muted-100 dark:hover:bg-muted-900/60 md:max-w-[240px]"
-      :class="openDropdown && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()"
-    >
+      :class="openDropdown && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
       <span class="flex w-full items-center gap-3 text-start">
         <BaseAvatar size="xxs" :src="tenant?.logo" :text="tenant?.tradeName?.charAt(0) || 'E'" />
         <div class="flex-1 min-w-0">
@@ -144,21 +142,15 @@ const selectedMemberName = computed(() => {
             {{ selectedMemberName }}
           </BaseText>
         </div>
-        <Icon
-          name="lucide:chevrons-up-down" class="ms-auto size-4 text-muted-400 transition-transform duration-300"
-          :class="openDropdown && 'rotate-180'"
-        />
+        <Icon name="lucide:chevrons-up-down" class="ms-auto size-4 text-muted-400 transition-transform duration-300"
+          :class="openDropdown && 'rotate-180'" />
       </span>
     </button>
-    <Transition
-      enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0"
+    <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0"
       enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in"
-      leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0"
-    >
-      <div
-        v-if="openDropdown"
-        class="absolute end-0 top-12 w-full min-w-[280px] overflow-hidden rounded-xl border border-muted-200 bg-white shadow-xl shadow-muted-400/10 dark:border-muted-800 dark:bg-muted-950 dark:shadow-muted-800/10 md:start-0 md:min-w-[575px] !z-[60]"
-      >
+      leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
+      <div v-if="openDropdown"
+        class="absolute end-0 top-12 w-full min-w-[280px] overflow-hidden rounded-xl border border-muted-200 bg-white shadow-xl shadow-muted-400/10 dark:border-muted-800 dark:bg-muted-950 dark:shadow-muted-800/10 md:start-0 md:min-w-[575px] !z-[60]">
         <div class="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-muted-200 md:dark:divide-muted-800">
           <!-- Left: Team Members -->
           <div>
@@ -166,21 +158,18 @@ const selectedMemberName = computed(() => {
               <div class="shrink-0 size-8 flex items-center justify-center">
                 <Icon name="lucide:search" class="size-4 text-muted-400 dark:text-muted-100" />
               </div>
-              <input
-                v-model="searchMembers" type="text"
+              <input v-model="searchMembers" type="text"
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
-                placeholder="Buscar funcionário..."
-              >
+                placeholder="Buscar funcionário...">
             </div>
             <div class="flex h-[calc(100%_-_2.5rem)] flex-col p-3">
               <div class="flex items-center justify-between mb-2">
                 <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400">
                   Visualizar por
                 </BaseHeading>
-                <button
-                  v-if="selectedEmployeeId" type="button" class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
-                  @click="selectEmployee(null)"
-                >
+                <button v-if="selectedEmployeeId" type="button"
+                  class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
+                  @click="selectEmployee(null)">
                   Limpar Filtro
                 </button>
               </div>
@@ -193,14 +182,11 @@ const selectedMemberName = computed(() => {
                 <ul v-else-if="filteredMembers.length > 0" class="space-y-1">
                   <!-- All Option -->
                   <li>
-                    <button
-                      type="button"
+                    <button type="button"
                       class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
-                      :class="!selectedEmployeeId && 'bg-primary-500/5 text-primary-600'" @click="selectEmployee(null)"
-                    >
+                      :class="!selectedEmployeeId && 'bg-primary-500/5 text-primary-600'" @click="selectEmployee(null)">
                       <div
-                        class="size-6 rounded-full bg-muted-200 dark:bg-muted-800 flex items-center justify-center shrink-0"
-                      >
+                        class="size-6 rounded-full bg-muted-200 dark:bg-muted-800 flex items-center justify-center shrink-0">
                         <Icon name="lucide:users" class="size-3" />
                       </div>
                       <BaseText size="sm" class="truncate block font-medium">
@@ -210,12 +196,10 @@ const selectedMemberName = computed(() => {
                     </button>
                   </li>
                   <li v-for="member in filteredMembers" :key="member.id">
-                    <button
-                      type="button"
+                    <button type="button"
                       class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
                       :class="selectedEmployeeId === member.id && 'bg-primary-500/5 text-primary-600'"
-                      @click="selectEmployee(member.id)"
-                    >
+                      @click="selectEmployee(member.id)">
                       <BaseAvatar size="xxs" :src="member.photo" :text="member.name?.charAt(0)" />
                       <div class="flex-1 min-w-0">
                         <BaseText size="sm" class="truncate block font-medium">
@@ -249,11 +233,9 @@ const selectedMemberName = computed(() => {
               <div class="shrink-0 size-8 flex items-center justify-center">
                 <Icon name="lucide:search" class="size-4 text-muted-400 dark:text-muted-100" />
               </div>
-              <input
-                v-model="searchDeclarations" type="text"
+              <input v-model="searchDeclarations" type="text"
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
-                placeholder="Buscar declaração..."
-              >
+                placeholder="Buscar declaração...">
             </div>
             <div class="flex h-[calc(100%_-_2.5rem)] flex-col p-3">
               <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400 mb-2">
@@ -267,11 +249,9 @@ const selectedMemberName = computed(() => {
                 <!-- Declarations List -->
                 <ul v-else-if="filteredDeclarations.length > 0" class="space-y-1">
                   <li v-for="declaration in filteredDeclarations" :key="declaration.id">
-                    <button
-                      type="button"
+                    <button type="button"
                       class="flex w-full items-center gap-3 rounded-lg py-2 px-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
-                      @click="openDetails(declaration.id)"
-                    >
+                      @click="openDetails(declaration.id)">
                       <div class="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
                         <Icon name="lucide:file-text" class="size-4 text-primary-500" />
                       </div>
