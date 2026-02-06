@@ -94,15 +94,64 @@ const company = ref({
   tradeName: '',
   document: '',
   pixKey: '',
+  email: '',
+  phone: '',
+  whatsapp: '',
+  zipCode: '',
+  address: '',
+  addressNumber: '',
+  addressComplement: '',
+  neighborhood: '',
+  city: '',
+  state: '',
 })
 
 const cnpjMask = { mask: '##.###.###/####-##' }
+const phoneMask = { mask: ['(##) ####-####', '(##) #####-####'] }
+const cepMask = { mask: '#####-###' }
 
+const isSearchingCep = ref(false)
 const logoInput = ref<HTMLInputElement | null>(null)
 const isUploadingLogo = ref(false)
+
 function triggerLogoUpload() {
   logoInput.value?.click()
 }
+
+async function fetchAddressByCep(cep: string) {
+  const cleanCep = cep.replace(/\D/g, '')
+  if (cleanCep.length !== 8) return
+
+  isSearchingCep.value = true
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+    const data = await response.json()
+
+    if (!data.erro) {
+      company.value.address = data.logradouro || ''
+      company.value.neighborhood = data.bairro || ''
+      company.value.city = data.localidade || ''
+      company.value.state = data.uf || ''
+
+      toaster.add({
+        title: 'CEP Encontrado',
+        description: 'Endereço preenchido automaticamente.',
+        icon: 'solar:check-circle-bold-duotone',
+        duration: 3000,
+      })
+    }
+  } catch (error) {
+    console.error('Erro ao buscar CEP:', error)
+  } finally {
+    isSearchingCep.value = false
+  }
+}
+
+watch(() => company.value.zipCode, (newValue) => {
+  if (newValue?.replace(/\D/g, '').length === 8) {
+    fetchAddressByCep(newValue)
+  }
+})
 
 async function handleLogoUpload(event: Event) {
   const target = event.target as HTMLInputElement
@@ -428,6 +477,16 @@ async function saveCompany() {
     name: company.value.name,
     document: company.value.document,
     pixKey: company.value.pixKey,
+    email: company.value.email,
+    phone: company.value.phone.replace(/\D/g, ''),
+    whatsapp: company.value.whatsapp.replace(/\D/g, ''),
+    zipCode: company.value.zipCode.replace(/\D/g, ''),
+    address: company.value.address,
+    addressNumber: company.value.addressNumber,
+    addressComplement: company.value.addressComplement,
+    neighborhood: company.value.neighborhood,
+    city: company.value.city,
+    state: company.value.state,
     logo: tenant.value?.logo,
     ...(hasWhitelabel.value ? { tradeName: company.value.tradeName } : {}),
   }
@@ -630,6 +689,16 @@ onMounted(async () => {
         tradeName: t.tradeName || '',
         document: t.document || '',
         pixKey: t.pixKey || '',
+        email: t.email || '',
+        phone: t.phone || '',
+        whatsapp: t.whatsapp || '',
+        zipCode: t.zipCode || '',
+        address: t.address || '',
+        addressNumber: t.addressNumber || '',
+        addressComplement: t.addressComplement || '',
+        neighborhood: t.neighborhood || '',
+        city: t.city || '',
+        state: t.state || '',
       }
       whitelabel.value = {
         name: t.name || '',
@@ -812,30 +881,103 @@ onMounted(async () => {
                   <p class="mt-3 text-[10px] text-muted-400 text-center max-w-[120px]">Recomendamos PNG transparente</p>
                 </div>
 
-                <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div class="sm:col-span-2">
-                    <BaseField label="Razão Social" required>
-                      <TairoInput v-model="company.name" placeholder="Ex: Contabilidade Silva & Associados"
-                        icon="solar:buildings-bold-duotone" />
-                    </BaseField>
+                <div class="flex-1 space-y-8">
+                  <!-- Informações Básicas -->
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-muted-50/50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
+                    <div class="sm:col-span-2">
+                      <h4 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-2">Informações Básicas
+                      </h4>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <BaseField label="Razão Social" required>
+                        <TairoInput v-model="company.name" placeholder="Ex: Contabilidade Silva & Associados"
+                          icon="solar:buildings-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div>
+                      <BaseField label="Nome Fantasia">
+                        <TairoInput v-model="company.tradeName" :disabled="!hasWhitelabel"
+                          placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div>
+                      <BaseField label="CNPJ">
+                        <TairoInput v-model="company.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
+                          icon="solar:document-text-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <BaseField label="E-mail da Empresa">
+                        <TairoInput v-model="company.email" type="email" placeholder="contato@empresa.com"
+                          icon="solar:letter-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div>
+                      <BaseField label="Telefone">
+                        <TairoInput v-model="company.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
+                          icon="solar:phone-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div>
+                      <BaseField label="WhatsApp">
+                        <TairoInput v-model="company.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                          icon="solar:phone-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-2 bg-primary-500/5 p-4 rounded-xl border border-primary-500/20">
+                      <BaseField label="Chave PIX para Honorários"
+                        help="Seus clientes verão esta chave para pagar você.">
+                        <TairoInput v-model="company.pixKey" placeholder="E-mail, CPF/CNPJ ou Aleatória"
+                          icon="solar:wallet-money-bold-duotone" />
+                      </BaseField>
+                    </div>
                   </div>
-                  <div>
-                    <BaseField label="Nome Fantasia">
-                      <TairoInput v-model="company.tradeName" :disabled="!hasWhitelabel"
-                        placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
-                    </BaseField>
-                  </div>
-                  <div>
-                    <BaseField label="CNPJ">
-                      <TairoInput v-model="company.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
-                        icon="solar:document-text-bold-duotone" />
-                    </BaseField>
-                  </div>
-                  <div class="sm:col-span-2 bg-primary-500/5 p-4 rounded-xl border border-primary-500/20">
-                    <BaseField label="Chave PIX para Honorários" help="Seus clientes verão esta chave para pagar você.">
-                      <TairoInput v-model="company.pixKey" placeholder="E-mail, CPF/CNPJ ou Aleatória"
-                        icon="solar:wallet-money-bold-duotone" />
-                    </BaseField>
+
+                  <!-- Endereço -->
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-6 gap-6 p-6 bg-muted-50/50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
+                    <div class="sm:col-span-6">
+                      <h4 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-2">Endereço do Escritório
+                      </h4>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <BaseField label="CEP">
+                        <TairoInput v-model="company.zipCode" v-maska="cepMask" placeholder="00000-000"
+                          icon="solar:map-point-bold-duotone" :loading="isSearchingCep" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-4">
+                      <BaseField label="Logradouro">
+                        <TairoInput v-model="company.address" placeholder="Rua, Avenida, etc"
+                          icon="solar:map-point-wave-bold-duotone" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <BaseField label="Número">
+                        <TairoInput v-model="company.addressNumber" placeholder="Nº" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-4">
+                      <BaseField label="Complemento">
+                        <TairoInput v-model="company.addressComplement" placeholder="Sala, Bloco, etc" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <BaseField label="Bairro">
+                        <TairoInput v-model="company.neighborhood" placeholder="Bairro" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-3">
+                      <BaseField label="Cidade">
+                        <TairoInput v-model="company.city" placeholder="Cidade" />
+                      </BaseField>
+                    </div>
+                    <div class="sm:col-span-1">
+                      <BaseField label="UF">
+                        <TairoInput v-model="company.state" placeholder="UF" />
+                      </BaseField>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -914,7 +1056,7 @@ onMounted(async () => {
                             icon="solar:letter-bold-duotone" />
                         </BaseField>
                         <BaseField label="WhatsApp">
-                          <TairoInput v-model="teamForm.phone" placeholder="(00) 00000-0000"
+                          <TairoInput v-model="teamForm.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
                             icon="solar:phone-bold-duotone" />
                         </BaseField>
                         <div class="sm:col-span-2">

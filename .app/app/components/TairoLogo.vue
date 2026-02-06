@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { useTenant } from '~/composables/useTenant'
+import { useSubscription } from '~/composables/useSubscription'
 
-const { tenant, fetchTenant } = useTenant()
+const { tenant } = useTenant()
+const { currentSubscription } = useSubscription()
 
 const logoUrl = computed(() => {
-  return tenant.value?.logo || '/img/logo.png'
+  // Apenas mostra logo do tenant se tiver whitelabel ativo
+  const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
+
+  if (hasWhitelabel && tenant.value?.logo) {
+    return tenant.value.logo
+  }
+
+  return '/img/logo.png'
 })
 </script>
 

@@ -439,15 +439,24 @@ async function createDeclaration() {
       if (linkResponse.data.success) {
         generatedLink.value = `${window.location.origin}${linkResponse.data.data.url}`
 
-        // Auto-copy to clipboard
-        await navigator.clipboard.writeText(generatedLink.value)
-
-        toaster.add({
-          title: 'Sucesso!',
-          description: 'Declaração criada e link copiado para área de transferência',
-          icon: 'ph:check-circle-fill',
-          duration: 4000,
-        })
+        // Auto-copy to clipboard (silently ignore if blocked)
+        try {
+          await navigator.clipboard.writeText(generatedLink.value)
+          toaster.add({
+            title: 'Sucesso!',
+            description: 'Declaração criada e link copiado para área de transferência',
+            icon: 'ph:check-circle-fill',
+            duration: 4000,
+          })
+        } catch {
+          // Clipboard blocked - just show success without copy confirmation
+          toaster.add({
+            title: 'Sucesso!',
+            description: 'Declaração criada com sucesso',
+            icon: 'ph:check-circle-fill',
+            duration: 4000,
+          })
+        }
       }
 
       // Emit saved to refresh Kanban
@@ -496,26 +505,21 @@ onMounted(() => {
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl"
-  >
+    class="border-muted-200 dark:border-muted-800 dark:bg-muted-950 border-l bg-white w-full max-w-2xl shadow-2xl">
     <!-- Header -->
     <div class="border-muted-200 dark:border-muted-800 flex h-20 w-full items-center justify-between border-b px-8">
       <div>
-        <BaseHeading
-          as="h3" size="sm" weight="medium"
-          class="text-muted-800 dark:text-muted-100 uppercase tracking-wider"
-        >
+        <BaseHeading as="h3" size="sm" weight="medium"
+          class="text-muted-800 dark:text-muted-100 uppercase tracking-wider">
           Novo Imposto de Renda
         </BaseHeading>
         <BaseParagraph size="xs" class="text-muted-400 mt-1">
           Etapa {{ currentStep }} de 3: {{ stepTitles[currentStep - 1] }}
         </BaseParagraph>
       </div>
-      <button
-        type="button"
+      <button type="button"
         class="text-muted-500 rounded-full p-2 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
-        @click="() => $emit('close')"
-      >
+        @click="() => $emit('close')">
         <Icon name="lucide:x" class="size-5" />
       </button>
     </div>
@@ -525,27 +529,21 @@ onMounted(() => {
       <div class="flex items-center justify-between">
         <div v-for="(title, idx) in stepTitles" :key="idx" class="flex items-center flex-1">
           <div class="flex items-center gap-2 flex-1">
-            <div
-              class="size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all" :class="[
-                currentStep > idx + 1 ? 'bg-success-500 text-white'
+            <div class="size-8 rounded-full flex items-center justify-center text-xs font-bold transition-all" :class="[
+              currentStep > idx + 1 ? 'bg-success-500 text-white'
                 : currentStep === idx + 1 ? 'bg-primary-500 text-white'
                   : 'bg-muted-200 text-muted-400 dark:bg-muted-800',
-              ]"
-            >
+            ]">
               <Icon v-if="currentStep > idx + 1" name="lucide:check" class="size-4" />
               <span v-else>{{ idx + 1 }}</span>
             </div>
-            <span
-              class="text-xs font-medium hidden md:inline"
-              :class="currentStep === idx + 1 ? 'text-primary-600 dark:text-primary-400' : 'text-muted-500'"
-            >
+            <span class="text-xs font-medium hidden md:inline"
+              :class="currentStep === idx + 1 ? 'text-primary-600 dark:text-primary-400' : 'text-muted-500'">
               {{ title }}
             </span>
           </div>
-          <div
-            v-if="idx < stepTitles.length - 1" class="h-0.5 w-full mx-2"
-            :class="currentStep > idx + 1 ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'"
-          />
+          <div v-if="idx < stepTitles.length - 1" class="h-0.5 w-full mx-2"
+            :class="currentStep > idx + 1 ? 'bg-success-500' : 'bg-muted-200 dark:bg-muted-800'" />
         </div>
       </div>
     </div>
@@ -563,12 +561,7 @@ onMounted(() => {
               Busque e selecione um cliente, ou cadastre um novo
             </BaseParagraph>
           </div>
-          <BaseButton
-            v-if="!showNewClientForm && !generatedLink"
-            size="sm"
-            variant="primary"
-            @click="showRegisterForm"
-          >
+          <BaseButton v-if="!showNewClientForm && !generatedLink" size="sm" variant="primary" @click="showRegisterForm">
             <Icon name="lucide:user-plus" class="size-4 mr-2" />
             Novo cliente
           </BaseButton>
@@ -577,12 +570,8 @@ onMounted(() => {
         <div v-if="selectedClient && !showNewClientForm" class="space-y-3">
           <BaseCard rounded="lg" class="p-5 border-muted-200 dark:border-muted-800 shadow-none">
             <div class="flex items-start gap-4">
-              <BaseAvatar
-                :src="selectedClient.photoUrl"
-                :text="selectedClient.name?.charAt(0)?.toUpperCase()"
-                size="md"
-                class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
-              />
+              <BaseAvatar :src="selectedClient.photoUrl" :text="selectedClient.name?.charAt(0)?.toUpperCase()" size="md"
+                class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
               <div class="flex-1 min-w-0">
                 <BaseHeading as="h5" size="sm" weight="medium" class="truncate">
                   {{ selectedClient.name }}
@@ -600,20 +589,15 @@ onMounted(() => {
                 </div>
                 <div class="mt-3 flex items-center gap-2">
                   <span
-                    class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400"
-                  >
+                    class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400">
                     {{ selectedClient.declarationsCount || 0 }} IRs
                   </span>
-                  <span
-                    v-if="selectedClient.onboardingCompleted"
-                    class="text-[11px] px-2 py-1 rounded-full bg-success-500/10 text-success-700 dark:text-success-400"
-                  >
+                  <span v-if="selectedClient.onboardingCompleted"
+                    class="text-[11px] px-2 py-1 rounded-full bg-success-500/10 text-success-700 dark:text-success-400">
                     Onboarding ok
                   </span>
-                  <span
-                    v-else
-                    class="text-[11px] px-2 py-1 rounded-full bg-warning-500/10 text-warning-700 dark:text-warning-400"
-                  >
+                  <span v-else
+                    class="text-[11px] px-2 py-1 rounded-full bg-warning-500/10 text-warning-700 dark:text-warning-400">
                     Onboarding pendente
                   </span>
                 </div>
@@ -627,13 +611,8 @@ onMounted(() => {
 
         <div v-else-if="!showNewClientForm" class="space-y-3">
           <BaseField label="Buscar cliente">
-            <BaseInput
-              v-model="clientSearch"
-              placeholder="Nome, CPF, e-mail ou telefone..."
-              icon="ph:magnifying-glass"
-              autocomplete="off"
-              @keydown="handleSearchKeydown"
-            />
+            <BaseInput v-model="clientSearch" placeholder="Nome, CPF, e-mail ou telefone..." icon="ph:magnifying-glass"
+              autocomplete="off" @keydown="handleSearchKeydown" />
             <p class="text-xs text-muted-400 mt-1">
               Dica: cole o CPF sem se preocupar com pontos e traços
             </p>
@@ -649,7 +628,8 @@ onMounted(() => {
         </div>
 
         <!-- Search Results -->
-        <div v-if="searchResults.length > 0 && !isLoadingClients && !selectedClient && !showNewClientForm" class="space-y-2">
+        <div v-if="searchResults.length > 0 && !isLoadingClients && !selectedClient && !showNewClientForm"
+          class="space-y-2">
           <div class="flex items-center justify-between">
             <BaseParagraph size="xs" class="text-muted-500 uppercase tracking-wider font-medium">
               Resultados
@@ -659,21 +639,15 @@ onMounted(() => {
             </BaseParagraph>
           </div>
           <div class="space-y-2">
-            <button
-              v-for="(client, idx) in searchResults" :key="client.id" type="button" class="w-full p-4 rounded-lg border transition-all text-left"
-              :class="[
+            <button v-for="(client, idx) in searchResults" :key="client.id" type="button"
+              class="w-full p-4 rounded-lg border transition-all text-left" :class="[
                 idx === activeResultIndex
                   ? 'border-primary-500 bg-primary-500/5'
                   : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50',
-              ]" @click="selectClient(client)"
-            >
+              ]" @click="selectClient(client)">
               <div class="flex items-center gap-3">
-                <BaseAvatar
-                  :src="client.photoUrl"
-                  :text="client.name?.charAt(0)?.toUpperCase()"
-                  size="xs"
-                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
-                />
+                <BaseAvatar :src="client.photoUrl" :text="client.name?.charAt(0)?.toUpperCase()" size="xs"
+                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
                 <div class="flex-1">
                   <BaseParagraph size="sm" weight="medium">
                     {{ client.name }}
@@ -691,8 +665,7 @@ onMounted(() => {
                   </div>
                 </div>
                 <span
-                  class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400"
-                >
+                  class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400">
                   {{ client.declarationsCount || 0 }} IRs
                 </span>
               </div>
@@ -701,25 +674,19 @@ onMounted(() => {
         </div>
 
         <!-- Recent Clients -->
-        <div v-if="!clientSearch && recentClients.length > 0 && !isLoadingClients && !selectedClient && !showNewClientForm" class="space-y-2">
+        <div
+          v-if="!clientSearch && recentClients.length > 0 && !isLoadingClients && !selectedClient && !showNewClientForm"
+          class="space-y-2">
           <BaseParagraph size="xs" class="text-muted-500 uppercase tracking-wider font-medium">
             Recentes
           </BaseParagraph>
           <div class="space-y-2">
-            <button
-              v-for="client in recentClients"
-              :key="client.id"
-              type="button"
+            <button v-for="client in recentClients" :key="client.id" type="button"
               class="w-full p-4 rounded-lg border border-muted-200 dark:border-muted-800 hover:border-primary-500/50 transition-all text-left"
-              @click="selectClient(client)"
-            >
+              @click="selectClient(client)">
               <div class="flex items-center gap-3">
-                <BaseAvatar
-                  :src="client.photoUrl"
-                  :text="client.name?.charAt(0)?.toUpperCase()"
-                  size="xs"
-                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
-                />
+                <BaseAvatar :src="client.photoUrl" :text="client.name?.charAt(0)?.toUpperCase()" size="xs"
+                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
                 <div class="flex-1">
                   <BaseParagraph size="sm" weight="medium">
                     {{ client.name }}
@@ -729,8 +696,7 @@ onMounted(() => {
                   </BaseParagraph>
                 </div>
                 <span
-                  class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400"
-                >
+                  class="text-[11px] px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-900 text-muted-600 dark:text-muted-400">
                   {{ client.declarationsCount || 0 }} IRs
                 </span>
               </div>
@@ -741,8 +707,7 @@ onMounted(() => {
         <!-- No Results / Register New -->
         <div
           v-if="clientSearch && clientSearch.trim().length >= 3 && searchResults.length === 0 && !isLoadingClients && !showNewClientForm && !selectedClient"
-          class="text-center py-8 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl"
-        >
+          class="text-center py-8 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
           <Icon name="lucide:search-x" class="size-12 text-muted-300 mx-auto mb-3" />
           <BaseParagraph size="sm" class="text-muted-500 mb-4">
             Nenhum cliente encontrado
@@ -768,10 +733,8 @@ onMounted(() => {
 
           <div class="grid grid-cols-2 gap-4">
             <BaseField label="CPF *">
-              <BaseInput
-                v-model="newClientData.cpf" v-maska="masks" placeholder="000.000.000-00"
-                icon="ph:identification-card"
-              />
+              <BaseInput v-model="newClientData.cpf" v-maska="masks" placeholder="000.000.000-00"
+                icon="ph:identification-card" />
               <div class="mt-2 flex justify-end">
                 <BaseButton size="sm" :loading="isConsultingCpf" @click="consultCpf">
                   <Icon name="lucide:scan-search" class="size-4 mr-2" />
@@ -781,10 +744,8 @@ onMounted(() => {
             </BaseField>
 
             <BaseField label="Telefone/WhatsApp">
-              <BaseInput
-                v-model="newClientData.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
-                icon="ph:phone"
-              />
+              <BaseInput v-model="newClientData.phone" v-maska="phoneMask" placeholder="(00) 00000-0000"
+                icon="ph:phone" />
             </BaseField>
           </div>
 
@@ -827,10 +788,8 @@ onMounted(() => {
         </div>
 
         <BaseField label="Honorários (R$) *">
-          <BaseInput
-            v-model.number="serviceData.serviceValue" type="number" step="0.01" placeholder="350.00"
-            icon="lucide:dollar-sign"
-          />
+          <BaseInput v-model.number="serviceData.serviceValue" type="number" step="0.01" placeholder="350.00"
+            icon="lucide:dollar-sign" />
           <p class="text-xs text-muted-400 mt-1">
             Valor a ser cobrado pelo serviço
           </p>
@@ -840,10 +799,8 @@ onMounted(() => {
           <BaseSelect v-model="serviceData.assignedToId" icon="ph:user-circle" placeholder="Selecione o responsável...">
             <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
               <div class="flex items-center gap-2">
-                <BaseAvatar
-                  :src="member.photo" :text="member.name.charAt(0).toUpperCase()" size="xs"
-                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400"
-                />
+                <BaseAvatar :src="member.photo" :text="member.name.charAt(0).toUpperCase()" size="xs"
+                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
                 <div class="flex flex-col">
                   <span class="font-medium text-xs">{{ member.name }}</span>
                   <span class="text-[10px] text-muted-500">{{ member.role?.name }}</span>
@@ -878,13 +835,15 @@ onMounted(() => {
               Pronto para iniciar!
             </BaseHeading>
             <BaseParagraph size="xs" class="text-primary-700/70 dark:text-primary-500/70">
-              Ao confirmar, enviaremos automaticamente um <b>SMS e E-mail</b> para <b>{{ selectedClientName }}</b> com o link de acesso seguro para envio dos documentos.
+              Ao confirmar, enviaremos automaticamente um <b>SMS e E-mail</b> para <b>{{ selectedClientName }}</b> com o
+              link de acesso seguro para envio dos documentos.
             </BaseParagraph>
           </div>
         </div>
 
         <!-- Checklist Editável -->
-        <BaseCard rounded="lg" class="p-5 border-muted-200 dark:border-muted-800 shadow-none bg-muted-50/30 dark:bg-muted-950/30">
+        <BaseCard rounded="lg"
+          class="p-5 border-muted-200 dark:border-muted-800 shadow-none bg-muted-50/30 dark:bg-muted-950/30">
           <div class="flex items-center justify-between mb-4">
             <div>
               <BaseHeading as="h4" size="sm" weight="medium">
@@ -904,13 +863,8 @@ onMounted(() => {
           <div class="space-y-4">
             <!-- Add new item input -->
             <div class="flex gap-2">
-              <BaseInput
-                v-model="newChecklistItemTitle"
-                placeholder="Adicionar novo documento necessário..."
-                size="sm"
-                class="flex-1"
-                @keydown.enter.prevent="addChecklistItem"
-              />
+              <BaseInput v-model="newChecklistItemTitle" placeholder="Adicionar novo documento necessário..." size="sm"
+                class="flex-1" @keydown.enter.prevent="addChecklistItem" />
               <BaseButton size="sm" @click="addChecklistItem">
                 <Icon name="lucide:plus" class="size-4 mr-1" />
                 Add
@@ -918,57 +872,47 @@ onMounted(() => {
             </div>
 
             <div class="space-y-2 max-h-[350px] overflow-y-auto nui-slimscroll pr-2">
-              <div
-                v-if="checklistDraft.length === 0"
-                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl"
-              >
+              <div v-if="checklistDraft.length === 0"
+                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-2xl">
                 <Icon name="lucide:clipboard-list" class="size-10 text-muted-300 mb-2 mx-auto" />
                 <p class="text-xs text-muted-500">
                   Nenhum item definido. O cliente não terá o que enviar.
                 </p>
               </div>
 
-              <div
-                v-for="(item, idx) in checklistDraft" :key="idx"
-                class="group flex items-start gap-3 p-3 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all shadow-sm hover:shadow-md"
-              >
-                <div class="flex items-center justify-center size-6 rounded-lg bg-muted-100 dark:bg-muted-800 text-[10px] font-bold text-muted-500 shrink-0 mt-0.5">
+              <div v-for="(item, idx) in checklistDraft" :key="idx"
+                class="group flex items-start gap-3 p-3 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-500/50 transition-all shadow-sm hover:shadow-md">
+                <div
+                  class="flex items-center justify-center size-6 rounded-lg bg-muted-100 dark:bg-muted-800 text-[10px] font-bold text-muted-500 shrink-0 mt-0.5">
                   {{ idx + 1 }}
                 </div>
 
                 <div class="flex-1 min-w-0">
-                  <input
-                    v-model="item.title"
+                  <input v-model="item.title"
                     class="w-full bg-transparent text-sm font-semibold focus:outline-none border-b border-transparent focus:border-primary-500 text-muted-800 dark:text-muted-100"
-                    placeholder="Nome do documento"
-                  >
-                  <input
-                    v-model="item.description"
+                    placeholder="Nome do documento">
+                  <input v-model="item.description"
                     class="w-full bg-transparent text-[11px] text-muted-500 focus:outline-none mt-1"
-                    placeholder="Instruções curtas (ex: 'Pode ser PDF ou foto')"
-                  >
+                    placeholder="Instruções curtas (ex: 'Pode ser PDF ou foto')">
                 </div>
 
                 <div class="flex items-center gap-3 shrink-0">
                   <div
                     class="flex items-center gap-1.5 cursor-pointer select-none py-1 px-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
-                    @click="item.isRequired = !item.isRequired"
-                  >
-                    <div
-                      class="size-4 rounded border flex items-center justify-center transition-colors"
-                      :class="item.isRequired ? 'bg-primary-500 border-primary-500 text-white' : 'border-muted-300 dark:border-muted-700'"
-                    >
+                    @click="item.isRequired = !item.isRequired">
+                    <div class="size-4 rounded border flex items-center justify-center transition-colors"
+                      :class="item.isRequired ? 'bg-primary-500 border-primary-500 text-white' : 'border-muted-300 dark:border-muted-700'">
                       <Icon v-if="item.isRequired" name="lucide:check" class="size-2.5" />
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-tight" :class="item.isRequired ? 'text-primary-600' : 'text-muted-400'">
+                    <span class="text-[10px] font-bold uppercase tracking-tight"
+                      :class="item.isRequired ? 'text-primary-600' : 'text-muted-400'">
                       Obrig.
                     </span>
                   </div>
 
                   <button
                     class="p-1.5 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10 rounded-lg transition-all md:opacity-0 group-hover:opacity-100"
-                    @click="removeChecklistItem(idx)"
-                  >
+                    @click="removeChecklistItem(idx)">
                     <Icon name="lucide:trash-2" class="size-3.5" />
                   </button>
                 </div>
@@ -995,13 +939,15 @@ onMounted(() => {
               Honorário
             </BaseParagraph>
             <BaseParagraph size="sm" weight="bold" class="text-primary-600 dark:text-primary-400">
-              {{ new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(serviceData.serviceValue) }}
+              {{ new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(serviceData.serviceValue)
+              }}
             </BaseParagraph>
           </div>
         </div>
 
         <!-- Generated Link Preview (After Submission) -->
-        <div v-if="generatedLink" class="p-6 bg-success-500/5 border border-success-500/20 rounded-xl animate-pulse-once">
+        <div v-if="generatedLink"
+          class="p-6 bg-success-500/5 border border-success-500/20 rounded-xl animate-pulse-once">
           <div class="flex items-center gap-2 mb-3">
             <Icon name="lucide:check-circle" class="size-6 text-success-600" />
             <BaseHeading as="h4" size="sm" weight="medium" class="text-success-700 dark:text-success-400">
@@ -1025,8 +971,7 @@ onMounted(() => {
 
     <!-- Footer Actions -->
     <div
-      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-t px-8 bg-muted-50/50 dark:bg-muted-950/50"
-    >
+      class="border-muted-200 dark:border-muted-800 flex h-16 w-full items-center justify-between border-t px-8 bg-muted-50/50 dark:bg-muted-950/50">
       <BaseButton v-if="currentStep > 1 && !generatedLink" size="sm" @click="goBack">
         <Icon name="lucide:arrow-left" class="size-4 mr-2" />
         Voltar
@@ -1045,10 +990,8 @@ onMounted(() => {
           Continuar
           <Icon name="lucide:arrow-right" class="size-4 ml-2" />
         </BaseButton>
-        <BaseButton
-          v-else-if="currentStep === 3 && !generatedLink" variant="primary" size="sm" :loading="isSaving"
-          @click="createDeclaration"
-        >
+        <BaseButton v-else-if="currentStep === 3 && !generatedLink" variant="primary" size="sm" :loading="isSaving"
+          @click="createDeclaration">
           <Icon name="lucide:rocket" class="size-4 mr-2" />
           Criar e Gerar Link
         </BaseButton>

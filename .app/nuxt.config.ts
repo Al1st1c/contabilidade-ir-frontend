@@ -35,6 +35,7 @@ export default defineNuxtConfig({
   plugins: [
     '~/plugins/api.ts',
     '~/plugins/recaptcha.client.ts',
+    '~/plugins/maska.ts',
   ],
 
   content: {

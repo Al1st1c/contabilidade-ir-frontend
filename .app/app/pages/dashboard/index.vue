@@ -3,6 +3,7 @@ import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs, PanelsPanelSubsc
 import { useAppState } from '~/composables/useAppState'
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useTenant } from '~/composables/useTenant'
+import { useSubscription } from '~/composables/useSubscription'
 
 import { resolveColor } from '~/utils/colors'
 // import OnboardingWizard from '~/components/onboarding/OnboardingWizard.vue'
@@ -47,12 +48,25 @@ const { user } = useAuth()
 const { open } = usePanels()
 const { selectedEmployeeId } = useAppState() // Global state
 const { tenant, fetchTenant } = useTenant()
+const { currentSubscription } = useSubscription()
 
 const isOnboardingOpen = computed(() => user.value?.onboardingStatus === 'PENDING')
 
 // Tenant computed properties for whitelabel
-const companyName = computed(() => tenant.value?.tradeName || tenant.value?.name || 'Seu Escritório')
-const companyLogo = computed(() => tenant.value?.logo)
+const companyName = computed(() => {
+  const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
+  if (hasWhitelabel) {
+    return tenant.value?.tradeName || tenant.value?.name || 'Gestor IRPF'
+  }
+  return 'Gestor IRPF'
+})
+const companyLogo = computed(() => {
+  const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
+  if (hasWhitelabel && tenant.value?.logo) {
+    return tenant.value.logo
+  }
+  return '/img/logo.png'
+})
 const companyLocation = computed(() => {
   if (tenant.value?.city && tenant.value?.state) {
     return `${tenant.value.city}, ${tenant.value.state}`
@@ -384,7 +398,7 @@ const acessorapido = computed(() => {
       description: 'Cadastrar um novo IR',
       icon: 'solar:document-text-bold-duotone',
       iconColor: 'text-primary-500 bg-primary-500/10',
-      url: '/imposto-de-renda',
+      url: '/dashboard/ir',
     },
     {
       id: 3,
@@ -566,7 +580,7 @@ function handleNextAction() {
     return
   }
 
-  navigateTo('/imposto-de-renda')
+  navigateTo('/dashboard/ir')
 }
 
 const filter = ref('')
@@ -679,7 +693,7 @@ const filteredMembers = computed(() => {
                         Cadastre um novo cliente ou declaração para iniciar o processo.
                       </BaseParagraph>
                       <div class="mt-auto">
-                        <BaseButton class="w-full" variant="default" to="/imposto-de-renda">
+                        <BaseButton class="w-full" variant="default" to="/dashboard/ir">
                           <span>Cadastrar Agora</span>
                         </BaseButton>
                       </div>
@@ -712,7 +726,7 @@ const filteredMembers = computed(() => {
                           : 'Prepare sua equipe! O período oficial de entrega das declarações do IR 2026 inicia em breve.'
                         }}
                       </BaseParagraph>
-                      <!-- <BaseButton size="sm" variant="default" class="w-fit" to="/imposto-de-renda">
+                      <!-- <BaseButton size="sm" variant="default" class="w-fit" to="/dashboard/ir">
                         {{ isIrPeriodStarted ? 'Gerenciar IRs' : 'Ver Cronograma' }}
                       </BaseButton> -->
                     </div>
@@ -1157,7 +1171,7 @@ const filteredMembers = computed(() => {
                     Últimos IRs
                   </BaseHeading>
                 </div>
-                <NuxtLink to="/imposto-de-renda"
+                <NuxtLink to="/dashboard/ir"
                   class="text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors flex items-center gap-1">
                   Ver tudo
                   <Icon name="solar:arrow-right-linear" class="size-3" />

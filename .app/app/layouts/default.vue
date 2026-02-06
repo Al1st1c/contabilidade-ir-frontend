@@ -1,9 +1,27 @@
 <script setup lang="ts">
 import { useTenant } from '~/composables/useTenant'
+import { useSubscription } from '~/composables/useSubscription'
 
 const { tenant } = useTenant()
+const { currentSubscription } = useSubscription()
 const { user } = useAuth()
 const isMobileOpen = ref(false)
+
+const companyName = computed(() => {
+  const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
+  if (hasWhitelabel) {
+    return tenant.value?.tradeName || tenant.value?.name || 'Gestor IRPF'
+  }
+  return 'Gestor IRPF'
+})
+
+const companyLogo = computed(() => {
+  const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
+  if (hasWhitelabel && tenant.value?.logo) {
+    return tenant.value.logo
+  }
+  return '/img/logo.png'
+})
 </script>
 
 <template>
@@ -119,9 +137,9 @@ const isMobileOpen = ref(false)
                         <div class="hidden sm:block sm:col-span-2">
                           <div class="flex flex-col justify-end h-full w-full bg-primary-800 rounded-xl p-4">
                             <div>
-                              <img :src="tenant?.logo || '/img/favicon-white.png'" alt="" class=" rounded-lg mb-3">
+                              <img :src="companyLogo" alt="" class=" rounded-lg mb-3">
                               <BaseHeading class="text-white mb-2 leading-tight">
-                                {{ tenant?.tradeName || tenant?.name || 'CONTSTAR' }}
+                                {{ companyName }}
                               </BaseHeading>
                               <BaseParagraph size="xs" class="max-w-[260px] text-white/70">
                                 Configurações e Gestão
