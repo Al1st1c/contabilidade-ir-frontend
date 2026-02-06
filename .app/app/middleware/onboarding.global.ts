@@ -18,8 +18,6 @@ export default defineNuxtRouteMiddleware((to) => {
     }
   }
 
-  // Se o onboarding já foi concluído e o usuário tenta acessar a página de onboarding
-  if (onboardingStatus === 'COMPLETED' && to.path.startsWith('/dashboard')) {
-    return navigateTo('/dashboard')
-  }
+  // Não precisa de lógica adicional para COMPLETED
+  // O dashboard já controla a exibição do modal baseado no onboardingStatus
 })

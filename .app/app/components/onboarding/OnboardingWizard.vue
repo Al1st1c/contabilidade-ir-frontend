@@ -363,8 +363,22 @@ async function inviteMember() {
         icon: 'lucide:mail-check',
         duration: 5000,
       })
+
+      // Adicionar o novo membro à lista imediatamente
+      if (response.data) {
+        teamData.value.data.push({
+          id: response.data.id,
+          name: response.data.name,
+          email: response.data.email,
+          phone: teamForm.value.phone,
+          photo: null,
+          status: 'PENDING_INVITE',
+          role: response.data.role,
+        })
+        teamData.value.total = teamData.value.data.length
+      }
+
       teamForm.value = { name: '', email: '', phone: '', roleId: 'placeholder' }
-      await fetchMembers()
     }
   }
   catch (error: any) {
@@ -897,13 +911,49 @@ onMounted(async () => {
                           <TairoInput v-model="teamForm.phone" placeholder="(00) 00000-0000"
                             icon="solar:phone-bold-duotone" />
                         </BaseField>
-                        <BaseField label="Cargo / Função">
-                          <BaseSelect v-model="teamForm.roleId">
-                            <BaseSelectItem value="placeholder" disabled>Selecione um cargo</BaseSelectItem>
-                            <BaseSelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}
-                            </BaseSelectItem>
-                          </BaseSelect>
-                        </BaseField>
+                        <div class="sm:col-span-2">
+                          <label class="text-xs text-muted-400 uppercase tracking-wider mb-3 block">Cargo /
+                            Função</label>
+                          <div class="grid grid-cols-2 gap-3">
+                            <button v-for="role in roles" :key="role.id" type="button"
+                              @click="teamForm.roleId = role.id"
+                              class="group relative p-4 rounded-xl border-2 transition-all duration-200 text-left hover:border-primary-500/50"
+                              :class="teamForm.roleId === role.id
+                                ? 'border-primary-500 bg-primary-500/5 dark:bg-primary-500/10'
+                                : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-900 hover:bg-muted-50 dark:hover:bg-muted-800'">
+                              <div class="flex items-start gap-3">
+                                <div
+                                  class="size-10 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                                  :class="teamForm.roleId === role.id
+                                    ? 'bg-primary-500 text-white'
+                                    : 'bg-muted-100 dark:bg-muted-800 text-muted-400 group-hover:bg-primary-500/10 group-hover:text-primary-500'">
+                                  <Icon :name="role.name === 'master' ? 'solar:crown-bold-duotone'
+                                    : role.name === 'contador' ? 'solar:calculator-bold-duotone'
+                                      : role.name === 'assistente' ? 'solar:user-hands-bold-duotone'
+                                        : 'solar:user-bold-duotone'" class="size-5" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                  <p class="text-sm font-semibold truncate transition-colors" :class="teamForm.roleId === role.id
+                                    ? 'text-primary-600 dark:text-primary-400'
+                                    : 'text-muted-800 dark:text-white'">
+                                    {{ role.name }}
+                                  </p>
+                                  <p class="text-[10px] text-muted-500 dark:text-muted-400 mt-0.5 line-clamp-2">
+                                    {{ role.description || 'Membro da equipe' }}
+                                  </p>
+                                </div>
+                                <div v-if="teamForm.roleId === role.id"
+                                  class="absolute top-2 right-2 size-5 rounded-full bg-primary-500 flex items-center justify-center">
+                                  <Icon name="solar:check-circle-bold" class="size-4 text-white" />
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                          <p v-if="!teamForm.roleId || teamForm.roleId === 'placeholder'"
+                            class="text-xs text-red-500 mt-2">
+                            Selecione um cargo para continuar
+                          </p>
+                        </div>
                         <div class="sm:col-span-2 pt-2 flex justify-end">
                           <BaseButton variant="primary" rounded="sm" shadow="primary"
                             class="w-full sm:w-auto px-10 h-12" :loading="isInviting" @click="inviteMember">
