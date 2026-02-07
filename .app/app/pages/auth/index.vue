@@ -542,56 +542,55 @@ const onSubmit = handleSubmit(async (values) => {
             </div>
 
             <!-- 2FA Section -->
-            <div v-if="isTwoFactor" class="mt-6">
-              <form action="" method="POST" class="mt-6" @submit.prevent>
-                <div>
-                  <div class="space-y-4">
-                    <div class="flex size-full flex-col">
-                      <div class="pointer-events-none flex w-full items-center justify-center pt-8">
-                        <div class="flex h-16 items-center justify-center">
-                          <TairoCheckAnimated v-if="logged" size="sm" />
-                          <BaseIconBox v-else color="primary" size="lg" rounded="full" class="mx-auto">
-                            <Icon name="ph:lock-duotone" class="text-white-500 mx-auto size-8" />
-                          </BaseIconBox>
-                        </div>
-                      </div>
-                      <div class="pt-4 text-center">
-                        <BaseHeading tag="h2" size="3xl" weight="medium" class="mb-1">
-                          Digite o código
-                        </BaseHeading>
-                        <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-2">
-                          Digite o código que <strong>enviamos para o seu telefone</strong>
-                        </BaseParagraph>
-                      </div>
-                      <div
-                        class="text-muted-800 dark:text-muted-100 mx-auto flex h-60 w-72 flex-col rounded text-center">
-                        <div class="flex w-full justify-center gap-3" :class="logged && 'pointer-events-none'">
-                          <input v-for="i in codeLength" :key="`pin${i}`" :ref="(el) => {
-                            inputElements[i] = el as HTMLInputElement
-                          }
-                            " v-focus="i === 1" type="text" :name="`pin${i}`" maxlength="1"
-                            class="dark:bg-muted-800 unselectable nui-focus inline w-16 select-none rounded-lg bg-white py-5 text-center text-4xl font-bold transition-all"
-                            :value="input[i - 1] !== undefined ? input[i - 1] : '-'" placeholder="0"
-                            :disabled="input.length < i - 1 || logged" @paste.prevent="(event) => paste(event)"
-                            @keydown="(event) => type(event, i)">
-                        </div>
-                        <div class="mt-10">
-                          <!-- Um texto indicando que esta verificando o código -->
-                          <BaseText v-if="loading" size="sm" class="text-muted-400">
-                            Verificando código, aguarde...
-                          </BaseText>
+            <div v-if="isTwoFactor" class="mt-8">
+              <form action="" method="POST" @submit.prevent>
+                <div class="flex flex-col items-center">
+                  <!-- Icon -->
+                  <div class="mb-6 flex h-20 items-center justify-center">
+                    <TairoCheckAnimated v-if="logged" size="sm" />
+                    <div v-else
+                      class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/30">
+                      <Icon name="ph:shield-check-duotone" class="size-10 text-primary-600 dark:text-primary-400" />
+                    </div>
+                  </div>
 
-                          <div class="mt-8 flex items-center justify-between">
-                            <BaseText size="sm" class="text-muted-400">
-                              Não recebeu?
-                            </BaseText>
-                            <button type="button"
-                              class="text-primary-500 font-sans text-sm underline-offset-4 hover:underline"
-                              @click="resendCode">
-                              Enviar novamente
-                            </button>
-                          </div>
-                        </div>
+                  <!-- Header -->
+                  <div class="mb-8 text-center">
+                    <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-2">
+                      Verificação de Segurança
+                    </BaseHeading>
+                    <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+                      Digitie o código de 6 dígitos que enviamos para seu <span
+                        class="font-medium text-muted-800 dark:text-muted-100">celular</span>.
+                    </BaseParagraph>
+                  </div>
+
+                  <!-- Code Inputs -->
+                  <div class="flex flex-col items-center w-full">
+                    <div class="flex justify-center gap-2 sm:gap-3" :class="logged && 'pointer-events-none'">
+                      <input v-for="i in codeLength" :key="`pin${i}`" :ref="(el) => {
+                        inputElements[i] = el as HTMLInputElement
+                      }" v-focus="i === 1" type="text" :name="`pin${i}`" maxlength="1"
+                        class="dark:bg-muted-800 dark:border-muted-700 h-14 w-12 sm:h-16 sm:w-14 rounded-xl border-2 border-muted-200 bg-white text-center text-3xl font-bold transition-all focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+                        :value="input[i - 1] !== undefined ? input[i - 1] : ''" placeholder="&bull;"
+                        :disabled="input.length < i - 1 || logged" @paste.prevent="(event) => paste(event)"
+                        @keydown="(event) => type(event, i)">
+                    </div>
+
+                    <!-- Status & Resend -->
+                    <div class="mt-10 w-full text-center">
+                      <div v-if="loading" class="mb-4 flex items-center justify-center gap-2 text-primary-500">
+                        <Icon name="svg-spinners:270-ring-with-bg" class="size-4" />
+                        <BaseText size="xs" weight="medium">Verificando segurança...</BaseText>
+                      </div>
+
+                      <div class="flex flex-col items-center gap-1">
+                        <BaseText size="xs" class="text-muted-400">Não recebeu o código?</BaseText>
+                        <button type="button"
+                          class="text-primary-600 dark:text-primary-400 font-sans text-sm font-semibold hover:underline"
+                          @click="resendCode">
+                          Enviar novo código
+                        </button>
                       </div>
                     </div>
                   </div>
