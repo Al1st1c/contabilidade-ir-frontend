@@ -211,11 +211,7 @@ async function fetchKanban() {
             ? {
               id: card.assignedTo.id,
               name: card.assignedTo.name,
-              avatar: card.assignedTo.photo
-                ? (card.assignedTo.photo.startsWith('http')
-                  ? card.assignedTo.photo
-                  : `${useRuntimeConfig().public.apiBase}/files/${card.assignedTo.photo}`)
-                : '/img/avatars/placeholder.svg',
+              avatar: card.assignedTo.photo || '/img/avatars/placeholder.svg',
             }
             : undefined,
           dueDate: card.dueDate,
@@ -569,7 +565,8 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
       <!-- Kanban Board + Scrolling -->
       <ClientOnly>
         <template #default>
-          <div class="flex-1 overflow-x-auto overflow-y-hidden pb-4">
+          <AppPageLoading v-if="isLoading" message="Preparando seu dashboard..." />
+          <div v-else class="flex-1 overflow-x-auto overflow-y-hidden pb-4">
             <!-- Columns Container -->
             <div ref="columnsContainer" class="flex gap-4 h-full">
               <!-- Column (Screenshot Style) -->
@@ -792,7 +789,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
 
         <!-- Fallback for SSR -->
         <template #fallback>
-          <AppPageLoading message="Buscando declarações..." />
+          <AppPageLoading message="Preparando seu dashboard..." />
         </template>
       </ClientOnly>
     </div>
