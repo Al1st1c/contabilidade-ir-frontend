@@ -12,8 +12,8 @@ definePageMeta({
     title: 'Entrar',
     description: 'For authentication and sign in',
     categories: ['layouts', 'authentication'],
-    src: '/assets/funil/background.jpg',
-    srcDark: '/assets/funil/background.jpg',
+    src: '/assets/funil/background.png',
+    srcDark: '/assets/funil/background.png',
     order: 152,
   },
 })
@@ -454,251 +454,150 @@ const onSubmit = handleSubmit(async (values) => {
 
 <template>
   <ClientOnly>
-    <div class="dark:bg-muted-800 flex min-h-screen bg-white">
-      <div
-        class="bg-muted-100 dark:bg-muted-900 relative hidden w-0 flex-1 items-center justify-center lg:flex lg:w-3/5"
-      >
-        <div class="size-full">
-          <img
-            src="assets/funil/background.png"
-            alt="Integra Flux"
-            class="size-full object-cover"
-          >
+    <div class="dark:bg-muted-800 min-h-screen bg-white">
+      <div class="relative mx-auto flex min-h-screen max-w-10xl">
+        <!-- Left Column: Content & Illustration -->
+        <div class="bg-muted-100 dark:bg-muted-900 relative  hidden w-1/2 items-center justify-center p-12 lg:flex">
+          <div class="text-center">
+            <img src="assets/funil/background.png" alt="Gestor IRPF" class="mx-auto mb-2 max-w-sm rounded-2xl w-60">
+            <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
+              Mais controle. Menos preocupações.
+            </BaseHeading>
+            <BaseParagraph class="text-muted-500 dark:text-muted-400 max-w-sm mx-auto">
+              Sua plataforma inteligente para gestão de declarações de imposto de renda.
+              Organize, automatize e escale seu escritório de contabilidade.
+            </BaseParagraph>
+          </div>
         </div>
-      </div>
-      <div
-        class="relative flex flex-1 flex-col justify-center px-6 py-12 lg:w-2/5 lg:flex-none"
-      >
-        <div class="dark:bg-muted-800 relative mx-auto w-full max-w-sm bg-white">
-          <!-- Nav -->
-          <div class="flex w-full items-center justify-between">
-            <BaseThemeToggle />
-          </div>
 
-          <div v-if="!isTwoFactor">
-            <img
-              src="/img/logo.png"
-              alt="Integra Flux"
-              class="mx-auto w-60 dark:hidden"
-            >
-            <img
-              src="/img/logo.png"
-              alt="Integra Flux"
-              class="mx-auto hidden w-60 dark:block"
-            >
-          </div>
-
-          <!-- Form section -->
-          <div v-if="!isTwoFactor" class="mt-6">
-            <div class="mt-5">
-              <!-- Form -->
-              <form
-                method="POST"
-                action=""
-                class="mt-6"
-                novalidate
-                @submit.prevent="onSubmit"
-              >
-                <div class="space-y-4">
-                  <Field
-                    v-slot="{ field, errorMessage, handleChange, handleBlur }"
-                    name="email"
-                  >
-                    <BaseField
-                      v-slot="{ inputAttrs, inputRef }"
-                      label="Email"
-                      :state="errorMessage ? 'error' : 'idle'"
-                      :error="errorMessage"
-                      :disabled="isSubmitting"
-                      required
-                    >
-                      <BaseInput
-                        :ref="inputRef"
-                        v-bind="inputAttrs"
-                        :model-value="field.value"
-                        type="email"
-                        placeholder="Email"
-                        autocomplete="email"
-                        rounded="lg"
-                        :classes="{
-                          input: 'h-12',
-                        }"
-                        @update:model-value="handleChange"
-                        @blur="handleBlur"
-                      />
-                    </BaseField>
-                  </Field>
-
-                  <Field
-                    v-slot="{ field, errorMessage, handleChange, handleBlur }"
-                    name="senha"
-                  >
-                    <BaseField
-                      v-slot="{ inputAttrs, inputRef }"
-                      label="Senha"
-                      :state="errorMessage ? 'error' : 'idle'"
-                      :error="errorMessage"
-                      :disabled="isSubmitting"
-                      required
-                    >
-                      <BaseInput
-                        :ref="inputRef"
-                        v-bind="inputAttrs"
-                        :model-value="field.value"
-                        type="password"
-                        placeholder="Senha"
-                        autocomplete="current-password"
-                        rounded="lg"
-                        :classes="{
-                          input: 'h-12',
-                        }"
-                        @update:model-value="handleChange"
-                        @blur="handleBlur"
-                      />
-                    </BaseField>
-                  </Field>
-                </div>
-
-                <!-- Remember -->
-                <div class="mt-6 flex items-center justify-between">
-                  <div class="text-xs leading-5">
-                    <NuxtLink
-                      to="https://wa.me/551132808396"
-                      class="text-primary-600 hover:text-primary-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline"
-                    >
-                      Esqueci minha senha
-                    </NuxtLink>
-                  </div>
-                  <div class="text-xs leading-5">
-                    <NuxtLink
-                      to="/auth/register"
-                      class="text-info-600 hover:text-info-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline"
-                    >
-                      Criar minha conta
-                    </NuxtLink>
-                  </div>
-                </div>
-
-                <!-- Submit -->
-                <div class="mt-6">
-                  <div class="block w-full rounded-md shadow-xs">
-                    <BaseButton
-                      :disabled="isSubmitting"
-                      :loading="isSubmitting"
-                      type="submit"
-                      variant="primary"
-                      rounded="lg"
-                      class="h-11! w-full"
-                    >
-                      Entrar
-                    </BaseButton>
-                  </div>
-                </div>
-              </form>
+        <!-- Right Column: Login Form -->
+        <div class="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-12">
+          <div class="mx-auto w-full max-w-md">
+            <!-- Nav -->
+            <div class="flex w-full items-center justify-between">
+              <BaseThemeToggle />
             </div>
-          </div>
 
-          <!-- 2FA Section -->
-          <div v-if="isTwoFactor" class="mt-6">
-            <form
-              action=""
-              method="POST"
-              class="mt-6"
-              @submit.prevent
-            >
-              <div>
-                <div class="space-y-4">
-                  <div class="flex size-full flex-col">
-                    <div
-                      class="pointer-events-none flex w-full items-center justify-center pt-8"
-                    >
-                      <div class="flex h-16 items-center justify-center">
-                        <TairoCheckAnimated v-if="logged" size="sm" />
-                        <BaseIconBox
-                          v-else
-                          color="primary"
-                          size="lg"
-                          rounded="full"
-                          class="mx-auto"
-                        >
-                          <Icon
-                            name="ph:lock-duotone"
-                            class="text-white-500 mx-auto size-8"
-                          />
-                        </BaseIconBox>
+            <div v-if="!isTwoFactor">
+              <img src="/img/logo.png" alt="Integra Flux" class="mx-auto w-60 dark:hidden">
+              <img src="/img/logo-white.png" alt="Integra Flux" class="mx-auto hidden w-60 dark:block">
+            </div>
+
+            <!-- Form section -->
+            <div v-if="!isTwoFactor" class="mt-6">
+              <div class="mt-5">
+                <!-- Form -->
+                <form method="POST" action="" class="mt-6" novalidate @submit.prevent="onSubmit">
+                  <div class="space-y-4">
+                    <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="email">
+                      <BaseField v-slot="{ inputAttrs, inputRef }" label="Email"
+                        :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" :disabled="isSubmitting"
+                        required>
+                        <BaseInput :ref="inputRef" v-bind="inputAttrs" :model-value="field.value" type="email"
+                          placeholder="Email" autocomplete="email" rounded="lg" :classes="{
+                            input: 'h-12',
+                          }" @update:model-value="handleChange" @blur="handleBlur" />
+                      </BaseField>
+                    </Field>
+
+                    <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="senha">
+                      <BaseField v-slot="{ inputAttrs, inputRef }" label="Senha"
+                        :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" :disabled="isSubmitting"
+                        required>
+                        <BaseInput :ref="inputRef" v-bind="inputAttrs" :model-value="field.value" type="password"
+                          placeholder="Senha" autocomplete="current-password" rounded="lg" :classes="{
+                            input: 'h-12',
+                          }" @update:model-value="handleChange" @blur="handleBlur" />
+                      </BaseField>
+                    </Field>
+                  </div>
+
+                  <!-- Remember -->
+                  <div class="mt-6 flex items-center justify-between">
+                    <div class="text-xs leading-5">
+                      <NuxtLink to="https://wa.me/551132808396"
+                        class="text-primary-600 hover:text-primary-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline">
+                        Esqueci minha senha
+                      </NuxtLink>
+                    </div>
+                    <div class="text-xs leading-5">
+                      <NuxtLink to="/auth/register"
+                        class="text-info-600 hover:text-info-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline">
+                        Criar minha conta
+                      </NuxtLink>
+                    </div>
+                  </div>
+
+                  <!-- Submit -->
+                  <div class="mt-6">
+                    <div class="block w-full rounded-md shadow-xs">
+                      <BaseButton :disabled="isSubmitting" :loading="isSubmitting" type="submit" variant="primary"
+                        rounded="lg" class="h-11! w-full">
+                        Entrar
+                      </BaseButton>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- 2FA Section -->
+            <div v-if="isTwoFactor" class="mt-6">
+              <form action="" method="POST" class="mt-6" @submit.prevent>
+                <div>
+                  <div class="space-y-4">
+                    <div class="flex size-full flex-col">
+                      <div class="pointer-events-none flex w-full items-center justify-center pt-8">
+                        <div class="flex h-16 items-center justify-center">
+                          <TairoCheckAnimated v-if="logged" size="sm" />
+                          <BaseIconBox v-else color="primary" size="lg" rounded="full" class="mx-auto">
+                            <Icon name="ph:lock-duotone" class="text-white-500 mx-auto size-8" />
+                          </BaseIconBox>
+                        </div>
                       </div>
-                    </div>
-                    <div class="pt-4 text-center">
-                      <BaseHeading
-                        tag="h2"
-                        size="3xl"
-                        weight="medium"
-                        class="mb-1"
-                      >
-                        Digite o código
-                      </BaseHeading>
-                      <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-2">
-                        Digite o código que <strong>enviamos para o seu telefone</strong>
-                      </BaseParagraph>
-                    </div>
-                    <div
-                      class="text-muted-800 dark:text-muted-100 mx-auto flex h-60 w-72 flex-col rounded text-center"
-                    >
+                      <div class="pt-4 text-center">
+                        <BaseHeading tag="h2" size="3xl" weight="medium" class="mb-1">
+                          Digite o código
+                        </BaseHeading>
+                        <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-2">
+                          Digite o código que <strong>enviamos para o seu telefone</strong>
+                        </BaseParagraph>
+                      </div>
                       <div
-                        class="flex w-full justify-center gap-3"
-                        :class="logged && 'pointer-events-none'"
-                      >
-                        <input
-                          v-for="i in codeLength"
-                          :key="`pin${i}`"
-                          :ref="
-                            (el) => {
-                              inputElements[i] = el as HTMLInputElement
-                            }
-                          "
-                          v-focus="i === 1"
-                          type="text"
-                          :name="`pin${i}`"
-                          maxlength="1"
-                          class="dark:bg-muted-800 unselectable nui-focus inline w-16 select-none rounded-lg bg-white py-5 text-center text-4xl font-bold transition-all"
-                          :value="input[i - 1] !== undefined ? input[i - 1] : '-'"
-                          placeholder="0"
-                          :disabled="input.length < i - 1 || logged"
-                          @paste.prevent="(event) => paste(event)"
-                          @keydown="(event) => type(event, i)"
-                        >
-                      </div>
-                      <div class="mt-10">
-                        <!-- Um texto indicando que esta verificando o código -->
-                        <BaseText
-                          v-if="loading"
-                          size="sm"
-                          class="text-muted-400"
-                        >
-                          Verificando código, aguarde...
-                        </BaseText>
-
-                        <div class="mt-8 flex items-center justify-between">
-                          <BaseText
-                            size="sm"
-                            class="text-muted-400"
-                          >
-                            Não recebeu?
+                        class="text-muted-800 dark:text-muted-100 mx-auto flex h-60 w-72 flex-col rounded text-center">
+                        <div class="flex w-full justify-center gap-3" :class="logged && 'pointer-events-none'">
+                          <input v-for="i in codeLength" :key="`pin${i}`" :ref="(el) => {
+                            inputElements[i] = el as HTMLInputElement
+                          }
+                            " v-focus="i === 1" type="text" :name="`pin${i}`" maxlength="1"
+                            class="dark:bg-muted-800 unselectable nui-focus inline w-16 select-none rounded-lg bg-white py-5 text-center text-4xl font-bold transition-all"
+                            :value="input[i - 1] !== undefined ? input[i - 1] : '-'" placeholder="0"
+                            :disabled="input.length < i - 1 || logged" @paste.prevent="(event) => paste(event)"
+                            @keydown="(event) => type(event, i)">
+                        </div>
+                        <div class="mt-10">
+                          <!-- Um texto indicando que esta verificando o código -->
+                          <BaseText v-if="loading" size="sm" class="text-muted-400">
+                            Verificando código, aguarde...
                           </BaseText>
-                          <button
-                            type="button"
-                            class="text-primary-500 font-sans text-sm underline-offset-4 hover:underline"
-                            @click="resendCode"
-                          >
-                            Enviar novamente
-                          </button>
+
+                          <div class="mt-8 flex items-center justify-between">
+                            <BaseText size="sm" class="text-muted-400">
+                              Não recebeu?
+                            </BaseText>
+                            <button type="button"
+                              class="text-primary-500 font-sans text-sm underline-offset-4 hover:underline"
+                              @click="resendCode">
+                              Enviar novamente
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       </div>
