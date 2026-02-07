@@ -617,6 +617,13 @@ const filteredMembers = computed(() => {
     )
   })
 })
+
+const showNoDeclarationsAlert = computed(() => {
+  return !isLoading.value &&
+    user.value?.onboardingStatus === 'COMPLETED' &&
+    stats.value.total === 0 &&
+    !selectedEmployeeId.value
+})
 </script>
 
 <template>
@@ -633,6 +640,28 @@ const filteredMembers = computed(() => {
 
       <!-- Grid -->
       <div v-else class="grid grid-cols-12 gap-4">
+        <!-- Alert: No Declarations (Whitelabel Minimalist) -->
+        <div v-if="showNoDeclarationsAlert" class="col-span-12 mb-3">
+          <div
+            class="flex items-center justify-between gap-4 rounded-xl bg-primary-500/10 border border-primary-500/20 px-4 py-2.5 shadow-sm">
+            <div class="flex items-center gap-3">
+              <div
+                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white shadow-sm shadow-primary-500/20">
+                <Icon name="solar:document-add-bold" class="size-4" />
+              </div>
+              <p class="text-sm font-semibold text-primary-900 dark:text-primary-50">
+                Crie seu primeiro Imposto de Renda <span class="hidden sm:inline font-normal opacity-70">para ativar
+                  todos
+                  os recursos do dashboard.</span>
+              </p>
+            </div>
+            <BaseButton to="/dashboard/ir" size="sm" variant="primary" shadow="primary" rounded="lg"
+              class="h-9 px-5 text-xs font-bold uppercase tracking-wider">
+              <span>Começar agora</span>
+              <Icon name="lucide:arrow-right" class="ms-1.5 size-3" />
+            </BaseButton>
+          </div>
+        </div>
         <!-- Grid column -->
         <div class="col-span-12">
           <!-- Header Row -->
