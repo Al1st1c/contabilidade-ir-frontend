@@ -26,6 +26,8 @@ const form = ref({
   secondaryColor: 'zinc',
 })
 
+const canEditWhitelabel = computed(() => tenant.value?.allowWhitelabel !== false)
+
 // Tailwind color options (now using centralized safe list)
 const primaryColors = safeColors
 
@@ -59,9 +61,32 @@ async function fetchTenant() {
   }
 }
 
+function checkWhitelabelPermission() {
+  if (tenant.value?.allowWhitelabel === false) {
+    toaster.add({
+      title: 'Recurso Bloqueado',
+      description: 'Seu plano atual não permite personalização (Cores, Logo, Nome). Considere fazer um upgrade para liberar o Whitelabel.',
+      icon: 'solar:lock-bold-duotone',
+    })
+    return false
+  }
+  return true
+}
+
+function setPrimaryColor(color: string) {
+  if (!checkWhitelabelPermission()) return
+  form.value.primaryColor = color
+}
+
+function setSecondaryColor(color: string) {
+  if (!checkWhitelabelPermission()) return
+  form.value.secondaryColor = color
+}
+
 // Logo upload logic
 const logoInput = ref<HTMLInputElement | null>(null)
 function triggerLogoUpload() {
+  if (!checkWhitelabelPermission()) return
   logoInput.value?.click()
 }
 
@@ -164,8 +189,10 @@ onMounted(fetchTenant)
       <div class="grid grid-cols-12 gap-8 lg:gap-12">
         <div class="col-span-12 lg:col-span-4">
           <div class="sticky top-24">
-            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+            <BaseHeading as="h3" size="lg" weight="medium"
+              class="text-muted-800 dark:text-white mb-2 flex items-center gap-2">
               Logo & Marca
+              <Icon v-if="!canEditWhitelabel" name="solar:lock-bold-duotone" class="size-5 text-warning-500" />
             </BaseHeading>
             <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
               Sua marca principal que aparecerá no topo do sistema e em todos os documentos gerados para seus clientes.
@@ -194,11 +221,11 @@ onMounted(fetchTenant)
                 <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="handleLogoUpload">
                 <BaseField label="Nome por Extenso">
                   <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva"
-                    icon="solar:buildings-bold-duotone" />
+                    icon="solar:buildings-bold-duotone" :disabled="!canEditWhitelabel" />
                 </BaseField>
                 <BaseField label="Nome Curto (Menu)">
-                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva"
-                    icon="solar:shop-bold-duotone" />
+                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone"
+                    :disabled="!canEditWhitelabel" />
                 </BaseField>
               </div>
             </div>
@@ -210,8 +237,10 @@ onMounted(fetchTenant)
       <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
         <div class="col-span-12 lg:col-span-4">
           <div class="sticky top-24">
-            <BaseHeading as="h3" size="lg" weight="medium" class="text-muted-800 dark:text-white mb-2">
+            <BaseHeading as="h3" size="lg" weight="medium"
+              class="text-muted-800 dark:text-white mb-2 flex items-center gap-2">
               Cores do Sistema
+              <Icon v-if="!canEditWhitelabel" name="solar:lock-bold-duotone" class="size-5 text-warning-500" />
             </BaseHeading>
             <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
               Personalize a paleta de cores para combinar com seu manual de marca. A cor primária afeta botões e
@@ -231,7 +260,7 @@ onMounted(fetchTenant)
                     class="size-10 rounded-xl transition-all duration-200" :class="[
                       c.class,
                       form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100',
-                    ]" @click="form.primaryColor = c.name" />
+                    ]" @click="setPrimaryColor(c.name)" />
                 </div>
               </div>
 
@@ -244,7 +273,7 @@ onMounted(fetchTenant)
                     class="size-14 rounded-xl border-2 transition-all duration-200" :class="[
                       c.class,
                       form.secondaryColor === c.name ? 'border-primary-500 ring-4 ring-primary-500/20 scale-110' : 'border-transparent hover:scale-105 opacity-60 hover:opacity-100',
-                    ]" @click="form.secondaryColor = c.name" />
+                    ]" @click="setSecondaryColor(c.name)" />
                 </div>
               </div>
 
@@ -276,8 +305,13 @@ onMounted(fetchTenant)
 
       <!-- Action Footer -->
       <div class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
-        <BaseButton variant="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12" @click="saveSettings">
-          Publicar Alterações
+        <BaseButton :variant="canEditWhitelabel ? 'primary' : 'muted'" rounded="lg" size="lg" :loading="isSaving"
+          class="px-12" @click="saveSettings">
+          <span v-if="canEditWhitelabel">Publicar Alterações</span>
+          <span v-else class="flex items-center gap-2">
+            <Icon name="solar:lock-bold-duotone" class="size-4" />
+            Disponível no Plano Pro
+          </span>
         </BaseButton>
       </div>
     </div>
