@@ -3,6 +3,8 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { Field, useForm } from 'vee-validate'
 import { z } from 'zod'
 import { vMaska } from 'maska/vue'
+const { useCustomFetch } = useApi()
+
 
 definePageMeta({
   layout: 'empty',
@@ -94,7 +96,7 @@ type UserFormData = z.infer<typeof userSchema>
 
 const validationSchema = toTypedSchema(userSchema)
 
-const { handleSubmit, values, errors } = useForm<UserFormData>({
+const { handleSubmit, values, errors, setValues } = useForm<UserFormData>({
   validationSchema,
   initialValues: {
     name: '',
@@ -195,6 +197,30 @@ function nextStep() {
 function prevStep() {
   if (step.value > 1) {
     step.value--
+    // Restore form data when going back to step 1
+    if (step.value === 1 && formData.value.name) {
+      setValues({
+        name: formData.value.name,
+        email: formData.value.email,
+        phone: formData.value.phone,
+        password: formData.value.password,
+        confirmPassword: formData.value.password,
+      })
+    }
+  }
+}
+
+function editUserData() {
+  step.value = 1
+  // Restore form values
+  if (formData.value.name) {
+    setValues({
+      name: formData.value.name,
+      email: formData.value.email,
+      phone: formData.value.phone,
+      password: formData.value.password,
+      confirmPassword: formData.value.password,
+    })
   }
 }
 
@@ -297,19 +323,19 @@ async function copyPixCode() {
   }
 }
 
-const onSubmit = handleSubmit(async (formValues: any) => {
+const onSubmit = (async () => {
   isSubmitting.value = true
 
   try {
-    const baseUrl = config.public.apiBase || 'http://localhost:3333'
 
-    const response = await $fetch<any>(`${baseUrl}/auth/signup-with-plan`, {
+
+    const { data: response } = await useCustomFetch<any>('/auth/signup-with-plan', {
       method: 'POST',
       body: {
-        name: formData.value.name || formValues.name,
-        email: formData.value.email || formValues.email,
-        password: formData.value.password || formValues.password,
-        phone: (formData.value.phone || formValues.phone)?.replace(/\D/g, '') || undefined,
+        name: formData.value.name,
+        email: formData.value.email,
+        password: formData.value.password,
+        phone: formData.value.phone?.replace(/\D/g, '') || undefined,
         planSlug: selectedPlan.value,
         billingPeriod: billingCycle.value,
         paymentMethod: isFreeFlow.value ? 'FREE' : paymentMethod.value,
@@ -317,19 +343,14 @@ const onSubmit = handleSubmit(async (formValues: any) => {
       },
     })
 
-    if (response.error) {
-      toaster.add({
-        title: 'Erro',
-        description: response.message || 'Erro ao criar conta',
-        icon: 'ph:warning-circle-fill',
-      })
-      return
+    // Salvar token de autenticação
+    if (response.access_token) {
+      const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7 })
+      tokenCookie.value = response.access_token
     }
 
-    const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7 })
-    tokenCookie.value = response.access_token
-
-    if (isFreeFlow.value) {
+    // Fluxo gratuito - ir direto para dashboard
+    if (isFreeFlow.value || !response.payment) {
       toaster.add({
         title: 'Sucesso!',
         description: 'Conta criada com sucesso!',
@@ -339,28 +360,60 @@ const onSubmit = handleSubmit(async (formValues: any) => {
       return
     }
 
-    if (paymentMethod.value === 'PIX') {
-      pixCode.value = `00020126580014br.gov.bcb.pix0136${crypto.randomUUID()}5204000053039865802BR5925GESTORIRPF6009SAO PAULO62070503***6304`
-      pixQrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixCode.value)}`
+    // Processar informações de pagamento da API
+    const paymentInfo = response.payment
+
+    // Pagamento via PIX - mostrar checkout com dados da API
+    if (paymentInfo.method === 'PIX' && paymentInfo.pix) {
+      pixCode.value = paymentInfo.pix.code
+      pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl
       showPixCheckout.value = true
+
+      // Iniciar timer com tempo de expiração da API
+      const expiresIn = paymentInfo.pix.expiresIn || 1800 // 30 minutos padrão
+      pixTimeRemaining.value = expiresIn
       startPixTimer()
+
+      toaster.add({
+        title: 'PIX Gerado!',
+        description: 'Código PIX gerado com sucesso. Complete o pagamento.',
+        icon: 'ph:qr-code-duotone',
+      })
       return
     }
 
-    if (paymentMethod.value === 'CREDIT_CARD') {
+    // Pagamento via cartão - redirecionar para Mercado Pago
+    if (paymentInfo.method === 'CREDIT_CARD' && paymentInfo.checkoutUrl) {
       toaster.add({
         title: 'Redirecionando...',
-        description: 'Você será redirecionado para o Mercado Pago.',
+        description: 'Você será redirecionado para a página de pagamento.',
         icon: 'ph:arrow-square-out-fill',
       })
-      setTimeout(() => router.push('/dashboard'), 2000)
+
+      // Redirecionar para checkout do Mercado Pago
+      setTimeout(() => {
+        window.location.href = paymentInfo.checkoutUrl
+      }, 1500)
+      return
     }
+
+    // Fallback - algum erro na resposta
+    toaster.add({
+      title: 'Conta criada!',
+      description: 'Entre em contato para completar o pagamento.',
+      icon: 'ph:check-circle-fill',
+    })
+    setTimeout(() => router.push('/dashboard'), 2000)
   }
   catch (err: any) {
     console.error('Erro no signup:', err)
+
+    // Extrair mensagem de erro da API
+    const errorMessage = err.data?.message || err.message || 'Erro ao criar conta. Tente novamente.'
+
     toaster.add({
-      title: 'Erro',
-      description: err.data?.message || err.message || 'Erro ao criar conta',
+      title: 'Erro ao criar conta',
+      description: errorMessage,
       icon: 'ph:warning-circle-fill',
     })
   }
@@ -368,6 +421,7 @@ const onSubmit = handleSubmit(async (formValues: any) => {
     isSubmitting.value = false
   }
 })
+
 
 // ===========================================================================
 // LIFECYCLE
@@ -563,7 +617,7 @@ onUnmounted(() => {
               </BaseParagraph>
 
               <div v-if="isLoading" class="flex items-center justify-center py-12">
-                <BaseLoading class="size-8" />
+                <AppPageLoading class="size-8" />
               </div>
 
               <div v-else class="space-y-4">
@@ -655,7 +709,7 @@ onUnmounted(() => {
                   <BaseText size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider">
                     Seus Dados
                   </BaseText>
-                  <button type="button" class="text-xs text-primary-500 hover:underline" @click="step = 1">
+                  <button type="button" class="text-xs text-primary-500 hover:underline" @click="editUserData">
                     Editar
                   </button>
                 </div>

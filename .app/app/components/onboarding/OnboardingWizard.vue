@@ -810,10 +810,10 @@ onMounted(async () => {
                   <span>Vamos Começar</span>
                   <Icon name="lucide:arrow-right" class="ms-2 size-5" />
                 </BaseButton>
-                <BaseButton rounded="sm" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
+                <!-- <BaseButton rounded="sm" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
                   @click.prevent="router.push('/dashboard')">
                   <span>Pular Guia</span>
-                </BaseButton>
+                </BaseButton> -->
               </div>
             </div>
 
