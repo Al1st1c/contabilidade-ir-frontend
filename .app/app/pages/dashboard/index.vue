@@ -6,7 +6,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useSubscription } from '~/composables/useSubscription'
 
 import { resolveColor } from '~/utils/colors'
-// import OnboardingWizard from '~/components/onboarding/OnboardingWizard.vue'
+import OnboardingWizard from '~/components/onboarding/OnboardingWizard.vue'
 
 definePageMeta({
   title: 'My Projects',
@@ -248,6 +248,12 @@ async function fetchTeam() {
 }
 
 onMounted(() => {
+  console.log('🏠 Dashboard montado')
+  console.log('  - User:', user.value)
+  console.log('  - User name:', user.value?.name)
+  console.log('  - Onboarding status:', user.value?.onboardingStatus)
+  console.log('  - Should open onboarding?', isOnboardingOpen.value)
+
   fetchDashboard()
   fetchTeam()
   // Fetch tenant data for whitelabel if not already loaded

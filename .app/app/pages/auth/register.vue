@@ -3,8 +3,6 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { Field, useForm } from 'vee-validate'
 import { z } from 'zod'
 import { vMaska } from 'maska/vue'
-const { useCustomFetch } = useApi()
-
 
 definePageMeta({
   layout: 'empty',
@@ -71,11 +69,28 @@ const pixCode = ref('')
 const pixQrCodeUrl = ref('')
 const pixExpiresAt = ref<Date | null>(null)
 const pixTimeRemaining = ref(0)
+
+// Exit retention modal state
+const showExitModal = ref(false)
+const isExitingPage = ref(false)
 const pixInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 const router = useRouter()
 const toaster = useNuiToasts()
 const config = useRuntimeConfig()
+const { useCustomFetch } = useApi()
+
+// Usar cookies diretamente para poder atribuir valores
+const token = useCookie<string | null>('auth_token', {
+  maxAge: 60 * 60 * 24 * 7, // 7 dias
+  path: '/',
+  sameSite: 'lax',
+})
+const userCookie = useCookie<any>('auth_user', { // Usar o mesmo nome que useAuth
+  maxAge: 60 * 60 * 24 * 7,
+  path: '/',
+  sameSite: 'lax',
+})
 
 // ===========================================================================
 // FORM VALIDATION
@@ -84,7 +99,7 @@ const config = useRuntimeConfig()
 const userSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('Email inválido'),
-  phone: z.string().optional(),
+  phone: z.string().min(14, 'Telefone é obrigatório'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
 }).refine((data: any) => data.password === data.confirmPassword, {
@@ -343,10 +358,52 @@ const onSubmit = (async () => {
       },
     })
 
-    // Salvar token de autenticação
+    console.log('📦 Resposta do signup:', response)
+
+    // Salvar token e dados do usuário
     if (response.access_token) {
-      const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7 })
-      tokenCookie.value = response.access_token
+      console.log('🔑 Token recebido:', response.access_token.substring(0, 20) + '...')
+
+      // Salvar token
+      token.value = response.access_token
+      console.log('💾 Token salvo no cookie')
+
+      // Aguardar um momento para garantir que o token foi salvo
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Buscar dados completos do usuário via /auth/me
+      try {
+        console.log('🔍 Buscando dados do usuário...')
+        const { data: userData } = await useCustomFetch<any>('/auth/me', {
+          method: 'GET',
+        })
+
+        // Salvar dados do usuário no cookie
+        userCookie.value = userData
+
+        console.log('✅ Dados do usuário carregados e salvos:', {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          onboardingStatus: userData.onboardingStatus,
+        })
+      } catch (userError) {
+        console.error('❌ Erro ao buscar dados do usuário:', userError)
+        // Se falhar, usar os dados básicos retornados pelo signup
+        if (response.user) {
+          userCookie.value = response.user
+          console.log('⚠️ Usando dados básicos do signup:', response.user)
+        }
+      }
+
+      // Verificar se tudo foi salvo antes de redirecionar
+      console.log('🔍 Verificação final antes de redirecionar:')
+      console.log('  - Token salvo?', !!token.value)
+      console.log('  - User salvo?', !!userCookie.value)
+      console.log('  - User name:', userCookie.value?.name)
+      console.log('  - Onboarding status:', userCookie.value?.onboardingStatus)
+    } else {
+      console.error('❌ Nenhum token recebido do backend!')
     }
 
     // Fluxo gratuito - ir direto para dashboard
@@ -356,6 +413,8 @@ const onSubmit = (async () => {
         description: 'Conta criada com sucesso!',
         icon: 'ph:check-circle-fill',
       })
+
+      console.log('🚀 Redirecionando para dashboard em 1 segundo...')
       setTimeout(() => router.push('/dashboard'), 1000)
       return
     }
@@ -422,6 +481,38 @@ const onSubmit = (async () => {
   }
 })
 
+function switchToFreePlan() {
+  selectedPlan.value = 'free'
+  paymentMethod.value = 'FREE'
+  showExitModal.value = false
+  isExitingPage.value = false
+
+  toaster.add({
+    title: 'Plano alterado',
+    description: 'Agora você está usando o plano gratuito. Continue o cadastro!',
+    icon: 'ph:check-circle-fill',
+  })
+}
+
+function confirmExit() {
+  showExitModal.value = false
+  isExitingPage.value = true
+  // Permitir saída da página
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  // Redirecionar ou permitir navegação
+  router.push('/auth')
+}
+
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  // Apenas interceptar se estiver na step 3, com plano pago e não estiver já saindo
+  if (step.value === 3 && !isFreeFlow.value && !isExitingPage.value && !isSubmitting.value) {
+    e.preventDefault()
+    // Mostrar modal customizado (o navegador pode não mostrar a mensagem customizada)
+    showExitModal.value = true
+    // Padrão para navegadores modernos
+    return (e.returnValue = 'Você tem um plano pago selecionado. Deseja mudar para o plano gratuito ao invés de sair?')
+  }
+}
 
 // ===========================================================================
 // LIFECYCLE
@@ -429,11 +520,18 @@ const onSubmit = (async () => {
 
 onMounted(() => {
   fetchPlans()
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onUnmounted(() => {
   if (pixInterval.value) clearInterval(pixInterval.value)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
+
+// Watch para adicionar/remover o event listener baseado no step
+watch([step, isFreeFlow, isSubmitting], () => {
+  // O listener já está sempre ativo, mas só age na condição correta
+}, { immediate: true })
 </script>
 
 <template>
@@ -577,7 +675,7 @@ onUnmounted(() => {
                 </Field>
 
                 <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="phone">
-                  <BaseField label="Telefone" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage">
+                  <BaseField label="Telefone" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" required>
                     <BaseInput v-maska="'(##) #####-####'" :model-value="field.value" type="tel"
                       placeholder="(00) 00000-0000" rounded="lg" :classes="{ input: 'h-12' }"
                       @update:model-value="handleChange" @blur="handleBlur" />
@@ -748,7 +846,7 @@ onUnmounted(() => {
                     <BaseText weight="semibold" class="text-muted-800 dark:text-white block">{{ currentPlan?.name }}
                     </BaseText>
                     <BaseText size="xs" class="text-muted-500 mt-0.5">{{ billingCycle === 'MONTHLY' ? 'Mensal' : 'Anual'
-                    }}
+                      }}
                     </BaseText>
                   </div>
                   <BaseText weight="bold" class="text-primary-500">{{ formatCurrency(currentPrice) }}</BaseText>
@@ -920,5 +1018,61 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modal de Retenção - Oferecer Plano Grátis -->
+    <DialogRoot v-model:open="showExitModal">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-50 bg-muted-900/50 backdrop-blur-sm" />
+        <DialogContent
+          class="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+
+          <div class="flex items-start gap-4 mb-4">
+            <div
+              class="size-12 rounded-full bg-warning-100 dark:bg-warning-900/30 flex items-center justify-center shrink-0">
+              <Icon name="lucide:alert-circle" class="size-6 text-warning-500" />
+            </div>
+            <div class="flex-1">
+              <DialogTitle as="h3" class="text-lg font-medium text-muted-800 dark:text-muted-100 mb-1">
+                Quer mesmo sair?
+              </DialogTitle>
+              <DialogDescription class="text-sm text-muted-500 dark:text-muted-400">
+                Você selecionou o plano <strong>{{ currentPlan?.name }}</strong>, mas ainda não finalizou.
+              </DialogDescription>
+            </div>
+          </div>
+
+
+          <div class="border-t border-muted-200 dark:border-muted-800 pt-4 mb-4">
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-muted-50 dark:bg-muted-800/50">
+              <Icon name="lucide:lightbulb" class="size-5 text-primary-500 shrink-0 mt-0.5" />
+              <div>
+                <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-muted-100 mb-1">
+                  Experimente o plano gratuito primeiro
+                </BaseText>
+                <BaseText size="sm" class="text-muted-500 dark:text-muted-400">
+                  Seus dados já estão salvos. Você pode começar grátis e fazer upgrade depois.
+                </BaseText>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <BaseButton variant="muted" rounded="lg" class="flex-1" @click="confirmExit">
+              Sair mesmo assim
+            </BaseButton>
+            <BaseButton variant="primary" rounded="lg" class="flex-1" @click="switchToFreePlan">
+              <Icon name="lucide:rocket" class="size-4 mr-1.5" />
+              Começar grátis
+            </BaseButton>
+          </div>
+
+          <DialogClose
+            class="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
+            <Icon name="lucide:x" class="h-4 w-4 text-muted-400" />
+            <span class="sr-only">Close</span>
+          </DialogClose>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </div>
 </template>

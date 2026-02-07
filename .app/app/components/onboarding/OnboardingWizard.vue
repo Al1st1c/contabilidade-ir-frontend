@@ -65,8 +65,8 @@ const steps = [
     id: 5,
     meta: {
       name: 'Finalização',
-      title: 'Veja como funciona o sistema',
-      subtitle: 'Estamos preparando seu ambiente. Em seguida, assista ao vídeo rápido e conclua.',
+      title: 'Tudo pronto 🥳 ',
+      subtitle: 'Preparamos um vídeo rápido para você conhecer as principais funcionalidades do sistema.',
     },
   },
 ] as const
