@@ -1,473 +1,548 @@
 <script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/zod'
+import { useDebounceFn } from '@vueuse/core'
+import { Field, useForm } from 'vee-validate'
+import { z } from 'zod'
+import { API_CONFIG } from '~/utils/config'
+
 definePageMeta({
-  title: 'Sistema de Gestão de IRPF',
-  layout: false,
+  layout: 'empty',
+  title: 'Entrar',
 })
 
-const features = [
-  {
-    icon: 'solar:users-group-rounded-bold-duotone',
-    title: 'Gestão de Clientes',
-    description: 'Organize todos os seus clientes em um só lugar com busca avançada e filtros inteligentes.',
-  },
-  {
-    icon: 'solar:document-text-bold-duotone',
-    title: 'Declarações IRPF',
-    description: 'Controle completo do status de cada declaração, prazos e documentos necessários.',
-  },
-  {
-    icon: 'solar:clipboard-list-bold-duotone',
-    title: 'Kanban Visual',
-    description: 'Quadros Kanban personalizáveis para acompanhar o progresso das declarações em tempo real.',
-  },
-  {
-    icon: 'solar:folder-with-files-bold-duotone',
-    title: 'Drive Integrado',
-    description: 'Armazenamento seguro de documentos com organização automática por cliente.',
-  },
-  {
-    icon: 'solar:chat-round-dots-bold-duotone',
-    title: 'Comunicação Automática',
-    description: 'Envio de SMS e WhatsApp para manter seus clientes sempre informados.',
-  },
-  {
-    icon: 'solar:chart-2-bold-duotone',
-    title: 'Relatórios e Dashboards',
-    description: 'Análises detalhadas e dashboards em tempo real para tomada de decisão estratégica.',
-  },
-]
+const VALIDATION_TEXT = {
+  EMAIL_REQUIRED: 'Um email válido é obrigatório',
+  PASSWORD_REQUIRED: 'Uma senha é obrigatória',
+}
 
-const plans = [
-  {
-    name: 'Gratuito',
-    price: 'R$ 0',
-    period: '',
-    description: 'Ideal para experimentar',
-    features: ['1 usuário', '1 IR/ano', '250MB de armazenamento', '5 SMS/mês'],
-    highlighted: false,
-  },
-  {
-    name: 'Básico',
-    price: 'R$ 99',
-    period: '/mês',
-    description: 'Para contadores autônomos',
-    features: ['2 usuários', '50 IRs/ano', '5GB de armazenamento', '100 SMS/mês', 'Relatórios'],
-    highlighted: false,
-  },
-  {
-    name: 'Profissional',
-    price: 'R$ 249',
-    period: '/mês',
-    description: 'Escritórios em crescimento',
-    features: ['10 usuários', '250 IRs/ano', '20GB de armazenamento', '500 SMS/mês', 'WhatsApp', 'Gestão de Equipe'],
-    highlighted: true,
-  },
-  {
-    name: 'Enterprise',
-    price: 'R$ 599',
-    period: '/mês',
-    description: 'Grandes operações',
-    features: ['50 usuários', '1000 IRs/ano', '100GB de armazenamento', '2000 SMS/mês', 'API', 'White Label'],
-    highlighted: false,
-  },
-]
+const zodSchema = z.object({
+  email: z.string().email(VALIDATION_TEXT.EMAIL_REQUIRED),
+  senha: z.string().min(1, VALIDATION_TEXT.PASSWORD_REQUIRED),
+  trustDevice: z.boolean(),
+})
+
+type FormInput = z.infer<typeof zodSchema>
+
+const validationSchema = toTypedSchema(zodSchema)
+const initialValues = {
+  email: '',
+  senha: '',
+  trustDevice: false,
+} satisfies FormInput
+
+const {
+  handleSubmit,
+  isSubmitting,
+  setFieldError,
+} = useForm({
+  validationSchema,
+  initialValues,
+})
+
+const router = useRouter()
+const toaster = useNuiToasts()
+const { login, verifyTwoFactor, isAuthenticated, token, debugCookies } = useAuth()
+const { useCustomFetch } = useApi()
+
+// Verifica se já está autenticado
+onMounted(async () => {
+  if (isAuthenticated.value) {
+    try {
+      const { data: userData } = await useCustomFetch<any>('/auth/me', {
+        method: 'GET',
+      })
+
+      const roleName = userData?.role?.name
+      const mobileRoles = ['Operador', 'Caixa', 'Portaria']
+
+      if (mobileRoles.includes(roleName)) {
+        router.push('/mobile')
+      }
+      else {
+        router.push('/dashboard')
+      }
+    }
+    catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error)
+      router.push('/dashboard')
+    }
+  }
+
+  if (router.currentRoute.value.query.firstAccess) {
+    toaster.add({
+      title: 'Obrigado por confiar em nós',
+      description: 'Preencha os campos com seu e-mail e sua senha!',
+      icon: 'ph:user-circle-fill',
+      progress: true,
+    })
+  }
+})
+
+// 2FA Variables
+const codeLength = ref(4)
+const input = ref<Array<number | undefined>>([])
+const inputElements = ref<HTMLInputElement[]>([])
+const email = ref('')
+const password = ref('')
+const loading = ref(false)
+const logged = ref(false)
+const isTwoFactor = ref(false)
+const recaptchaToken = ref('')
+
+async function getRecaptcha() {
+  const { $recaptchaV3 } = useNuxtApp()
+
+  if ($recaptchaV3 && API_CONFIG.SECURITY.RECAPTCHA_REQUIRED) {
+    try {
+      recaptchaToken.value = await $recaptchaV3.execute(API_CONFIG.SECURITY.RECAPTCHA_ACTION)
+    }
+    catch (error) {
+      console.error('Erro ao executar reCAPTCHA:', error)
+      toaster.add({
+        title: 'Ops..',
+        description: 'Falha na verificação de segurança. Por favor, tente novamente.',
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+      return
+    }
+
+    if (!recaptchaToken.value) {
+      toaster.add({
+        title: 'Erro',
+        description: 'Falha na verificação de segurança. Por favor, tente novamente.',
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+    }
+  }
+}
+
+async function validateCode(code: string) {
+  if (code.length !== codeLength.value)
+    return
+
+  loading.value = true
+
+  try {
+    const result = await verifyTwoFactor({
+      code,
+      email: email.value,
+      password: password.value,
+      recaptchaToken: recaptchaToken.value,
+    })
+
+    if (result.error) {
+      logged.value = false
+      clearInputs()
+      toaster.add({
+        title: 'Erro',
+        description: result.message,
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+      return
+    }
+
+    logged.value = true
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    try {
+      if (!token.value) {
+        throw new Error('Token não foi salvo corretamente')
+      }
+
+      const { data: userData } = await useCustomFetch<any>('/auth/me', {
+        method: 'GET',
+      })
+
+      const roleName = userData?.role?.name
+      const mobileRoles = ['Operador', 'Caixa', 'Portaria']
+
+      if (mobileRoles.includes(roleName)) {
+        toaster.add({
+          title: 'Sucesso',
+          description: `Bem-vindo, ${roleName}!`,
+          icon: 'ph:user-circle-fill',
+          progress: true,
+        })
+
+        setTimeout(() => {
+          router.push('/mobile')
+        }, 1000)
+      }
+      else {
+        toaster.add({
+          title: 'Sucesso',
+          description: 'Bem vindo ao seu centro de controle!',
+          icon: 'ph:user-circle-fill',
+          progress: true,
+        })
+
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1000)
+      }
+    }
+    catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error)
+      toaster.add({
+        title: 'Sucesso',
+        description: 'Bem vindo!',
+        icon: 'ph:user-circle-fill',
+        progress: true,
+      })
+
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1000)
+    }
+  }
+  catch (error) {
+    console.error('Erro ao validar código:', error)
+    toaster.add({
+      title: 'Erro',
+      description: 'Ocorreu um erro ao validar o código',
+      icon: 'ph:warning-circle-fill',
+      progress: true,
+    })
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+function clearInputs() {
+  input.value = Array.from({ length: codeLength.value }, () => undefined)
+  focusField(1)
+}
+
+function paste(event: ClipboardEvent) {
+  event.preventDefault()
+  const pasted = event.clipboardData
+    ?.getData('text')
+    ?.replace(/\D/g, '')
+    ?.substring(0, codeLength.value)
+
+  if (pasted) {
+    input.value = pasted.split('').map(Number)
+  }
+}
+
+function type(event: KeyboardEvent, index: number) {
+  if (event.code === 'ArrowRight') {
+    event.preventDefault()
+    nextTick(() => focusField(Math.min(codeLength.value, index + 1)))
+    return
+  }
+
+  if (event.code === 'ArrowLeft') {
+    event.preventDefault()
+    nextTick(() => focusField(Math.max(1, index - 1)))
+    return
+  }
+
+  if (event.code === 'Backspace') {
+    event.preventDefault()
+    input.value[index - 1] = undefined
+    nextTick(() => focusField(Math.max(1, index - 1)))
+    return
+  }
+
+  const key = event.key.replace(/\D/g, '')
+  if (key !== '') {
+    input.value[index - 1] = Number(key)
+    nextTick(() => focusField(Math.min(codeLength.value, index + 1)))
+  }
+}
+
+function focusField(n: number) {
+  if (!n || n > codeLength.value) {
+    n = 1
+  }
+  if (inputElements.value[n]) {
+    inputElements.value[n]?.focus()
+  }
+}
+
+const debouncedValidateCode = useDebounceFn((code: string) => {
+  validateCode(code)
+}, 300)
+
+watch(input, (newValue) => {
+  const code = newValue.join('')
+  if (code.length === codeLength.value) {
+    debouncedValidateCode(code)
+  }
+}, { deep: true })
+
+async function resendCode() {
+  try {
+    await getRecaptcha()
+
+    const result = await login({
+      email: email.value,
+      password: password.value,
+      recaptchaToken: recaptchaToken.value,
+    })
+
+    if (result.error) {
+      toaster.add({
+        title: 'Erro',
+        description: result.message,
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+      return
+    }
+
+    toaster.add({
+      title: 'Sucesso',
+      description: 'Código enviado com sucesso!',
+      icon: 'ph:user-circle-fill',
+      progress: true,
+    })
+  }
+  catch (error) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Erro ao reenviar código',
+      icon: 'ph:warning-circle-fill',
+      progress: true,
+    })
+  }
+}
+
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    const { $recaptchaV3 } = useNuxtApp()
+    let recaptchaToken = null
+
+    if ($recaptchaV3 && API_CONFIG.SECURITY.RECAPTCHA_REQUIRED) {
+      try {
+        recaptchaToken = await $recaptchaV3.execute(API_CONFIG.SECURITY.RECAPTCHA_ACTION)
+      }
+      catch (error) {
+        console.error('Erro ao executar reCAPTCHA:', error)
+        toaster.add({
+          title: 'Erro',
+          description: 'Falha na verificação de segurança. Por favor, tente novamente.',
+          icon: 'ph:warning-circle-fill',
+          progress: true,
+        })
+        return
+      }
+
+      if (!recaptchaToken) {
+        toaster.add({
+          title: 'Erro',
+          description: 'Falha na verificação de segurança. Por favor, tente novamente.',
+          icon: 'ph:warning-circle-fill',
+          progress: true,
+        })
+        return
+      }
+    }
+
+    const retorno = await login({
+      email: values.email,
+      password: values.senha,
+      recaptchaToken: recaptchaToken || undefined,
+    })
+
+    if (retorno.error) {
+      toaster.add({
+        title: 'Erro',
+        description: retorno.message,
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+      return
+    }
+
+    if ('two_factor' in retorno && retorno.two_factor) {
+      email.value = values.email
+      password.value = values.senha
+      isTwoFactor.value = true
+
+      if (retorno.phone) {
+        toaster.add({
+          title: 'Código Enviado',
+          description: `Código enviado para ${retorno.phone}`,
+          icon: 'ph:check-circle-fill',
+          progress: true,
+        })
+      }
+    }
+  }
+  catch (error: any) {
+    console.error('Erro durante o login:', error)
+
+    const errorMessage = error.message || error.data?.message || ''
+    if (errorMessage.includes('reCAPTCHA') || errorMessage.includes('Token do reCAPTCHA')) {
+      toaster.add({
+        title: 'Erro de Segurança',
+        description: 'Falha na verificação de segurança. Por favor, tente novamente.',
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+    }
+    else {
+      toaster.add({
+        title: 'Erro',
+        description: 'Dados de acesso inválidos! Verifique seu email e senha.',
+        icon: 'ph:warning-circle-fill',
+        progress: true,
+      })
+    }
+  }
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-muted-900">
-    <!-- Header -->
-    <header
-      class="sticky top-0 z-50 border-b border-muted-200 bg-white/80 backdrop-blur-xl dark:border-muted-800 dark:bg-muted-900/80">
-      <div class="container mx-auto px-4 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <TairoLogo class="h-10 w-auto" />
-            <div>
-              <BaseText weight="semibold" class="text-muted-800 dark:text-white block">
-                Contabilidade IR
-              </BaseText>
-              <BaseText size="xs" class="text-muted-500">
-                Gestão Profissional de IRPF
-              </BaseText>
-            </div>
-          </div>
-          <div class="flex items-center gap-3">
-            <NuxtLink to="/auth"
-              class="hidden sm:inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-700 transition-colors hover:bg-muted-100 dark:text-muted-300 dark:hover:bg-muted-800">
-              Fazer Login
-            </NuxtLink>
-            <NuxtLink to="/auth/register"
-              class="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-500/50 transition-all hover:bg-primary-600 hover:shadow-xl hover:shadow-primary-500/50">
-              <Icon name="solar:user-plus-bold" class="h-4 w-4" />
-              <span>Começar Grátis</span>
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="relative overflow-hidden py-20 lg:py-32">
-      <div class="container mx-auto px-4">
-        <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
-          <div>
-            <div
-              class="mb-6 inline-flex items-center gap-2 rounded-full bg-primary-500/10 px-4 py-2 dark:bg-primary-500/20">
-              <Icon name="solar:verified-check-bold" class="h-4 w-4 text-primary-500" />
-              <BaseText size="sm" weight="medium" class="text-primary-600 dark:text-primary-400">
-                Sistema Completo para Contadores
-              </BaseText>
-            </div>
-
-            <BaseHeading tag="h1" size="4xl" weight="bold" class="text-muted-900 dark:text-white mb-6 leading-tight">
-              Gerencie Declarações de IRPF com
-              <span class="bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">
-                Eficiência Total
-              </span>
-            </BaseHeading>
-
-            <BaseParagraph size="lg" class="text-muted-600 dark:text-muted-400 mb-8">
-              Plataforma completa para escritórios de contabilidade organizarem clientes, controlarem declarações
-              e automatizarem processos com dashboards, Kanban e comunicação integrada.
-            </BaseParagraph>
-
-            <div class="flex flex-col gap-4 sm:flex-row">
-              <NuxtLink to="/auth/register"
-                class="group inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-8 py-4 text-base font-semibold text-white shadow-xl shadow-primary-500/50 transition-all hover:scale-105 hover:bg-primary-600 hover:shadow-2xl hover:shadow-primary-500/50">
-                <Icon name="solar:rocket-2-bold" class="h-5 w-5" />
-                <span>Começar Gratuitamente</span>
-                <Icon name="solar:arrow-right-linear" class="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </NuxtLink>
-
-              <a href="#features"
-                class="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-muted-300 bg-white px-8 py-4 text-base font-semibold text-muted-700 transition-all hover:border-primary-500 hover:bg-primary-50 dark:border-muted-700 dark:bg-muted-800 dark:text-white dark:hover:border-primary-500 dark:hover:bg-muted-700">
-                <Icon name="solar:play-circle-bold" class="h-5 w-5" />
-                <span>Ver Recursos</span>
-              </a>
-            </div>
-
-            <div class="mt-8 flex items-center gap-6">
-              <div class="flex items-center gap-2">
-                <Icon name="solar:check-circle-bold" class="h-5 w-5 text-success-500" />
-                <BaseText size="sm" class="text-muted-600 dark:text-muted-400">
-                  Teste grátis sem cartão
-                </BaseText>
-              </div>
-              <div class="flex items-center gap-2">
-                <Icon name="solar:shield-check-bold" class="h-5 w-5 text-success-500" />
-                <BaseText size="sm" class="text-muted-600 dark:text-muted-400">
-                  Dados 100% seguros
-                </BaseText>
-              </div>
-            </div>
-          </div>
-
-          <div class="relative">
-            <div
-              class="absolute -inset-4 rounded-3xl bg-gradient-to-r from-primary-500/20 to-primary-600/20 blur-3xl" />
-            <img
-              src="/Users/computer/.gemini/antigravity/brain/47083866-edc2-40c8-b9f4-ac662f752b00/dashboard_hero_1770421479224.png"
-              alt="Dashboard do Sistema"
-              class="relative rounded-2xl shadow-2xl ring-1 ring-muted-200 dark:ring-muted-800">
-          </div>
-        </div>
-      </div>
-
-      <!-- Background decoration -->
-      <div class="absolute top-0 right-0 -z-10 h-96 w-96 rounded-full bg-primary-500/5 blur-3xl" />
-      <div class="absolute bottom-0 left-0 -z-10 h-96 w-96 rounded-full bg-primary-600/5 blur-3xl" />
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="py-20 bg-muted-50 dark:bg-muted-950">
-      <div class="container mx-auto px-4">
-        <div class="mx-auto max-w-3xl text-center mb-16">
-          <BaseHeading tag="h2" size="3xl" weight="bold" class="text-muted-900 dark:text-white mb-4">
-            Tudo que você precisa em um só lugar
-          </BaseHeading>
-          <BaseParagraph size="lg" class="text-muted-600 dark:text-muted-400">
-            Conjunto completo de ferramentas para escritórios de contabilidade modernos
-          </BaseParagraph>
-        </div>
-
-        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          <div v-for="feature in features" :key="feature.title"
-            class="group rounded-2xl border border-muted-200 bg-white p-8 transition-all hover:scale-105 hover:border-primary-500 hover:shadow-xl dark:border-muted-800 dark:bg-muted-900 dark:hover:border-primary-500">
-            <div
-              class="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500 transition-all group-hover:bg-primary-500 group-hover:text-white dark:bg-primary-500/20">
-              <Icon :name="feature.icon" class="h-7 w-7" />
-            </div>
-            <BaseHeading tag="h3" size="lg" weight="semibold" class="text-muted-900 dark:text-white mb-3">
-              {{ feature.title }}
-            </BaseHeading>
-            <BaseParagraph class="text-muted-600 dark:text-muted-400">
-              {{ feature.description }}
-            </BaseParagraph>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Screenshots Section -->
-    <section class="py-20">
-      <div class="container mx-auto px-4">
-        <div class="mx-auto max-w-3xl text-center mb-16">
-          <BaseHeading tag="h2" size="3xl" weight="bold" class="text-muted-900 dark:text-white mb-4">
-            Interface moderna e intuitiva
-          </BaseHeading>
-          <BaseParagraph size="lg" class="text-muted-600 dark:text-muted-400">
-            Desenvolvido pensando em produtividade e facilidade de uso
-          </BaseParagraph>
-        </div>
-
-        <div class="space-y-12">
-          <!-- Kanban -->
-          <div class="mx-auto max-w-6xl">
-            <div class="mb-6 text-center">
-              <BaseHeading tag="h3" size="xl" weight="semibold" class="text-muted-800 dark:text-white mb-2">
-                Quadro Kanban Interativo
-              </BaseHeading>
-              <BaseParagraph class="text-muted-600 dark:text-muted-400">
-                Acompanhe visualmente o progresso de cada declaração
-              </BaseParagraph>
-            </div>
-            <div
-              class="relative rounded-2xl border border-muted-200 bg-muted-50 p-4 dark:border-muted-800 dark:bg-muted-950">
-              <img
-                src="/Users/computer/.gemini/antigravity/brain/47083866-edc2-40c8-b9f4-ac662f752b00/kanban_board_1770421495988.png"
-                alt="Kanban Board" class="rounded-xl shadow-lg w-full">
-            </div>
-          </div>
-
-          <!-- Document Management -->
-          <div class="mx-auto max-w-6xl">
-            <div class="mb-6 text-center">
-              <BaseHeading tag="h3" size="xl" weight="semibold" class="text-muted-800 dark:text-white mb-2">
-                Gestão de Documentos
-              </BaseHeading>
-              <BaseParagraph class="text-muted-600 dark:text-muted-400">
-                Armazene e organize todos os arquivos com segurança
-              </BaseParagraph>
-            </div>
-            <div
-              class="relative rounded-2xl border border-muted-200 bg-muted-50 p-4 dark:border-muted-800 dark:bg-muted-950">
-              <img
-                src="/Users/computer/.gemini/antigravity/brain/47083866-edc2-40c8-b9f4-ac662f752b00/document_management_1770421509322.png"
-                alt="Document Management" class="rounded-xl shadow-lg w-full">
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="py-20 bg-muted-50 dark:bg-muted-950">
-      <div class="container mx-auto px-4">
-        <div class="mx-auto max-w-3xl text-center mb-16">
-          <BaseHeading tag="h2" size="3xl" weight="bold" class="text-muted-900 dark:text-white mb-4">
-            Planos para todos os tamanhos
-          </BaseHeading>
-          <BaseParagraph size="lg" class="text-muted-600 dark:text-muted-400">
-            Escolha o plano ideal para o seu escritório
-          </BaseParagraph>
-        </div>
-
-        <div class="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div v-for="plan in plans" :key="plan.name" :class="[
-            'relative rounded-2xl border p-8 transition-all',
-            plan.highlighted
-              ? 'border-primary-500 bg-primary-500 shadow-2xl shadow-primary-500/50 scale-105'
-              : 'border-muted-200 bg-white hover:border-primary-500 hover:shadow-xl dark:border-muted-800 dark:bg-muted-900'
-          ]">
-            <div v-if="plan.highlighted"
-              class="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-success-500 px-4 py-1">
-              <BaseText size="xs" weight="semibold" class="text-white uppercase">
-                Mais Popular
-              </BaseText>
-            </div>
-
-            <div class="mb-6">
-              <BaseHeading tag="h3" size="xl" weight="bold"
-                :class="plan.highlighted ? 'text-white' : 'text-muted-900 dark:text-white'">
-                {{ plan.name }}
-              </BaseHeading>
-              <BaseParagraph size="sm"
-                :class="plan.highlighted ? 'text-white/80' : 'text-muted-600 dark:text-muted-400'">
-                {{ plan.description }}
-              </BaseParagraph>
-            </div>
-
-            <div class="mb-6">
-              <div class="flex items-baseline gap-1">
-                <BaseText size="4xl" weight="bold"
-                  :class="plan.highlighted ? 'text-white' : 'text-muted-900 dark:text-white'">
-                  {{ plan.price }}
-                </BaseText>
-                <BaseText size="lg" :class="plan.highlighted ? 'text-white/80' : 'text-muted-600 dark:text-muted-400'">
-                  {{ plan.period }}
-                </BaseText>
-              </div>
-            </div>
-
-            <ul class="mb-8 space-y-3">
-              <li v-for="feature in plan.features" :key="feature" class="flex items-center gap-2">
-                <Icon name="solar:check-circle-bold"
-                  :class="plan.highlighted ? 'text-white h-5 w-5' : 'text-success-500 h-5 w-5'" />
-                <BaseText size="sm" :class="plan.highlighted ? 'text-white' : 'text-muted-700 dark:text-muted-300'">
-                  {{ feature }}
-                </BaseText>
-              </li>
-            </ul>
-
-            <NuxtLink to="/auth/register" :class="[
-              'block w-full rounded-lg py-3 text-center font-semibold transition-all',
-              plan.highlighted
-                ? 'bg-white text-primary-600 hover:bg-primary-50'
-                : 'bg-primary-500 text-white hover:bg-primary-600'
-            ]">
-              Começar Agora
-            </NuxtLink>
-          </div>
-        </div>
-
-        <div class="mt-12 text-center">
-          <BaseParagraph class="text-muted-600 dark:text-muted-400">
-            Todos os planos incluem 14 dias de teste grátis • Sem necessidade de cartão de crédito
-          </BaseParagraph>
-        </div>
-      </div>
-    </section>
-
-    <!-- Final CTA -->
-    <section class="py-20">
-      <div class="container mx-auto px-4">
-        <div
-          class="mx-auto max-w-4xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-700 p-12 shadow-2xl shadow-primary-500/50 md:p-16">
+  <ClientOnly>
+    <div class="dark:bg-muted-800 min-h-screen bg-white">
+      <div class="relative mx-auto flex min-h-screen max-w-10xl">
+        <!-- Left Column: Content & Illustration -->
+        <div class="bg-muted-100 dark:bg-muted-900 relative hidden w-1/2 items-center justify-center p-12 lg:flex">
           <div class="text-center">
-            <BaseHeading tag="h2" size="3xl" weight="bold" class="text-white mb-4">
-              Pronto para transformar a gestão do seu escritório?
+            <img src="assets/funil/background.png" alt="Gestor IRPF"
+              class="mx-auto mb-2 max-w-sm rounded-[2.5rem] w-60 shadow-xl border border-muted-200 dark:border-muted-800">
+            <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
+              Mais controle. Menos preocupações.
             </BaseHeading>
-            <BaseParagraph size="lg" class="text-white/90 mb-8">
-              Junte-se a centenas de contadores que já otimizaram seus processos
+            <BaseParagraph class="text-muted-500 dark:text-muted-400 max-w-sm mx-auto">
+              Sua plataforma inteligente para gestão de declarações de imposto de renda.
+              Organize, automatize e escale seu escritório de contabilidade.
             </BaseParagraph>
+          </div>
+        </div>
 
-            <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <NuxtLink to="/auth/register"
-                class="group inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-lg font-semibold text-primary-600 shadow-xl transition-all hover:scale-105 hover:shadow-2xl">
-                <Icon name="solar:rocket-2-bold" class="h-5 w-5" />
-                <span>Criar Conta Gratuita</span>
-                <Icon name="solar:arrow-right-linear" class="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </NuxtLink>
-
-              <NuxtLink to="/auth/login"
-                class="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 bg-white/10 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20">
-                <Icon name="solar:login-3-bold" class="h-5 w-5" />
-                <span>Fazer Login</span>
-              </NuxtLink>
+        <!-- Right Column: Login Form -->
+        <div class="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-12">
+          <div class="mx-auto w-full max-w-md">
+            <!-- Nav -->
+            <div class="flex w-full items-center justify-between">
+              <BaseThemeToggle />
             </div>
 
-            <div class="mt-8 flex flex-wrap items-center justify-center gap-6">
-              <div class="flex items-center gap-2 text-white/90">
-                <Icon name="solar:check-circle-bold" class="h-5 w-5" />
-                <BaseText size="sm">Teste grátis por 14 dias</BaseText>
+            <div v-if="!isTwoFactor">
+              <img src="/img/logo.png" alt="Integra Flux" class="mx-auto w-60 dark:hidden">
+              <img src="/img/logo-white.png" alt="Integra Flux" class="mx-auto hidden w-60 dark:block">
+            </div>
+
+            <!-- Form section -->
+            <div v-if="!isTwoFactor" class="mt-6">
+              <div class="mt-5">
+                <form method="POST" action="" class="mt-6" novalidate @submit.prevent="onSubmit">
+                  <div class="space-y-4">
+                    <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="email">
+                      <BaseField v-slot="{ inputAttrs, inputRef }" label="Email"
+                        :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" :disabled="isSubmitting"
+                        required>
+                        <BaseInput :ref="inputRef" v-bind="inputAttrs" :model-value="field.value" type="email"
+                          placeholder="Email" autocomplete="email" rounded="lg" :classes="{
+                            input: 'h-12',
+                          }" @update:model-value="handleChange" @blur="handleBlur" />
+                      </BaseField>
+                    </Field>
+
+                    <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="senha">
+                      <BaseField v-slot="{ inputAttrs, inputRef }" label="Senha"
+                        :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" :disabled="isSubmitting"
+                        required>
+                        <BaseInput :ref="inputRef" v-bind="inputAttrs" :model-value="field.value" type="password"
+                          placeholder="Senha" autocomplete="current-password" rounded="lg" :classes="{
+                            input: 'h-12',
+                          }" @update:model-value="handleChange" @blur="handleBlur" />
+                      </BaseField>
+                    </Field>
+                  </div>
+
+                  <!-- Remember -->
+                  <div class="mt-6 flex items-center justify-between">
+                    <div class="text-xs leading-5">
+                      <NuxtLink to="https://wa.me/551132808396"
+                        class="text-primary-600 hover:text-primary-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline">
+                        Esqueci minha senha
+                      </NuxtLink>
+                    </div>
+                    <div class="text-xs leading-5">
+                      <NuxtLink to="/auth/register"
+                        class="text-info-600 hover:text-info-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline">
+                        Criar minha conta
+                      </NuxtLink>
+                    </div>
+                  </div>
+
+                  <!-- Submit -->
+                  <div class="mt-6">
+                    <div class="block w-full rounded-md shadow-xs">
+                      <BaseButton :disabled="isSubmitting" :loading="isSubmitting" type="submit" variant="primary"
+                        rounded="lg" class="h-11! w-full">
+                        Entrar
+                      </BaseButton>
+                    </div>
+                  </div>
+                </form>
               </div>
-              <div class="flex items-center gap-2 text-white/90">
-                <Icon name="solar:shield-check-bold" class="h-5 w-5" />
-                <BaseText size="sm">Sem compromisso</BaseText>
-              </div>
-              <div class="flex items-center gap-2 text-white/90">
-                <Icon name="solar:card-bold" class="h-5 w-5" />
-                <BaseText size="sm">Não precisa de cartão</BaseText>
-              </div>
+            </div>
+
+            <!-- 2FA Section -->
+            <div v-if="isTwoFactor" class="mt-8">
+              <form action="" method="POST" @submit.prevent>
+                <div class="flex flex-col items-center">
+                  <div class="mb-6 flex h-20 items-center justify-center">
+                    <TairoCheckAnimated v-if="logged" size="sm" />
+                    <div v-else
+                      class="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/30">
+                      <Icon name="ph:shield-check-duotone" class="size-10 text-primary-600 dark:text-primary-400" />
+                    </div>
+                  </div>
+
+                  <div class="mb-8 text-center">
+                    <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-2">
+                      Verificação de Segurança
+                    </BaseHeading>
+                    <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+                      Digite o código de 6 dígitos que enviamos para seu <span
+                        class="font-medium text-muted-800 dark:text-muted-100">celular</span>.
+                    </BaseParagraph>
+                  </div>
+
+                  <div class="flex flex-col items-center w-full">
+                    <div class="flex justify-center gap-2 sm:gap-3" :class="logged && 'pointer-events-none'">
+                      <input v-for="i in codeLength" :key="`pin${i}`" :ref="(el) => {
+                        inputElements[i] = el as HTMLInputElement
+                      }" v-focus="i === 1" type="text" :name="`pin${i}`" maxlength="1"
+                        class="dark:bg-muted-800 dark:border-muted-700 h-14 w-12 sm:h-16 sm:w-14 rounded-xl border-2 border-muted-200 bg-white text-center text-3xl font-bold transition-all focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+                        :value="input[i - 1] !== undefined ? input[i - 1] : ''" placeholder="&bull;"
+                        :disabled="input.length < i - 1 || logged" @paste.prevent="(event) => paste(event)"
+                        @keydown="(event) => type(event, i)">
+                    </div>
+
+                    <div class="mt-10 w-full text-center">
+                      <div v-if="loading" class="mb-4 flex items-center justify-center gap-2 text-primary-500">
+                        <Icon name="svg-spinners:270-ring-with-bg" class="size-4" />
+                        <BaseText size="xs" weight="medium">Verificando segurança...</BaseText>
+                      </div>
+
+                      <div class="flex flex-col items-center gap-1">
+                        <BaseText size="xs" class="text-muted-400">Não recebeu o código?</BaseText>
+                        <button type="button"
+                          class="text-primary-600 dark:text-primary-400 font-sans text-sm font-semibold hover:underline"
+                          @click="resendCode">
+                          Enviar novo código
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="border-t border-muted-200 bg-muted-50 py-12 dark:border-muted-800 dark:bg-muted-950">
-      <div class="container mx-auto px-4">
-        <div class="grid gap-8 md:grid-cols-4">
-          <div class="md:col-span-2">
-            <div class="mb-4 flex items-center gap-3">
-              <TairoLogo class="h-10 w-auto" />
-              <div>
-                <BaseText weight="semibold" class="text-muted-800 dark:text-white block">
-                  Contabilidade IR
-                </BaseText>
-                <BaseText size="xs" class="text-muted-500">
-                  Gestão Profissional de IRPF
-                </BaseText>
-              </div>
-            </div>
-            <BaseParagraph size="sm" class="text-muted-600 dark:text-muted-400 max-w-md">
-              Plataforma completa para escritórios de contabilidade gerenciarem declarações de IRPF
-              com eficiência, organização e segurança.
-            </BaseParagraph>
-          </div>
-
-          <div>
-            <BaseHeading tag="h4" size="sm" weight="semibold" class="text-muted-900 dark:text-white mb-4">
-              Produto
-            </BaseHeading>
-            <ul class="space-y-2">
-              <li>
-                <a href="#features" class="text-sm text-muted-600 hover:text-primary-500 dark:text-muted-400">
-                  Recursos
-                </a>
-              </li>
-              <li>
-                <a href="#pricing" class="text-sm text-muted-600 hover:text-primary-500 dark:text-muted-400">
-                  Preços
-                </a>
-              </li>
-              <li>
-                <NuxtLink to="/auth/register" class="text-sm text-muted-600 hover:text-primary-500 dark:text-muted-400">
-                  Começar Grátis
-                </NuxtLink>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <BaseHeading tag="h4" size="sm" weight="semibold" class="text-muted-900 dark:text-white mb-4">
-              Empresa
-            </BaseHeading>
-            <ul class="space-y-2">
-              <li>
-                <NuxtLink to="/auth/login" class="text-sm text-muted-600 hover:text-primary-500 dark:text-muted-400">
-                  Login
-                </NuxtLink>
-              </li>
-              <li>
-                <a href="#" class="text-sm text-muted-600 hover:text-primary-500 dark:text-muted-400">
-                  Suporte
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mt-12 border-t border-muted-200 pt-8 dark:border-muted-800">
-          <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <BaseParagraph size="sm" class="text-muted-500">
-              © {{ new Date().getFullYear() }} Contabilidade IR. Todos os direitos reservados.
-            </BaseParagraph>
-            <div class="flex gap-4">
-              <a href="#" class="text-muted-500 hover:text-primary-500">
-                <Icon name="lucide:linkedin" class="h-5 w-5" />
-              </a>
-              <a href="#" class="text-muted-500 hover:text-primary-500">
-                <Icon name="lucide:instagram" class="h-5 w-5" />
-              </a>
-              <a href="#" class="text-muted-500 hover:text-primary-500">
-                <Icon name="lucide:facebook" class="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  </div>
+    </div>
+  </ClientOnly>
 </template>
