@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs, PanelsPanelSubscription } from '#components'
+import { PanelsPanelDeclarationDetails, PanelsPanelWaitingDocs, PanelsPanelSubscription, OnboardingWizard } from '#components'
 import { useAppState } from '~/composables/useAppState'
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useTenant } from '~/composables/useTenant'
 import { useSubscription } from '~/composables/useSubscription'
 
 import { resolveColor } from '~/utils/colors'
-import OnboardingWizard from '~/components/onboarding/OnboardingWizard.vue'
 
 definePageMeta({
   title: 'My Projects',
@@ -254,13 +253,29 @@ onMounted(() => {
   console.log('  - Onboarding status:', user.value?.onboardingStatus)
   console.log('  - Should open onboarding?', isOnboardingOpen.value)
 
-  fetchDashboard()
-  fetchTeam()
-  // Fetch tenant data for whitelabel if not already loaded
-  if (!tenant.value) {
-    fetchTenant()
+  // Só buscar dados se NÃO estiver no onboarding
+  if (user.value?.onboardingStatus !== 'PENDING') {
+    fetchDashboard()
+    fetchTeam()
+
+    // Fetch tenant data for whitelabel if not already loaded
+    if (!tenant.value) {
+      fetchTenant()
+    }
   }
 })
+
+// Disparar fetches quando o onboarding for concluído
+watch(
+  () => user.value?.onboardingStatus,
+  (newStatus) => {
+    if (newStatus === 'COMPLETED') {
+      fetchDashboard()
+      fetchTeam()
+      fetchTenant()
+    }
+  },
+)
 
 function openDetails(declarationId: string) {
   open(PanelsPanelDeclarationDetails, {

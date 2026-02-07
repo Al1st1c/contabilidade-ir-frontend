@@ -675,6 +675,7 @@ async function completeOnboarding() {
 
 onMounted(async () => {
   try {
+    // Carregar apenas dados que não dependem do tenant ainda não criado
     await Promise.all([
       fetchTenant(),
       fetchMySubscription(),
@@ -1353,9 +1354,7 @@ onMounted(async () => {
             <!-- Step 5: Video / Finish -->
             <div v-else-if="currentStep === 5" class="max-w-3xl mx-auto space-y-8">
               <div v-if="isPreparing" class="py-20 flex flex-col items-center">
-                <Icon name="svg-spinners:ring-resize" class="size-16 text-primary-500 mb-6" />
-                <p class="text-lg font-medium text-muted-800 dark:text-white animate-pulse">Personalizando sua
-                  plataforma...</p>
+                <AppPageLoading message="Personalizando sua plataforma.." />
               </div>
               <div v-else class="space-y-6">
                 <div class="aspect-video bg-muted-900 rounded-3xl overflow-hidden shadow-2xl relative group">
@@ -1398,8 +1397,9 @@ onMounted(async () => {
             <span>Pular Customização</span>
           </BaseButton>
 
-          <BaseButton v-if="shouldShowFooterContinue" type="submit" rounded="sm" variant="primary" shadow="primary"
-            class="w-full sm:w-48 h-12" :loading="loading" :disabled="loading" @click.prevent="handleSubmit">
+          <BaseButton v-if="shouldShowFooterContinue && !isPreparing" type="submit" rounded="sm" variant="primary"
+            shadow="primary" class="w-full sm:w-48 h-12" :loading="loading" :disabled="loading"
+            @click.prevent="handleSubmit">
             <span>{{ isLastStep ? 'Concluir' : 'Continuar' }}</span>
             <Icon v-if="!isLastStep" name="lucide:chevron-right" class="ms-2 size-4" />
             <Icon v-else name="lucide:check" class="ms-2 size-4" />
