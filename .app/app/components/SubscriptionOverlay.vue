@@ -104,6 +104,12 @@ async function goToPayment() {
               @click="checkStatus">
               Já realizei o pagamento
             </BaseButton>
+
+            <BaseButton to="https://wa.me/551132808396" target="_blank" variant="muted" rounded="lg" size="md"
+              class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700">
+              <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
+              Falar com o suporte
+            </BaseButton>
           </div>
 
           <!-- Footer -->
@@ -134,10 +140,18 @@ async function goToPayment() {
             </span>
           </BaseParagraph>
 
-          <BaseButton variant="muted" rounded="lg" size="md" class="w-full h-10" @click="checkStatus"
-            :loading="isChecking">
-            Verificar novamente
-          </BaseButton>
+          <div class="space-y-2.5">
+            <BaseButton variant="muted" rounded="lg" size="md" class="w-full h-10" @click="checkStatus"
+              :loading="isChecking">
+              Verificar novamente
+            </BaseButton>
+
+            <BaseButton to="https://wa.me/551132808396" target="_blank" variant="muted" rounded="lg" size="md"
+              class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700 text-xs">
+              <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
+              Falar com o suporte
+            </BaseButton>
+          </div>
         </div>
       </BaseCard>
     </div>
