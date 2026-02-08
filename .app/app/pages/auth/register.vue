@@ -54,6 +54,7 @@ const formData = ref({
   name: '',
   email: '',
   phone: '',
+  document: '',
   password: '',
 })
 
@@ -67,6 +68,7 @@ const isCouponLoading = ref(false)
 const showPixCheckout = ref(false)
 const pixCode = ref('')
 const pixQrCodeUrl = ref('')
+const checkoutUrl = ref('')
 const pixExpiresAt = ref<Date | null>(null)
 const pixTimeRemaining = ref(0)
 
@@ -74,23 +76,17 @@ const pixTimeRemaining = ref(0)
 const showExitModal = ref(false)
 const isExitingPage = ref(false)
 const pixInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const checkPaymentInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const isCheckingPayment = ref(false)
 
 const router = useRouter()
 const toaster = useNuiToasts()
 const config = useRuntimeConfig()
 const { useCustomFetch } = useApi()
+const { token, user: authUser, fetchUser } = useAuth()
 
-// Usar cookies diretamente para poder atribuir valores
-const token = useCookie<string | null>('auth_token', {
-  maxAge: 60 * 60 * 24 * 7, // 7 dias
-  path: '/',
-  sameSite: 'lax',
-})
-const userCookie = useCookie<any>('auth_user', { // Usar o mesmo nome que useAuth
-  maxAge: 60 * 60 * 24 * 7,
-  path: '/',
-  sameSite: 'lax',
-})
+// Mapear userCookie para o authUser do useAuth
+const userCookie = authUser
 
 // ===========================================================================
 // FORM VALIDATION
@@ -100,6 +96,7 @@ const userSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().min(14, 'Telefone é obrigatório'),
+  document: z.string().min(11, 'CPF/CNPJ é obrigatório'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
 }).refine((data: any) => data.password === data.confirmPassword, {
@@ -117,6 +114,7 @@ const { handleSubmit, values, errors, setValues } = useForm<UserFormData>({
     name: '',
     email: '',
     phone: '',
+    document: '',
     password: '',
     confirmPassword: '',
   },
@@ -172,6 +170,12 @@ const isFreeFlow = computed(() => {
   return selectedPlan.value === 'free' || currentPrice.value === 0
 })
 
+const canRedirectToDashboard = computed(() => {
+  // Se for grátis, pode. Se for pago, só se showPixCheckout for false (ou seja, já passou pela ativação)
+  // Mas a regra principal é: se showPixCheckout está aberto, não sai dali até pagar.
+  return !showPixCheckout.value
+})
+
 // ===========================================================================
 // METHODS
 // ===========================================================================
@@ -196,6 +200,7 @@ function saveFormData() {
     name: values.name || '',
     email: values.email || '',
     phone: values.phone || '',
+    document: values.document || '',
     password: values.password || '',
   }
 }
@@ -218,6 +223,7 @@ function prevStep() {
         name: formData.value.name,
         email: formData.value.email,
         phone: formData.value.phone,
+        document: formData.value.document,
         password: formData.value.password,
         confirmPassword: formData.value.password,
       })
@@ -233,6 +239,7 @@ function editUserData() {
       name: formData.value.name,
       email: formData.value.email,
       phone: formData.value.phone,
+      document: formData.value.document,
       password: formData.value.password,
       confirmPassword: formData.value.password,
     })
@@ -338,6 +345,44 @@ async function copyPixCode() {
   }
 }
 
+async function checkPaymentStatus() {
+  if (isCheckingPayment.value) return
+  isCheckingPayment.value = true
+
+  try {
+    const { data: sub } = await useCustomFetch<any>('/subscriptions/my-subscription')
+    console.log('🔍 Status da assinatura:', sub?.status)
+
+    if (sub?.status === 'ACTIVE') {
+      if (checkPaymentInterval.value) clearInterval(checkPaymentInterval.value)
+
+      toaster.add({
+        title: 'Pagamento Confirmado!',
+        description: 'Sua conta foi ativada com sucesso. Bem-vindo!',
+        icon: 'ph:check-circle-fill',
+      })
+
+      // Buscar dados atualizados do usuário (importante para o onboardingStatus)
+      await fetchUser()
+
+      // Redirecionar após um breve delay para o usuário ver o sucesso
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+    }
+  } catch (err) {
+    console.error('Erro ao verificar status do pagamento:', err)
+  } finally {
+    isCheckingPayment.value = false
+  }
+}
+
+function startPaymentPolling() {
+  if (checkPaymentInterval.value) clearInterval(checkPaymentInterval.value)
+  // Verificar a cada 7 segundos
+  checkPaymentInterval.value = setInterval(checkPaymentStatus, 7000)
+}
+
 const onSubmit = (async () => {
   isSubmitting.value = true
 
@@ -351,6 +396,7 @@ const onSubmit = (async () => {
         email: formData.value.email,
         password: formData.value.password,
         phone: formData.value.phone?.replace(/\D/g, '') || undefined,
+        document: formData.value.document?.replace(/\D/g, '') || undefined,
         planSlug: selectedPlan.value,
         billingPeriod: billingCycle.value,
         paymentMethod: isFreeFlow.value ? 'FREE' : paymentMethod.value,
@@ -426,6 +472,7 @@ const onSubmit = (async () => {
     if (paymentInfo.method === 'PIX' && paymentInfo.pix) {
       pixCode.value = paymentInfo.pix.code
       pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl
+      checkoutUrl.value = paymentInfo.checkoutUrl
       showPixCheckout.value = true
 
       // Iniciar timer com tempo de expiração da API
@@ -435,9 +482,12 @@ const onSubmit = (async () => {
 
       toaster.add({
         title: 'PIX Gerado!',
-        description: 'Código PIX gerado com sucesso. Complete o pagamento.',
+        description: 'Código PIX gerado com sucesso. Complete o pagamento para entrar.',
         icon: 'ph:qr-code-duotone',
       })
+
+      // Iniciar polling para detectar pagamento
+      startPaymentPolling()
       return
     }
 
@@ -456,13 +506,25 @@ const onSubmit = (async () => {
       return
     }
 
-    // Fallback - algum erro na resposta
+    // Fallback - algum erro na resposta ou pagamento pendente sem dados de PIX
+    if (response.paymentPending) {
+      toaster.add({
+        title: 'Conta criada!',
+        description: 'Aguardando confirmação do pagamento. Você será redirecionado assim que o sistema detectar o pagamento.',
+        icon: 'ph:clock-clock-duotone',
+      })
+      showPixCheckout.value = true
+      startPaymentPolling()
+      return
+    }
+
     toaster.add({
       title: 'Conta criada!',
-      description: 'Entre em contato para completar o pagamento.',
+      description: 'Verifique seu email para mais instruções.',
       icon: 'ph:check-circle-fill',
     })
-    setTimeout(() => router.push('/dashboard'), 2000)
+    // Se não tem pagamento pendente, vai para login
+    setTimeout(() => router.push('/auth'), 2000)
   }
   catch (err: any) {
     console.error('Erro no signup:', err)
@@ -518,13 +580,35 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 // LIFECYCLE
 // ===========================================================================
 
-onMounted(() => {
+onMounted(async () => {
   fetchPlans()
   window.addEventListener('beforeunload', handleBeforeUnload)
+
+  // Se já estiver logado (ex: refresh na página de PIX), verificar status
+  if (token.value) {
+    try {
+      const { data: sub } = await useCustomFetch<any>('/subscriptions/my-subscription')
+      if (sub?.status === 'PENDING_PAYMENT') {
+        const paymentInfo = sub.payment
+        if (paymentInfo?.method === 'PIX' && paymentInfo.pix) {
+          pixCode.value = paymentInfo.pix.code
+          pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl
+          checkoutUrl.value = sub.payment?.checkoutUrl || sub.payment?.paymentData?.checkout_url
+        }
+        showPixCheckout.value = true
+        startPaymentPolling()
+      } else if (sub?.status === 'ACTIVE') {
+        router.push('/dashboard')
+      }
+    } catch (e) {
+      console.error('Erro ao verificar status inicial:', e)
+    }
+  }
 })
 
 onUnmounted(() => {
   if (pixInterval.value) clearInterval(pixInterval.value)
+  if (checkPaymentInterval.value) clearInterval(checkPaymentInterval.value)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -540,7 +624,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
       <!-- Coluna Esquerda -->
       <div class="relative hidden w-1/2 items-center justify-center p-12 lg:flex bg-muted-100 dark:bg-muted-900">
         <div class="text-center">
-          <img src="/img/illustrations/onboarding/pricing-2.svg" alt="Registro" class="mx-auto mb-8 max-w-xs">
+          <img src="assets/funil/background.png" alt="Registro" class="mx-auto mb-8 max-w-xs" width="200" height="200">
           <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
             Comece sua jornada
           </BaseHeading>
@@ -568,7 +652,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
             <div class="text-center">
               <div
                 class="inline-flex items-center justify-center size-16 rounded-full bg-success-100 dark:bg-success-900/30 mb-4">
-                <Icon name="ph:qr-code-fill" class="size-8 text-success-500" />
+                <Icon name="logos:pix" class="size-10" />
               </div>
               <BaseHeading tag="h1" size="xl" weight="bold" class="text-muted-800 dark:text-white mb-2">
                 Pagamento via PIX
@@ -579,8 +663,11 @@ watch([step, isFreeFlow, isSubmitting], () => {
             </div>
 
             <BaseCard rounded="lg" class="p-6 text-center">
-              <img :src="pixQrCodeUrl" alt="QR Code PIX"
-                class="mx-auto mb-4 rounded-lg border-4 border-muted-200 dark:border-muted-700">
+              <img
+                :src="pixQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`"
+                alt="QR Code PIX"
+                class="mx-auto mb-4 rounded-lg border-4 border-muted-200 dark:border-muted-700 bg-white p-2" width="200"
+                height="200">
 
               <div class="flex items-center justify-center gap-2 mb-4">
                 <Icon name="ph:timer-fill" class="size-5 text-warning-500" />
@@ -603,6 +690,17 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   </BaseButton>
                 </div>
               </div>
+
+              <div v-if="checkoutUrl" class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-700">
+                <BaseParagraph size="xs" class="text-muted-500 mb-3">
+                  Ou se preferir, acesse o link de pagamento:
+                </BaseParagraph>
+                <BaseButton :to="checkoutUrl" target="_blank" variant="muted" color="primary" rounded="lg"
+                  class="w-full h-10">
+                  <Icon name="ph:link-bold" class="size-4 mr-2" />
+                  Abrir Link de Pagamento
+                </BaseButton>
+              </div>
             </BaseCard>
 
             <BaseCard rounded="lg" class="p-4">
@@ -618,9 +716,17 @@ watch([step, isFreeFlow, isSubmitting], () => {
               Após o pagamento, sua conta será ativada automaticamente.
             </BaseParagraph>
 
-            <BaseButton variant="muted" rounded="lg" class="w-full h-12" @click="showPixCheckout = false">
-              Voltar e alterar forma de pagamento
-            </BaseButton>
+            <div class="flex flex-col gap-3">
+              <BaseButton variant="primary" rounded="lg" class="w-full h-12" :loading="isCheckingPayment"
+                @click="checkPaymentStatus">
+                <Icon name="ph:arrows-clockwise-fill" class="size-5 mr-2" />
+                Já paguei, verificar agora
+              </BaseButton>
+
+              <BaseButton variant="muted" rounded="lg" class="w-full h-12" @click="showPixCheckout = false">
+                Voltar e alterar forma de pagamento
+              </BaseButton>
+            </div>
           </div>
 
           <!-- Formulário Normal -->
@@ -678,6 +784,14 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <BaseField label="Telefone" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" required>
                     <BaseInput v-maska="'(##) #####-####'" :model-value="field.value" type="tel"
                       placeholder="(00) 00000-0000" rounded="lg" :classes="{ input: 'h-12' }"
+                      @update:model-value="handleChange" @blur="handleBlur" />
+                  </BaseField>
+                </Field>
+
+                <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="document">
+                  <BaseField label="CPF" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" required>
+                    <BaseInput v-maska="'###.###.###-##'" :model-value="field.value" type="text"
+                      placeholder="000.000.000-00" rounded="lg" :classes="{ input: 'h-12' }"
                       @update:model-value="handleChange" @blur="handleBlur" />
                   </BaseField>
                 </Field>
@@ -825,6 +939,11 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <div v-if="formData.phone" class="flex justify-between">
                     <BaseText size="sm" class="text-muted-500">Telefone</BaseText>
                     <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-white">{{ formData.phone }}
+                    </BaseText>
+                  </div>
+                  <div v-if="formData.document" class="flex justify-between">
+                    <BaseText size="sm" class="text-muted-500">CPF</BaseText>
+                    <BaseText size="sm" weight="medium" class="text-muted-800 dark:text-white">{{ formData.document }}
                     </BaseText>
                   </div>
                 </div>

@@ -11,8 +11,8 @@ useHead({
   title: () => route?.meta?.title ?? '',
   titleTemplate: (titleChunk) => {
     return titleChunk
-      ? `${titleChunk} - GestorX`
-      : `GestorX`
+      ? `${titleChunk} - Gestor IRPF`
+      : `Gestor IRPF`
   },
   htmlAttrs: {
     lang: () => head.value.htmlAttrs!.lang,

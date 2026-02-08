@@ -32,7 +32,7 @@ export interface Subscription {
   tenantId: string
   planId: string
   plan: Plan
-  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED'
+  status: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED' | 'PENDING_PAYMENT'
   billingPeriod: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL'
   currentPeriodStart: string
   currentPeriodEnd: string

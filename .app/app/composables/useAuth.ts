@@ -236,6 +236,31 @@ export function useAuth() {
     }
   }
 
+  // Função para buscar dados atualizados do usuário
+  const fetchUser = async (): Promise<User | null> => {
+    if (!token.value) return null
+
+    try {
+      const data = await $fetch<User>(getApiUrl(API_CONFIG.ENDPOINTS.ME), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })
+
+      if (data) {
+        user.value = data
+        console.log('Dados do usuário atualizados:', data)
+        return data
+      }
+      return null
+    }
+    catch (e) {
+      console.error('Erro ao buscar dados do usuário:', e)
+      return null
+    }
+  }
+
   // Função de debug para verificar cookies
   const debugCookies = () => {
     console.log('=== DEBUG COOKIES ===')
@@ -260,6 +285,7 @@ export function useAuth() {
     verifyTwoFactor,
     logout,
     checkAuth,
+    fetchUser,
     debugCookies,
   }
 }

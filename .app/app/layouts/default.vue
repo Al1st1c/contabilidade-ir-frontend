@@ -3,7 +3,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useSubscription } from '~/composables/useSubscription'
 
 const { tenant } = useTenant()
-const { currentSubscription } = useSubscription()
+const { currentSubscription, fetchMySubscription } = useSubscription()
 const { user } = useAuth()
 const isMobileOpen = ref(false)
 
@@ -21,6 +21,13 @@ const companyLogo = computed(() => {
     return tenant.value.logo
   }
   return '/img/logo.png'
+})
+
+onMounted(() => {
+  // Buscar status da assinatura se estiver no dashboard
+  if (user.value) {
+    fetchMySubscription()
+  }
 })
 </script>
 
@@ -338,5 +345,7 @@ const companyLogo = computed(() => {
         </ul>
       </div>
     </TairoMobileDrawer>
+
+    <SubscriptionOverlay />
   </TairoTopnavLayout>
 </template>
