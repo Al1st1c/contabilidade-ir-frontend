@@ -224,72 +224,150 @@ function formatCurrency(amount: number) {
                 </div>
               </div>
               <span class="font-bold text-sm text-muted-900 dark:text-white shrink-0">{{ formatCurrency(p.amount)
-              }}</span>
+                }}</span>
             </button>
           </div>
         </div>
 
-        <!-- Checkout PIX Compacto -->
+        <!-- Checkout Multi-Método -->
         <div v-if="selectedPayment" class="space-y-4">
-          <!-- QR Code e Timer em Grid -->
-          <div class="grid grid-cols-[auto_1fr] gap-4 items-start">
-            <!-- QR Code -->
-            <div class="bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-xl p-3">
-              <img :src="pixQrCode" alt="QR Code PIX" class="w-32 h-32">
-            </div>
 
-            <!-- Info lado direito -->
-            <div class="space-y-3 pt-1">
-              <div>
-                <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-1">Pagamento via Pix</h5>
-                <p class="text-[11px] text-muted-500 leading-relaxed">Aponte a câmera do seu banco para o QR Code ao
-                  lado</p>
+          <!-- Caso PIX -->
+          <div v-if="selectedPayment.paymentMethod === 'PIX' || selectedPayment.method === 'PIX'" class="space-y-4">
+            <!-- QR Code e Timer em Grid -->
+            <div class="grid grid-cols-[auto_1fr] gap-4 items-start">
+              <!-- QR Code -->
+              <div class="bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-xl p-3">
+                <img :src="pixQrCodeUrl" alt="QR Code PIX" class="w-32 h-32">
               </div>
 
-              <!-- Timer -->
+              <!-- Info lado direito -->
+              <div class="space-y-3 pt-1">
+                <div>
+                  <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-1">Pagamento via Pix</h5>
+                  <p class="text-[11px] text-muted-500 leading-relaxed">Aponte a câmera do seu banco para o QR Code ao
+                    lado</p>
+                </div>
+
+                <!-- Timer -->
+                <div
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40">
+                  <Icon name="ph:clock-fill" class="size-3.5 text-amber-600 dark:text-amber-500" />
+                  <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400">{{
+                    formatPixTime(pixTimeRemaining) }}</span>
+                </div>
+
+                <!-- Link externo -->
+                <a v-if="checkoutUrl" :href="checkoutUrl" target="_blank"
+                  class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                  <Icon name="ph:arrow-square-out" class="size-3.5" />
+                  Abrir no navegador
+                </a>
+              </div>
+            </div>
+
+            <!-- Código PIX Copia e Cola -->
+            <div class="space-y-2">
+              <label class="text-[9px] font-semibold uppercase tracking-wider text-muted-500">Código Pix</label>
               <div
-                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40">
-                <Icon name="ph:clock-fill" class="size-3.5 text-amber-600 dark:text-amber-500" />
-                <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400">{{
-                  formatPixTime(pixTimeRemaining) }}</span>
+                class="flex items-center gap-2 border border-muted-200 dark:border-muted-800 rounded-lg bg-white dark:bg-muted-950 p-1">
+                <input type="text" :value="pixCode" readonly
+                  class="flex-1 bg-transparent px-3 py-2 text-[11px] font-mono text-muted-600 dark:text-muted-400 focus:outline-none truncate" />
+                <BaseButton variant="primary" rounded="lg" size="sm" class="px-4 font-semibold" @click="copyPixCode">
+                  Copiar
+                </BaseButton>
               </div>
-
-              <!-- Link externo -->
-              <a v-if="checkoutUrl" :href="checkoutUrl" target="_blank"
-                class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                <Icon name="ph:arrow-square-out" class="size-3.5" />
-                Abrir no navegador
-              </a>
             </div>
-          </div>
 
-          <!-- Código PIX Copia e Cola -->
-          <div class="space-y-2">
-            <label class="text-[9px] font-semibold uppercase tracking-wider text-muted-500">Código Pix</label>
-            <div
-              class="flex items-center gap-2 border border-muted-200 dark:border-muted-800 rounded-lg bg-white dark:bg-muted-950 p-1">
-              <input type="text" :value="pixCode" readonly
-                class="flex-1 bg-transparent px-3 py-2 text-[11px] font-mono text-muted-600 dark:text-muted-400 focus:outline-none truncate" />
-              <BaseButton variant="primary" rounded="lg" size="sm" class="px-4 font-semibold" @click="copyPixCode">
-                Copiar
+            <div class="space-y-2.5 pt-1">
+              <BaseButton variant="primary" rounded="lg" size="lg"
+                class="w-full h-12 font-semibold shadow-lg shadow-primary-500/20" :loading="isCheckingStatus"
+                @click="checkPaymentStatus">
+                <Icon name="ph:check-circle-fill" class="size-4 mr-2" />
+                Confirmar Pagamento
               </BaseButton>
             </div>
           </div>
 
-          <!-- Botões -->
-          <div class="space-y-2.5 pt-1">
-            <BaseButton variant="primary" rounded="lg" size="lg"
-              class="w-full h-12 font-semibold shadow-lg shadow-primary-500/20" :loading="isCheckingStatus"
-              @click="checkPaymentStatus">
-              <Icon name="ph:check-circle-fill" class="size-4 mr-2" />
-              Confirmar Pagamento
-            </BaseButton>
+          <!-- Caso Cartão / PayPal -->
+          <div
+            v-else-if="selectedPayment.paymentMethod === 'CREDIT_CARD' || selectedPayment.method === 'CREDIT_CARD' || selectedPayment.paymentMethod === 'PAYPAL' || selectedPayment.method === 'PAYPAL'"
+            class="space-y-4">
+            <div class="p-6 bg-primary-500/5 border border-primary-500/20 rounded-xl text-center">
+              <Icon name="logos:paypal" class="h-8 mx-auto mb-4" />
+              <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-2">Pagamento via Cartão de Crédito</h5>
+              <p class="text-[11px] text-muted-500 leading-relaxed mb-6">
+                Para sua segurança, o pagamento é processado através do checkout criptografado do PayPal.
+                Você não precisa de conta no PayPal para pagar com cartão.
+              </p>
 
-            <button v-if="pendingPayments.length > 1" @click="selectedPayment = null"
-              class="w-full text-[11px] font-semibold text-muted-400 hover:text-muted-600 dark:hover:text-muted-300 py-2">
-              ← Trocar fatura
-            </button>
+              <BaseButton :to="checkoutUrl" target="_blank" variant="primary" rounded="lg" size="lg"
+                class="w-full h-12 shadow-lg shadow-primary-500/20 font-bold">
+                <Icon name="ph:credit-card-fill" class="size-4 mr-2" />
+                Ir para Pagamento Seguro
+              </BaseButton>
+            </div>
+
+            <div
+              class="p-4 rounded-xl bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 flex items-start gap-3">
+              <Icon name="ph:info-fill" class="size-4 text-primary-500 shrink-0 mt-0.5" />
+              <p class="text-[10px] text-muted-500">
+                Após completar o pagamento no PayPal, sua assinatura será ativada automaticamente em alguns instantes.
+              </p>
+            </div>
+
+            <BaseButton variant="muted" rounded="lg" size="md" class="w-full font-semibold" :loading="isCheckingStatus"
+              @click="checkPaymentStatus">
+              <Icon name="ph:arrows-clockwise-bold" class="size-4 mr-2" />
+              Já paguei, verificar acesso
+            </BaseButton>
           </div>
+
+          <!-- Caso Boleto -->
+          <div v-else-if="selectedPayment.paymentMethod === 'BOLETO' || selectedPayment.method === 'BOLETO'"
+            class="space-y-4">
+            <div class="p-6 bg-primary-500/5 border border-primary-500/20 rounded-xl text-center">
+              <Icon name="ph:barcode-fill" class="size-12 text-primary-500 mx-auto mb-4" />
+              <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-2">Pagamento via Boleto</h5>
+              <p class="text-[11px] text-muted-500 leading-relaxed mb-6">
+                O boleto foi gerado e uma cópia foi enviada para seu e-mail.
+                A compensação pode levar até 48h úteis.
+              </p>
+
+              <BaseButton :to="checkoutUrl" target="_blank" variant="primary" rounded="lg" size="lg"
+                class="w-full h-12 shadow-lg shadow-primary-500/20 font-bold">
+                <Icon name="ph:file-pdf-fill" class="size-4 mr-2" />
+                Visualizar Boleto (PDF)
+              </BaseButton>
+            </div>
+
+            <BaseButton variant="muted" rounded="lg" size="md" class="w-full font-semibold" :loading="isCheckingStatus"
+              @click="checkPaymentStatus">
+              <Icon name="ph:arrows-clockwise-bold" class="size-4 mr-2" />
+              Verificar Compensação
+            </BaseButton>
+          </div>
+
+          <!-- Fallback / Desconhecido -->
+          <div v-else
+            class="p-6 bg-muted-100 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-xl text-center">
+            <Icon name="ph:question-fill" class="size-12 text-muted-400 mx-auto mb-4" />
+            <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-2">Processando Pagamento</h5>
+            <p class="text-[11px] text-muted-500 leading-relaxed mb-6">
+              Detectamos uma fatura pendente, mas ainda estamos processando os detalhes.
+              Por favor, aguarde alguns instantes ou entre em contato com o suporte.
+            </p>
+            <BaseButton variant="muted" rounded="lg" size="md" class="w-full font-semibold" :loading="isCheckingStatus"
+              @click="checkPaymentStatus">
+              <Icon name="ph:arrows-clockwise-bold" class="size-4 mr-2" />
+              Verificar agora
+            </BaseButton>
+          </div>
+
+          <button v-if="pendingPayments.length > 1" @click="selectedPayment = null"
+            class="w-full text-[11px] font-semibold text-muted-400 hover:text-muted-600 dark:hover:text-muted-300 py-2">
+            ← Trocar fatura
+          </button>
         </div>
 
       </div>

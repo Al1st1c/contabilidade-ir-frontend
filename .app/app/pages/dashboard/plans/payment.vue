@@ -143,6 +143,14 @@ const isInitialLoading = ref(true)
 const isSubmitting = ref(false)
 const isCouponLoading = ref(false)
 const paymentResult = ref<any>(null)
+const isExitingPage = ref(false)
+
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  if (paymentMethod.value === 'CREDIT_CARD' && !isExitingPage.value && !isSubmitting.value) {
+    e.preventDefault()
+    return (e.returnValue = 'Deseja realmente sair? Sua assinatura ainda não foi concluída.')
+  }
+}
 
 onMounted(async () => {
   isInitialLoading.value = true
@@ -155,6 +163,11 @@ onMounted(async () => {
     billingCycles.value = (route.query.billing as string).toLowerCase()
   }
   isInitialLoading.value = false
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 const currentCyclePrice = computed(() => {
@@ -244,6 +257,20 @@ async function handlePayment() {
     const result = await subscribe(params)
     if (result.success) {
       paymentResult.value = result.data
+
+      // Redirecionamento automático para PayPal se for cartão/paypal
+      if (paymentMethod.value === 'CREDIT_CARD' && result.data?.paymentData?.checkoutUrl) {
+        toaster.add({
+          title: 'Redirecionando...',
+          description: 'Você será redirecionado para o PayPal para concluir sua assinatura.',
+          icon: 'logos:paypal',
+        })
+
+        setTimeout(() => {
+          isExitingPage.value = true
+          window.location.href = result.data.paymentData.checkoutUrl
+        }, 2000)
+      }
     }
     else {
       toaster.add({
@@ -276,10 +303,8 @@ function formatCurrency(value: number) {
       <!-- Header -->
       <div class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <NuxtLink
-            to="/dashboard/plans"
-            class="text-primary-500 hover:opacity-75 transition-opacity flex items-center gap-2 mb-2 font-medium"
-          >
+          <NuxtLink to="/dashboard/plans"
+            class="text-primary-500 hover:opacity-75 transition-opacity flex items-center gap-2 mb-2 font-medium">
             <Icon name="solar:alt-arrow-left-linear" class="size-4" />
             Voltar para Planos
           </NuxtLink>
@@ -299,10 +324,8 @@ function formatCurrency(value: number) {
           <BaseRadioGroup v-model="customRadio" class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <TairoRadioCard value="free" class="data-[state=checked]:ring-primary-500!">
               <template #indicator>
-                <Icon
-                  name="solar:check-circle-bold-duotone"
-                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500"
-                />
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500" />
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
@@ -312,10 +335,8 @@ function formatCurrency(value: number) {
             </TairoRadioCard>
             <TairoRadioCard value="basic" class="data-[state=checked]:ring-yellow-400!">
               <template #indicator>
-                <Icon
-                  name="solar:check-circle-bold-duotone"
-                  class="size-5 group-data-[state=unchecked]:opacity-0 text-yellow-500"
-                />
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-yellow-500" />
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
@@ -325,15 +346,12 @@ function formatCurrency(value: number) {
             </TairoRadioCard>
             <TairoRadioCard value="pro" class="data-[state=checked]:ring-indigo-500! relative overflow-hidden">
               <div
-                class="absolute -right-6 top-2 rotate-45 bg-indigo-500 px-6 py-0.5 text-[8px] font-bold text-white uppercase"
-              >
+                class="absolute -right-6 top-2 rotate-45 bg-indigo-500 px-6 py-0.5 text-[8px] font-bold text-white uppercase">
                 TOP
               </div>
               <template #indicator>
-                <Icon
-                  name="solar:check-circle-bold-duotone"
-                  class="size-5 group-data-[state=unchecked]:opacity-0 text-indigo-500"
-                />
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-indigo-500" />
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
@@ -343,10 +361,8 @@ function formatCurrency(value: number) {
             </TairoRadioCard>
             <TairoRadioCard value="enterprise" class="data-[state=checked]:ring-primary-500!">
               <template #indicator>
-                <Icon
-                  name="solar:check-circle-bold-duotone"
-                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500"
-                />
+                <Icon name="solar:check-circle-bold-duotone"
+                  class="size-5 group-data-[state=unchecked]:opacity-0 text-primary-500" />
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
@@ -358,10 +374,8 @@ function formatCurrency(value: number) {
 
           <!-- Detalhes do Plano Selecionado (Igual estava antes) -->
           <BaseCard rounded="md" class="p-6 relative overflow-hidden">
-            <div
-              v-if="currentSubscription?.plan.slug === selectedPlan?.slug"
-              class="absolute -right-10 top-5 rotate-45 bg-success-500 px-12 py-1 text-[10px] font-bold text-white shadow-lg z-10 font-sans"
-            >
+            <div v-if="currentSubscription?.plan.slug === selectedPlan?.slug"
+              class="absolute -right-10 top-5 rotate-45 bg-success-500 px-12 py-1 text-[10px] font-bold text-white shadow-lg z-10 font-sans">
               Seu Plano Atual
             </div>
             <div class="flex items-center gap-6 mb-6">
@@ -385,9 +399,10 @@ function formatCurrency(value: number) {
               <div class="flex items-center gap-2" :class="planColor">
                 <Icon name="solar:check-circle-bold-duotone" class="size-4" />
                 <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? `${Math.round((selectedPlan.limits.storage_mb || 0)
+                  {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? `${Math.round((selectedPlan.limits.storage_mb ||
+                    0)
                     / 1024)
-                  }GB` : `${selectedPlan?.limits?.storage_mb || 0}MB` }} de Drive
+                    }GB` : `${selectedPlan?.limits?.storage_mb || 0}MB` }} de Drive
                 </BaseText>
               </div>
               <div class="flex items-center gap-2" :class="planColor">
@@ -434,10 +449,8 @@ function formatCurrency(value: number) {
           </BaseCard>
 
           <!-- Usuários -->
-          <BaseCard
-            rounded="md" class="p-4 md:p-6 transition-all duration-300"
-            :class="{ 'ring-1 ring-primary-500 border-primary-500': showUserCustomizer }"
-          >
+          <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
+            :class="{ 'ring-1 ring-primary-500 border-primary-500': showUserCustomizer }">
             <div class="mb-4 flex items-center justify-between">
               <BaseHeading as="h4" size="sm" weight="medium">
                 Equipe e Usuários
@@ -452,10 +465,8 @@ function formatCurrency(value: number) {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <BaseAvatar src="/img/custom/user-slot.png" size="sm" />
-                <BaseAvatar
-                  v-if="(selectedPlan?.limits?.employees || 0) > 1" src="/img/custom/user-slot.png"
-                  size="sm"
-                />
+                <BaseAvatar v-if="(selectedPlan?.limits?.employees || 0) > 1" src="/img/custom/user-slot.png"
+                  size="sm" />
                 <div v-if="(selectedPlan?.limits?.employees || 0) > 2" class="text-muted-400 text-xs font-medium ml-2">
                   +{{ (selectedPlan?.limits?.employees || 0) - 2 }} extras
                 </div>
@@ -465,25 +476,19 @@ function formatCurrency(value: number) {
                 Ajustar
               </BaseButton>
             </div>
-            <div
-              v-if="showUserCustomizer"
-              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 animate-in fade-in slide-in-from-top-2"
-            >
+            <div v-if="showUserCustomizer"
+              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 animate-in fade-in slide-in-from-top-2">
               <BaseText size="xs" class="text-muted-500 mb-2">
                 Quantidade de Usuários
               </BaseText>
-              <BaseInput
-                v-model="customConfig.employees" type="number" min="1" label="Quantidade de Usuários"
-                @update:model-value="convertToCustom"
-              />
+              <BaseInput v-model="customConfig.employees" type="number" min="1" label="Quantidade de Usuários"
+                @update:model-value="convertToCustom" />
             </div>
           </BaseCard>
 
           <!-- Personalização (Drive/SMS) -->
-          <BaseCard
-            rounded="md" class="p-4 md:p-6 transition-all duration-300"
-            :class="{ 'ring-1 ring-primary-500 border-primary-500': showResourceCustomizer }"
-          >
+          <BaseCard rounded="md" class="p-4 md:p-6 transition-all duration-300"
+            :class="{ 'ring-1 ring-primary-500 border-primary-500': showResourceCustomizer }">
             <div class="mb-4 flex items-center justify-between">
               <BaseHeading as="h4" size="sm" weight="medium">
                 Personalização
@@ -502,51 +507,39 @@ function formatCurrency(value: number) {
               <div class="flex gap-4">
                 <BaseAvatar src="/img/custom/drive-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
                 <BaseAvatar src="/img/custom/sms-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
-                <BaseAvatar
-                  src="/img/illustrations/onboarding/pricing-1.svg" size="sm"
-                  class="bg-muted-100 dark:bg-muted-800 p-1"
-                />
+                <BaseAvatar src="/img/illustrations/onboarding/pricing-1.svg" size="sm"
+                  class="bg-muted-100 dark:bg-muted-800 p-1" />
               </div>
               <BaseButton type="button" size="sm" variant="muted" class="h-8" @click="toggleResourceCustomizer">
                 <Icon name="solar:pen-2-linear" class="size-3 mr-1" />
                 Personalizar
               </BaseButton>
             </div>
-            <div
-              v-if="showResourceCustomizer"
-              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 space-y-4 animate-in fade-in slide-in-from-top-2"
-            >
+            <div v-if="showResourceCustomizer"
+              class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-800 space-y-4 animate-in fade-in slide-in-from-top-2">
               <div class="grid grid-cols-2 gap-4">
                 <BaseText size="xs" class="text-muted-500 mb-2">
                   Espaço DRIVE (GB)
                 </BaseText>
-                <BaseInput
-                  v-model="customConfig.storage_gb" type="number" min="1" label="Espaço DRIVE (GB)"
-                  @update:model-value="convertToCustom"
-                />
+                <BaseInput v-model="customConfig.storage_gb" type="number" min="1" label="Espaço DRIVE (GB)"
+                  @update:model-value="convertToCustom" />
                 <BaseText size="xs" class="text-muted-500 mb-2">
                   Qtd. SMS
                 </BaseText>
-                <BaseInput
-                  v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS"
-                  @update:model-value="convertToCustom"
-                />
+                <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS"
+                  @update:model-value="convertToCustom" />
                 <BaseText size="xs" class="text-muted-500 mb-2">
                   Declarações IR/ano
                 </BaseText>
-                <BaseInput
-                  v-model="customConfig.tax_declarations_yearly" type="number" step="10" min="1"
-                  label="Declarações IR/ano" @update:model-value="convertToCustom"
-                />
+                <BaseInput v-model="customConfig.tax_declarations_yearly" type="number" step="10" min="1"
+                  label="Declarações IR/ano" @update:model-value="convertToCustom" />
               </div>
             </div>
           </BaseCard>
 
           <!-- Pagamento Seguro (Novo) -->
-          <BaseCard
-            rounded="md"
-            class="p-8 bg-muted-50/50 dark:bg-muted-900/50 border-dashed border-2 border-muted-200 dark:border-muted-800 flex flex-col items-center justify-center text-center"
-          >
+          <BaseCard rounded="md"
+            class="p-8 bg-muted-50/50 dark:bg-muted-900/50 border-dashed border-2 border-muted-200 dark:border-muted-800 flex flex-col items-center justify-center text-center">
             <div class="mb-4 p-4 bg-white dark:bg-muted-800 rounded-2xl shadow-sm">
               <Icon name="solar:shield-check-bold-duotone" class="size-16 text-success-500" />
             </div>
@@ -554,13 +547,12 @@ function formatCurrency(value: number) {
               Pagamento 100% Seguro
             </BaseHeading>
             <BaseParagraph size="xs" class="text-muted-500 max-w-sm mx-auto">
-              Seus dados estão protegidos por criptografia de ponta a ponta. Utilizamos os mesmos padrões de segurança
-              dos
-              maiores bancos brasileiros.
+              Seus dados financeiros são processados em ambiente seguro e criptografado. Não armazenamos os dados do seu
+              cartão em
+              nossos servidores.
             </BaseParagraph>
             <div
-              class="flex items-center gap-4 mt-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-300"
-            >
+              class="flex items-center gap-4 mt-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
               <img src="/img/custom/pix-logo.png" class="h-6" alt="PIX">
               <Icon name="logos:visa" class="h-4" />
               <Icon name="logos:mastercard" class="h-6" />
@@ -571,10 +563,8 @@ function formatCurrency(value: number) {
 
         <div class="col-span-12 lg:col-span-5">
           <div class="sticky top-6 space-y-4">
-            <BaseCard
-              rounded="md"
-              class="p-6 shadow-xl shadow-muted-200/50 dark:shadow-none border-t-4 border-t-primary-500"
-            >
+            <BaseCard rounded="md"
+              class="p-6 shadow-xl shadow-muted-200/50 dark:shadow-none border-t-4 border-t-primary-500">
               <BaseHeading as="h3" size="lg" weight="bold" class="mb-6 flex items-center justify-between">
                 Resumo do Pedido
                 <Icon name="solar:bill-list-bold-duotone" class="size-6 text-primary-500" />
@@ -585,10 +575,8 @@ function formatCurrency(value: number) {
                 <div class="space-y-6 mb-8 pb-8 border-b border-muted-100 dark:border-muted-800">
                   <div class="space-y-4">
                     <div>
-                      <BaseHeading
-                        as="h4" size="xs" weight="semibold"
-                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]"
-                      >
+                      <BaseHeading as="h4" size="xs" weight="semibold"
+                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]">
                         Ciclo de Cobrança
                       </BaseHeading>
                       <BaseRadioGroup v-model="billingCycles" class="grid grid-cols-2 gap-2">
@@ -597,18 +585,14 @@ function formatCurrency(value: number) {
                             Mensal
                           </BaseText>
                         </TairoRadioCard>
-                        <TairoRadioCard
-                          value="quarterly"
-                          class="p-2 text-center data-[state=checked]:ring-primary-500!"
-                        >
+                        <TairoRadioCard value="quarterly"
+                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Trimestral
                           </BaseText>
                         </TairoRadioCard>
-                        <TairoRadioCard
-                          value="semiannual"
-                          class="p-2 text-center data-[state=checked]:ring-primary-500!"
-                        >
+                        <TairoRadioCard value="semiannual"
+                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Semestral
                           </BaseText>
@@ -622,38 +606,26 @@ function formatCurrency(value: number) {
                     </div>
 
                     <div>
-                      <BaseHeading
-                        as="h4" size="xs" weight="semibold"
-                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]"
-                      >
+                      <BaseHeading as="h4" size="xs" weight="semibold"
+                        class="mb-3 uppercase text-muted-500 text-center font-sans tracking-[0.1em]">
                         Forma de Pagamento
                       </BaseHeading>
                       <BaseRadioGroup v-model="paymentMethod" class="grid grid-cols-2 gap-2">
-                        <TairoRadioCard
-                          value="CREDIT_CARD"
-                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!"
-                        >
-                          <Icon
-                            name="solar:card-2-bold-duotone"
-                            class="size-6 text-muted-400 group-data-[state=checked]:text-primary-500"
-                          />
+                        <TairoRadioCard value="CREDIT_CARD"
+                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!">
+                          <Icon name="logos:paypal" class="h-5 group-data-[state=checked]:grayscale-0 grayscale" />
                           <BaseText size="xs" weight="bold" class="font-sans">
-                            Cartão
+                            Cartão de Crédito
                           </BaseText>
                         </TairoRadioCard>
-                        <TairoRadioCard
-                          value="PIX"
-                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-success-500! relative overflow-hidden"
-                        >
+                        <TairoRadioCard value="PIX"
+                          class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-success-500! relative overflow-hidden">
                           <div
-                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[8px] font-bold text-white uppercase"
-                          >
+                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[8px] font-bold text-white uppercase">
                             5% OFF
                           </div>
-                          <img
-                            src="/img/custom/pix-logo.png"
-                            class="h-6 object-contain grayscale group-data-[state=checked]:grayscale-0" alt="PIX"
-                          >
+                          <img src="/img/custom/pix-logo.png"
+                            class="h-6 object-contain grayscale group-data-[state=checked]:grayscale-0" alt="PIX">
                           <BaseText size="xs" weight="bold" class="font-sans">
                             PIX
                           </BaseText>
@@ -706,7 +678,7 @@ function formatCurrency(value: number) {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.tax_declarations_yearly
-                          || 0 }} /ano</span>
+                        || 0 }} /ano</span>
                     </div>
                     <div class="flex items-center justify-between text-muted-500">
                       <span class="flex items-center gap-2">
@@ -723,28 +695,20 @@ function formatCurrency(value: number) {
 
                 <!-- Cupom de Desconto -->
                 <div class="mb-8 pt-6 border-t border-muted-100 dark:border-muted-800">
-                  <BaseParagraph
-                    size="xs" weight="medium"
-                    class="text-muted-500 mb-2 uppercase tracking-wider font-sans"
-                  >
+                  <BaseParagraph size="xs" weight="medium"
+                    class="text-muted-500 mb-2 uppercase tracking-wider font-sans">
                     Possui um
                     cupom?
                   </BaseParagraph>
                   <div class="flex gap-2">
-                    <BaseInput
-                      v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10"
-                      :disabled="!!appliedCoupon"
-                    />
-                    <BaseButton
-                      v-if="!appliedCoupon" variant="muted" class="h-10 px-4" :loading="isCouponLoading"
-                      @click="applyCoupon"
-                    >
+                    <BaseInput v-model="couponCode" placeholder="Código do cupom" class="flex-1 overflow-hidden h-10"
+                      :disabled="!!appliedCoupon" />
+                    <BaseButton v-if="!appliedCoupon" variant="muted" class="h-10 px-4" :loading="isCouponLoading"
+                      @click="applyCoupon">
                       Aplicar
                     </BaseButton>
-                    <BaseButton
-                      v-else variant="muted" color="danger" class="h-10 px-4"
-                      @click="appliedCoupon = null; couponCode = ''"
-                    >
+                    <BaseButton v-else variant="muted" color="danger" class="h-10 px-4"
+                      @click="appliedCoupon = null; couponCode = ''">
                       Remover
                     </BaseButton>
                   </div>
@@ -775,8 +739,7 @@ function formatCurrency(value: number) {
                       * 0.05) }}</span>
                   </div>
                   <div
-                    class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2"
-                  >
+                    class="flex justify-between items-center pt-2 border-t border-muted-200 dark:border-muted-700 mt-2">
                     <BaseText size="lg" weight="bold" class="text-muted-800 dark:text-white font-sans">
                       Total
                     </BaseText>
@@ -785,7 +748,8 @@ function formatCurrency(value: number) {
                     </BaseText>
                   </div>
                   <BaseParagraph size="xs" class="text-muted-400 text-right font-sans italic opacity-70">
-                    Cobrança única via {{ paymentMethod === 'CREDIT_CARD' ? 'Cartão' : paymentMethod }}
+                    {{ paymentMethod === 'CREDIT_CARD' ? 'Assinatura Recorrente' : 'Pagamento' }} via {{ paymentMethod
+                      === 'CREDIT_CARD' ? 'Cartão (PayPal)' : paymentMethod }}
                   </BaseParagraph>
                 </div>
 
@@ -794,8 +758,7 @@ function formatCurrency(value: number) {
                   v-if="!paymentResult || (paymentMethod !== 'PIX' && paymentMethod !== 'BOLETO' && paymentResult.status !== 'PAID')"
                   type="submit" variant="primary" color="primary"
                   class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans"
-                  :loading="isSubmitting"
-                >
+                  :loading="isSubmitting">
                   Finalizar Assinatura
                 </BaseButton>
               </template>
@@ -803,20 +766,16 @@ function formatCurrency(value: number) {
               <!-- Área de Resultado (Integrada no lugar do cartão de totais quando houver resultado) -->
               <div v-if="paymentResult" class="mt-8 space-y-6 animate-in fade-in slide-in-from-top-4">
                 <!-- Caso PIX -->
-                <div
-                  v-if="paymentMethod === 'PIX'"
-                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center"
-                >
+                <div v-if="paymentMethod === 'PIX'"
+                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center">
                   <BaseHeading as="h4" size="md" weight="bold" class="mb-4 text-success-600 font-sans">
                     Aguardando
                     Pagamento PIX
                   </BaseHeading>
 
                   <div class="flex justify-center mb-6 p-4 bg-white rounded-lg shadow-inner border border-muted-200">
-                    <img
-                      :src="paymentResult.paymentData?.qr_code_url || '/img/custom/pix-logo.png'"
-                      class="size-48 object-contain" alt="QR Code PIX"
-                    >
+                    <img :src="paymentResult.paymentData?.qr_code_url || '/img/custom/pix-logo.png'"
+                      class="size-48 object-contain" alt="QR Code PIX">
                   </div>
 
                   <BaseParagraph size="xs" class="text-muted-500 mb-4 font-sans leading-relaxed">
@@ -824,14 +783,10 @@ function formatCurrency(value: number) {
                   </BaseParagraph>
 
                   <div class="flex gap-2 mb-4">
-                    <BaseInput
-                      :model-value="paymentResult.paymentData?.qr_code" readonly
-                      class="flex-1 text-[10px] h-10 font-mono"
-                    />
-                    <BaseButton
-                      color="success" class="h-10 px-4"
-                      @click="copyToClipboard(paymentResult.paymentData?.qr_code)"
-                    >
+                    <BaseInput :model-value="paymentResult.paymentData?.qr_code" readonly
+                      class="flex-1 text-[10px] h-10 font-mono" />
+                    <BaseButton color="success" class="h-10 px-4"
+                      @click="copyToClipboard(paymentResult.paymentData?.qr_code)">
                       <Icon name="solar:copy-bold-duotone" class="size-4" />
                     </BaseButton>
                   </div>
@@ -845,10 +800,8 @@ function formatCurrency(value: number) {
                 </div>
 
                 <!-- Caso Boleto -->
-                <div
-                  v-else-if="paymentMethod === 'BOLETO'"
-                  class="p-6 bg-primary-500/5 border-2 border-dashed border-primary-500/20 rounded-xl text-center"
-                >
+                <div v-else-if="paymentMethod === 'BOLETO'"
+                  class="p-6 bg-primary-500/5 border-2 border-dashed border-primary-500/20 rounded-xl text-center">
                   <Icon name="solar:bill-list-bold-duotone" class="size-12 text-primary-500 mx-auto mb-2" />
                   <BaseHeading as="h4" size="md" weight="bold" class="mb-2 font-sans">
                     Boleto pronto!
@@ -862,19 +815,18 @@ function formatCurrency(value: number) {
                 </div>
 
                 <!-- Caso Confirmado (Cartão) -->
-                <div
-                  v-else-if="paymentResult.status === 'PAID' || paymentMethod === 'CREDIT_CARD'"
-                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center"
-                >
+                <div v-else-if="paymentResult.status === 'PAID' || paymentMethod === 'CREDIT_CARD'"
+                  class="p-6 bg-success-500/5 border-2 border-dashed border-success-500/20 rounded-xl text-center">
                   <Icon name="solar:verified-check-bold-duotone" class="size-16 text-success-500 mx-auto mb-2" />
                   <BaseHeading as="h4" size="md" weight="bold" class="mb-2 text-success-600 font-sans">
-                    Assinatura Ativa!
+                    Redirecionando...
                   </BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-500 mb-6 font-sans">
-                    Seja bem-vindo ao plano {{ selectedPlan?.name }}.
+                    Seja bem-vindo. Você será redirecionado para o PayPal.
                   </BaseParagraph>
-                  <BaseButton to="/dashboard" variant="primary" color="success" class="w-full">
-                    Ir para Dashboard
+                  <BaseButton :to="paymentResult.paymentData?.checkoutUrl" variant="primary" color="success"
+                    class="w-full">
+                    Pagar com PayPal
                   </BaseButton>
                 </div>
               </div>

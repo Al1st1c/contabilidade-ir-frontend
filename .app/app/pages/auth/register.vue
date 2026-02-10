@@ -46,7 +46,7 @@ const isLoading = ref(false)
 const isSubmitting = ref(false)
 const plans = ref<Plan[]>([])
 const selectedPlan = ref<string>('free')
-const billingCycle = ref<'MONTHLY' | 'ANNUAL'>('MONTHLY')
+const billingCycle = ref<'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL'>('MONTHLY')
 const paymentMethod = ref<'PIX' | 'CREDIT_CARD' | 'FREE'>('PIX')
 
 // Form data (persists between steps)
@@ -138,7 +138,12 @@ const annualPrice = computed(() => {
 
 const currentPrice = computed(() => {
   if (!currentPlan.value?.pricing) return 0
-  return billingCycle.value === 'ANNUAL' ? annualPrice.value : monthlyPrice.value
+  switch (billingCycle.value) {
+    case 'QUARTERLY': return currentPlan.value.pricing.quarterly || (monthlyPrice.value * 3)
+    case 'SEMIANNUAL': return currentPlan.value.pricing.semiannual || (monthlyPrice.value * 6)
+    case 'ANNUAL': return currentPlan.value.pricing.annual || (monthlyPrice.value * 12)
+    default: return monthlyPrice.value
+  }
 })
 
 const discountAmount = computed(() => {
@@ -293,6 +298,13 @@ async function applyCoupon() {
     isCouponLoading.value = false
   }
 }
+function closePixCheckout() {
+  showPixCheckout.value = false
+  if (checkPaymentInterval.value) {
+    clearInterval(checkPaymentInterval.value)
+    checkPaymentInterval.value = null
+  }
+}
 
 function removeCoupon() {
   appliedCoupon.value = null
@@ -420,26 +432,16 @@ const onSubmit = (async () => {
       // Buscar dados completos do usuário via /auth/me
       try {
         console.log('🔍 Buscando dados do usuário...')
-        const { data: userData } = await useCustomFetch<any>('/auth/me', {
-          method: 'GET',
-        })
-
-        // Salvar dados do usuário no cookie
-        userCookie.value = userData
+        await fetchUser()
 
         console.log('✅ Dados do usuário carregados e salvos:', {
-          id: userData.id,
-          name: userData.name,
-          email: userData.email,
-          onboardingStatus: userData.onboardingStatus,
+          id: userCookie.value?.id,
+          name: userCookie.value?.name,
+          email: userCookie.value?.email,
+          onboardingStatus: userCookie.value?.onboardingStatus,
         })
       } catch (userError) {
         console.error('❌ Erro ao buscar dados do usuário:', userError)
-        // Se falhar, usar os dados básicos retornados pelo signup
-        if (response.user) {
-          userCookie.value = response.user
-          console.log('⚠️ Usando dados básicos do signup:', response.user)
-        }
       }
 
       // Verificar se tudo foi salvo antes de redirecionar
@@ -491,17 +493,19 @@ const onSubmit = (async () => {
       return
     }
 
-    // Pagamento via cartão - redirecionar para Mercado Pago
+    // Pagamento via PayPal - redirecionar
     if (paymentInfo.method === 'CREDIT_CARD' && paymentInfo.checkoutUrl) {
       toaster.add({
         title: 'Redirecionando...',
-        description: 'Você será redirecionado para a página de pagamento.',
+        description: 'Você será redirecionado para o PayPal.',
         icon: 'ph:arrow-square-out-fill',
       })
 
-      // Redirecionar para checkout do Mercado Pago
+      const redirectUrl = paymentInfo.checkoutUrl
+
       setTimeout(() => {
-        window.location.href = paymentInfo.checkoutUrl
+        isExitingPage.value = true
+        window.location.href = redirectUrl
       }, 1500)
       return
     }
@@ -590,13 +594,24 @@ onMounted(async () => {
       const { data: sub } = await useCustomFetch<any>('/subscriptions/my-subscription')
       if (sub?.status === 'PENDING_PAYMENT') {
         const paymentInfo = sub.payment
+
+        // Só mostra o checkout de PIX se o método for realmente PIX
         if (paymentInfo?.method === 'PIX' && paymentInfo.pix) {
           pixCode.value = paymentInfo.pix.code
           pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl
           checkoutUrl.value = sub.payment?.checkoutUrl || sub.payment?.paymentData?.checkout_url
+          showPixCheckout.value = true
+          startPaymentPolling()
+        } else {
+          // Se for Cartão/PayPal ou outro, o cadastro já foi feito (tem token).
+          // Redireciona para o checkout seguro do dashboard para não ficar preso no Registro.
+          toaster.add({
+            title: 'Cadastro já realizado',
+            description: 'Redirecionando para finalizar o pagamento de sua assinatura.',
+            icon: 'ph:info-fill'
+          })
+          router.push('/dashboard/plans/payment')
         }
-        showPixCheckout.value = true
-        startPaymentPolling()
       } else if (sub?.status === 'ACTIVE') {
         router.push('/dashboard')
       }
@@ -723,7 +738,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 Já paguei, verificar agora
               </BaseButton>
 
-              <BaseButton variant="muted" rounded="lg" class="w-full h-12" @click="showPixCheckout = false">
+              <BaseButton variant="muted" rounded="lg" class="w-full h-12" @click="closePixCheckout">
                 Voltar e alterar forma de pagamento
               </BaseButton>
             </div>
@@ -964,7 +979,11 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <div class="flex-1">
                     <BaseText weight="semibold" class="text-muted-800 dark:text-white block">{{ currentPlan?.name }}
                     </BaseText>
-                    <BaseText size="xs" class="text-muted-500 mt-0.5">{{ billingCycle === 'MONTHLY' ? 'Mensal' : 'Anual'
+                    <BaseText size="xs" class="text-muted-500 mt-0.5">
+                      {{
+                        billingCycle === 'MONTHLY' ? 'Mensal' :
+                          billingCycle === 'QUARTERLY' ? 'Trimestral' :
+                            billingCycle === 'SEMIANNUAL' ? 'Semestral' : 'Anual'
                       }}
                     </BaseText>
                   </div>
@@ -977,13 +996,31 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 <BaseText size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider mb-3">
                   Ciclo de Cobrança
                 </BaseText>
-                <BaseRadioGroup v-model="billingCycle" class="space-y-3">
+                <BaseRadioGroup v-model="billingCycle" class="grid grid-cols-2 gap-3">
                   <TairoRadioCard value="MONTHLY" class="p-4 data-[state=checked]:ring-primary-500!">
                     <div class="flex justify-between items-start">
                       <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Mensal</BaseText>
-                      <BaseText weight="bold" class="text-primary-500">{{ formatCurrency(monthlyPrice) }}</BaseText>
                     </div>
-                    <BaseText size="xs" class="text-muted-500 mt-1">Faturado mensalmente</BaseText>
+                    <BaseText weight="bold" class="text-primary-500 text-xs">{{ formatCurrency(monthlyPrice) }}
+                    </BaseText>
+                  </TairoRadioCard>
+
+                  <TairoRadioCard value="QUARTERLY" class="p-4 data-[state=checked]:ring-primary-500!">
+                    <div class="flex justify-between items-start">
+                      <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Trimestral</BaseText>
+                    </div>
+                    <BaseText weight="bold" class="text-primary-500 text-xs">{{
+                      formatCurrency(currentPlan?.pricing?.quarterly ||
+                        monthlyPrice * 3) }}</BaseText>
+                  </TairoRadioCard>
+
+                  <TairoRadioCard value="SEMIANNUAL" class="p-4 data-[state=checked]:ring-primary-500!">
+                    <div class="flex justify-between items-start">
+                      <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Semestral</BaseText>
+                    </div>
+                    <BaseText weight="bold" class="text-primary-500 text-xs">{{
+                      formatCurrency(currentPlan?.pricing?.semiannual ||
+                        monthlyPrice * 6) }}</BaseText>
                   </TairoRadioCard>
 
                   <TairoRadioCard value="ANNUAL"
@@ -994,11 +1031,12 @@ watch([step, isFreeFlow, isSubmitting], () => {
                     </div>
                     <div class="flex justify-between items-start">
                       <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Anual</BaseText>
-                      <BaseText weight="bold" class="text-primary-500">{{ formatCurrency(annualPrice) }}</BaseText>
                     </div>
-                    <BaseText size="xs" class="text-muted-400 line-through">{{ formatCurrency(monthlyPrice * 12) }}
+                    <BaseText weight="bold" class="text-primary-500 text-xs">{{ formatCurrency(annualPrice) }}
                     </BaseText>
-                    <BaseText size="xs" class="text-muted-500 mt-2">Pagamento único anual</BaseText>
+                    <BaseText size="xs" class="text-muted-400 line-through text-[10px]">{{ formatCurrency(monthlyPrice *
+                      12) }}
+                    </BaseText>
                   </TairoRadioCard>
                 </BaseRadioGroup>
               </BaseCard>
@@ -1059,13 +1097,12 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <TairoRadioCard value="CREDIT_CARD" class="p-3 data-[state=checked]:ring-primary-500!">
                     <div class="flex items-center gap-3">
                       <div class="flex items-center gap-1">
-                        <Icon name="logos:visa" class="h-4" />
-                        <Icon name="logos:mastercard" class="h-5" />
+                        <Icon name="logos:paypal" class="h-5" />
                       </div>
                       <div class="flex-1">
                         <BaseText weight="semibold" class="text-muted-800 dark:text-white block">Cartão de Crédito
                         </BaseText>
-                        <BaseText size="xs" class="text-muted-500 mt-0.5">Via Mercado Pago</BaseText>
+                        <BaseText size="xs" class="text-muted-500 mt-0.5">Pagamento Seguro via PayPal</BaseText>
                       </div>
                       <BaseText weight="bold" class="text-muted-800 dark:text-white">{{ formatCurrency(cardPrice) }}
                       </BaseText>
@@ -1073,13 +1110,13 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   </TairoRadioCard>
                 </BaseRadioGroup>
 
-                <!-- Info Mercado Pago -->
+                <!-- Info Pagamento -->
                 <div v-if="paymentMethod === 'CREDIT_CARD'"
                   class="mt-3 p-3 rounded-lg bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800">
                   <div class="flex items-start gap-2">
                     <Icon name="ph:info-fill" class="size-4 text-info-500 shrink-0 mt-0.5" />
                     <BaseText size="xs" class="text-info-600 dark:text-info-400">
-                      Ao continuar, você será redirecionado para o checkout seguro do Mercado Pago.
+                      Ao continuar, você poderá pagar com seu cartão de crédito através do checkout seguro do PayPal.
                     </BaseText>
                   </div>
                 </div>
@@ -1119,7 +1156,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <Icon v-else-if="paymentMethod === 'PIX'" name="ph:qr-code-fill" class="size-5 mr-2" />
                   <Icon v-else name="ph:arrow-square-out-fill" class="size-5 mr-2" />
                   {{ isFreeFlow ? 'Criar Conta Grátis' : (paymentMethod === 'PIX' ? 'Gerar PIX' :
-                    'Ir para Mercado Pago') }}
+                    'Ir para Pagamento Seguro') }}
                 </BaseButton>
               </div>
             </div>
