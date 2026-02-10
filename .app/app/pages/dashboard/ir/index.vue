@@ -234,12 +234,22 @@ async function fetchKanban() {
         })),
       }))
     }
+
+    // Após carregar os dados e o Vue atualizar o DOM (via isLoading), 
+    // precisamos reinicializar o Sortable
+    nextTick(() => {
+      initSortables()
+    })
   }
   catch (error) {
     console.error('Erro ao buscar Kanban:', error)
   }
   finally {
     isLoading.value = false
+    // Garantia dupla após o loading terminar
+    nextTick(() => {
+      initSortables()
+    })
   }
 }
 
@@ -262,15 +272,17 @@ async function moveTask(taskId: string, columnId: string, order: number) {
 
 // Columns container ref
 const columnsContainer = ref<HTMLElement | null>(null)
-const sortableInstances = ref<Map<string, Sortable>>(new Map())
+const columnSortableInstance = ref<Sortable | null>(null)
+const taskSortableInstances = ref<Map<string, Sortable>>(new Map())
 
-// Initialize sortable for columns after mount
-onMounted(async () => {
-  await fetchKanban()
-  await nextTick()
-
+function initSortables() {
+  // 1. Inicializar Colunas
   if (columnsContainer.value) {
-    Sortable.create(columnsContainer.value, {
+    if (columnSortableInstance.value) {
+      columnSortableInstance.value.destroy()
+    }
+
+    columnSortableInstance.value = Sortable.create(columnsContainer.value, {
       animation: 200,
       handle: '.column-handle',
       ghostClass: 'opacity-50',
@@ -286,16 +298,28 @@ onMounted(async () => {
     })
   }
 
-  // Initialize all task containers
+  // 2. Inicializar Tarefas dentro das colunas
   initAllTaskSortables()
+}
+
+// Initialize sortable for columns after mount
+onMounted(async () => {
+  await fetchKanban()
 })
 
-// Watch for column changes to reinitialize sortables
-watch(columns, () => {
+// Limpeza ao destruir o componente
+onUnmounted(() => {
+  if (columnSortableInstance.value) columnSortableInstance.value.destroy()
+  taskSortableInstances.value.forEach(instance => instance.destroy())
+  taskSortableInstances.value.clear()
+})
+
+// Watch for column changes to reinitialize sortables (deep: true para detectar mudanças internas de tarefas)
+watch(() => columns.value, () => {
   nextTick(() => {
     initAllTaskSortables()
   })
-}, { deep: false })
+}, { deep: true })
 
 function initAllTaskSortables() {
   const containers = document.querySelectorAll('[data-column-id]')
@@ -305,9 +329,11 @@ function initAllTaskSortables() {
     if (!columnId)
       return
 
-    // Skip if already initialized
-    if (sortableInstances.value.has(columnId))
-      return
+    // Destruir instância anterior se existir para evitar bugs de memória e ID
+    const existing = taskSortableInstances.value.get(columnId)
+    if (existing) {
+      existing.destroy()
+    }
 
     const sortable = Sortable.create(container as HTMLElement, {
       group: 'tasks',
@@ -317,6 +343,8 @@ function initAllTaskSortables() {
       chosenClass: 'sortable-chosen',
       fallbackOnBody: true,
       swapThreshold: 0.65,
+      delay: 50, // Pequeno delay para evitar disparos acidentais no mobile/toque
+      delayOnTouchOnly: true,
       onAdd: (evt) => {
         handleTaskMove(evt)
       },
@@ -325,7 +353,7 @@ function initAllTaskSortables() {
       },
     })
 
-    sortableInstances.value.set(columnId, sortable)
+    taskSortableInstances.value.set(columnId, sortable)
   })
 }
 
@@ -583,6 +611,10 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                 <div class="flex flex-col border-b border-muted-200/50 dark:border-muted-800/50 transition-all">
                   <div class="flex h-12 shrink-0 items-center px-4 justify-between">
                     <div class="flex items-center gap-2 overflow-hidden max-w-[70%]">
+                      <div
+                        class="column-handle cursor-grab active:cursor-grabbing p-1 -ml-1 text-muted-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Icon name="lucide:grip-vertical" class="size-3.5" />
+                      </div>
                       <span
                         class="block font-sans text-[11px] text-muted-500 dark:text-muted-400 uppercase tracking-widest truncate"
                         :title="column.title">
