@@ -10,6 +10,13 @@ definePageMeta({
   title: 'Entrar',
 })
 
+useSeoMeta({
+  title: 'Entrar - Gestor IRPF | A Plataforma do Contador Moderno',
+  ogTitle: 'Entrar - Gestor IRPF | A Plataforma do Contador Moderno',
+  description: 'Acesse seu painel do Gestor IRPF e domine sua temporada de imposto de renda com organização e automação.',
+  ogDescription: 'Acesse seu painel do Gestor IRPF e domine sua temporada de imposto de renda com organização e automação.',
+})
+
 const VALIDATION_TEXT = {
   EMAIL_REQUIRED: 'Um email válido é obrigatório',
   PASSWORD_REQUIRED: 'Uma senha é obrigatória',

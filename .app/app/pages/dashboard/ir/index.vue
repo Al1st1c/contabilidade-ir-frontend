@@ -6,7 +6,14 @@ import Sortable from 'sortablejs'
 import { bgColors, borderColors, borderLeftColors } from '~/utils/colors'
 
 definePageMeta({
-  title: 'Impostos de Renda',
+  title: 'Meu Kanban de IRPF',
+})
+
+useSeoMeta({
+  title: 'Meu Kanban de IRPF - Gestor IRPF | Gestão Visual de Declarações',
+  ogTitle: 'Meu Kanban de IRPF - Gestor IRPF | Gestão Visual de Declarações',
+  description: 'Organize suas declarações de Imposto de Renda em um fluxo visual. Acompanhe pendências, colete documentos e garanta a entrega no prazo.',
+  ogDescription: 'Organize suas declarações de Imposto de Renda em um fluxo visual. Acompanhe pendências, colete documentos e garanta a entrega no prazo.',
 })
 
 // Composables

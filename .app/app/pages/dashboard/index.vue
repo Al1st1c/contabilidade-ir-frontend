@@ -8,15 +8,14 @@ import { useSubscription } from '~/composables/useSubscription'
 import { resolveColor } from '~/utils/colors'
 
 definePageMeta({
-  title: 'My Projects',
-  preview: {
-    title: 'Personal dashboard v2',
-    description: 'For personal usage and reports',
-    categories: ['dashboards'],
-    src: '/img/screens/dashboards-personal-2.png',
-    srcDark: '/img/screens/dashboards-personal-2-dark.png',
-    order: 2,
-  },
+  title: 'Dashboard',
+})
+
+useSeoMeta({
+  title: 'Dashboard - Gestor IRPF | Centro de Controle Contábil',
+  ogTitle: 'Dashboard - Gestor IRPF | Centro de Controle Contábil',
+  description: 'Monitore sua performance, gerencie sua equipe e acompanhe o progresso de todas as declarações de IRPF em tempo real.',
+  ogDescription: 'Monitore sua performance, gerencie sua equipe e acompanhe o progresso de todas as declarações de IRPF em tempo real.',
 })
 
 const links = [

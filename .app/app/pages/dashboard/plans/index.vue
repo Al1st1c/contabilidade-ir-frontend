@@ -2,8 +2,15 @@
 import { useSubscription } from '~/composables/useSubscription'
 
 definePageMeta({
-  title: 'Assinatura',
+  title: 'Planos e Preços',
   layout: 'empty',
+})
+
+useSeoMeta({
+  title: 'Planos e Preços - Gestor IRPF | Escolha sua Assinatura',
+  ogTitle: 'Planos e Preços - Gestor IRPF | Escolha sua Assinatura',
+  description: 'Conheça nossos planos e escolha o ideal para o seu tamanho. Do contador autônomo ao grande escritório, temos a solução para sua gestão de IR.',
+  ogDescription: 'Conheça nossos planos e escolha o ideal para o seu tamanho. Do contador autônomo ao grande escritório, temos a solução para sua gestão de IR.',
 })
 
 const { plans, currentSubscription, loading, error, fetchPlans, fetchMySubscription, selectFreePlan } = useSubscription()

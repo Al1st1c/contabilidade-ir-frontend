@@ -1,6 +1,14 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'client',
+  title: 'Portal do Cliente',
+})
+
+useSeoMeta({
+  title: 'Portal do Cliente - Acompanhe seu IRPF | Gestor IRPF',
+  ogTitle: 'Portal do Cliente - Acompanhe seu IRPF | Gestor IRPF',
+  description: 'Acompanhe o status do seu Imposto de Renda em tempo real. Envie documentos, baixe seu recibo e tire dúvidas com seu contador de forma simples e segura.',
+  ogDescription: 'Acompanhe o status do seu Imposto de Renda em tempo real. Envie documentos, baixe seu recibo e tire dúvidas com seu contador de forma simples e segura.',
 })
 
 const { user } = useAuth()

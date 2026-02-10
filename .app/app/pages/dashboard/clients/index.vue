@@ -2,7 +2,14 @@
 import { useApi } from '~/composables/useAuth'
 
 definePageMeta({
-  title: 'Clientes',
+  title: 'Gestão de Clientes',
+})
+
+useSeoMeta({
+  title: 'Gestão de Clientes - CRM Contábil | Gestor IRPF',
+  ogTitle: 'Gestão de Clientes - CRM Contábil | Gestor IRPF',
+  description: 'Gerencie sua base de clientes com eficiência. Cadastre CPFs, acompanhe o histórico de declarações e mantenha o contato sempre atualizado.',
+  ogDescription: 'Gerencie sua base de clientes com eficiência. Cadastre CPFs, acompanhe o histórico de declarações e mantenha o contato sempre atualizado.',
 })
 
 const { useCustomFetch } = useApi()

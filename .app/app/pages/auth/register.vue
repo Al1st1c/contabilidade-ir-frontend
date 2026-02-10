@@ -9,6 +9,13 @@ definePageMeta({
   title: 'Criar Conta',
 })
 
+useSeoMeta({
+  title: 'Criar Conta - Gestor IRPF | Comece Agora Gratuitamente',
+  ogTitle: 'Criar Conta - Gestor IRPF | Comece Agora Gratuitamente',
+  description: 'Cadastre seu escritório de contabilidade no Gestor IRPF e transforme o caos do Imposto de Renda em um processo organizado e lucrativo.',
+  ogDescription: 'Cadastre seu escritório de contabilidade no Gestor IRPF e transforme o caos do Imposto de Renda em um processo organizado e lucrativo.',
+})
+
 // ===========================================================================
 // TYPES
 // ===========================================================================
