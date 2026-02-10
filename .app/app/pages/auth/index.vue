@@ -95,8 +95,8 @@ onMounted(async () => {
 })
 
 // 2FA Variables
-const codeLength = ref(4)
-const input = ref<Array<number | undefined>>([])
+const codeLength = ref(6)
+const input = ref<Array<number | undefined>>(new Array(6).fill(undefined))
 const inputElements = ref<HTMLInputElement[]>([])
 const email = ref('')
 const password = ref('')
@@ -123,7 +123,6 @@ async function getRecaptcha() {
       return
     }
 
-    // Se reCAPTCHA é obrigatório mas não conseguiu obter o token
     if (!recaptchaToken.value) {
       toaster.add({
         title: 'Erro',
@@ -135,7 +134,6 @@ async function getRecaptcha() {
   }
 }
 
-// Função para validar código 2FA
 async function validateCode(code: string) {
   if (code.length !== codeLength.value)
     return
@@ -143,16 +141,12 @@ async function validateCode(code: string) {
   loading.value = true
 
   try {
-    console.log('Validando código 2FA:', code)
-
     const result = await verifyTwoFactor({
       code,
       email: email.value,
       password: password.value,
       recaptchaToken: recaptchaToken.value,
     })
-
-    console.log('Resultado da validação 2FA:', result)
 
     if (result.error) {
       logged.value = false
@@ -166,31 +160,17 @@ async function validateCode(code: string) {
       return
     }
 
-    // Login bem-sucedido
     logged.value = true
-
-    // Debug: verificar se o token foi salvo
-    console.log('Token após 2FA:', token.value)
-    debugCookies()
-
-    // Aguardar um momento para garantir que o token foi salvo
     await new Promise(resolve => setTimeout(resolve, 300))
 
-    // Buscar dados do usuário para verificar o cargo
     try {
-      // Verificar se o token existe antes de fazer a chamada
-      if (!token.value) {
-        console.error('Token não encontrado após 2FA')
+      if (!token.value)
         throw new Error('Token não foi salvo corretamente')
-      }
 
       const { data: userData } = await useCustomFetch<any>('/auth/me', {
         method: 'GET',
       })
 
-      console.log('Dados do usuário:', userData)
-
-      // Verificar cargo e redirecionar apropriadamente
       const roleName = userData?.role?.name
       const mobileRoles = ['Operador', 'Caixa', 'Portaria']
 
@@ -201,10 +181,7 @@ async function validateCode(code: string) {
           icon: 'ph:user-circle-fill',
           progress: true,
         })
-
-        setTimeout(() => {
-          router.push('/mobile')
-        }, 1000)
+        setTimeout(() => router.push('/mobile'), 1000)
       }
       else {
         toaster.add({
@@ -213,29 +190,20 @@ async function validateCode(code: string) {
           icon: 'ph:user-circle-fill',
           progress: true,
         })
-
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1000)
+        setTimeout(() => router.push('/dashboard'), 1000)
       }
     }
     catch (error) {
-      console.error('Erro ao buscar dados do usuário:', error)
-      // Se falhar, redirecionar para dashboard por padrão
       toaster.add({
         title: 'Sucesso',
         description: 'Bem vindo!',
         icon: 'ph:user-circle-fill',
         progress: true,
       })
-
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
+      setTimeout(() => router.push('/dashboard'), 1000)
     }
   }
   catch (error) {
-    console.error('Erro ao validar código:', error)
     toaster.add({
       title: 'Erro',
       description: 'Ocorreu um erro ao validar o código',
@@ -250,8 +218,8 @@ async function validateCode(code: string) {
 
 // Função para limpar os inputs
 function clearInputs() {
-  input.value = Array.from({ length: codeLength.value }, () => undefined)
-  focusField(1) // Volta o foco para o primeiro campo
+  input.value = new Array(codeLength.value).fill(undefined)
+  focusField(1)
 }
 
 function paste(event: ClipboardEvent) {
@@ -262,44 +230,73 @@ function paste(event: ClipboardEvent) {
     ?.substring(0, codeLength.value)
 
   if (pasted) {
-    input.value = pasted.split('').map(Number)
+    const chars = pasted.split('')
+    chars.forEach((char, i) => {
+      if (i < codeLength.value)
+        input.value[i] = Number(char)
+    })
+    // Focar no último preenchido ou no próximo vazio
+    const nextIndex = Math.min(chars.length + 1, codeLength.value)
+    focusField(nextIndex)
   }
 }
 
-function type(event: KeyboardEvent, index: number) {
-  if (event.code === 'ArrowRight') {
-    event.preventDefault()
-    nextTick(() => focusField(Math.min(codeLength.value, index + 1)))
-    return
-  }
+function handleInput(event: Event, index: number) {
+  const el = event.target as HTMLInputElement
+  const rawValue = el.value
 
-  if (event.code === 'ArrowLeft') {
-    event.preventDefault()
-    nextTick(() => focusField(Math.max(1, index - 1)))
-    return
-  }
+  // Pegamos apenas o último dígito para evitar duplicidade em colagem ou digitação rápida
+  const digit = rawValue.replace(/\D/g, '').slice(-1)
 
-  if (event.code === 'Backspace') {
-    event.preventDefault()
+  if (digit !== '') {
+    // Atualiza o estado do Vue
+    input.value[index - 1] = Number(digit)
+
+    // Força o valor no elemento para garantir sincronia imediata
+    el.value = digit
+
+    if (index < codeLength.value) {
+      // Pequeno delay para permitir que o evento de input termine antes de mudar o foco
+      setTimeout(() => {
+        focusField(index + 1)
+      }, 20)
+    }
+  }
+  else {
     input.value[index - 1] = undefined
-    nextTick(() => focusField(Math.max(1, index - 1)))
-    return
+    el.value = ''
   }
+}
 
-  // Permite apenas números
-  const key = event.key.replace(/\D/g, '')
-  if (key !== '') {
-    input.value[index - 1] = Number(key)
-    nextTick(() => focusField(Math.min(codeLength.value, index + 1)))
+function handleKeydown(event: KeyboardEvent, index: number) {
+  if (event.key === 'Backspace') {
+    if (!input.value[index - 1] && index > 1) {
+      input.value[index - 2] = undefined
+      focusField(index - 1)
+    }
+    else {
+      input.value[index - 1] = undefined
+    }
+  }
+  else if (event.key === 'ArrowLeft' && index > 1) {
+    event.preventDefault()
+    focusField(index - 1)
+  }
+  else if (event.key === 'ArrowRight' && index < codeLength.value) {
+    event.preventDefault()
+    focusField(index + 1)
   }
 }
 
 function focusField(n: number) {
-  if (!n || n > codeLength.value) {
-    n = 1
-  }
-  if (inputElements.value[n]) {
-    inputElements.value[n]?.focus()
+  if (n < 1) n = 1
+  if (n > codeLength.value) n = codeLength.value
+
+  const el = inputElements.value[n]
+  if (el) {
+    el.focus()
+    // Seleciona o conteúdo para facilitar a sobrescrita caso já exista algo
+    el.setSelectionRange(0, 1)
   }
 }
 
@@ -309,7 +306,7 @@ const debouncedValidateCode = useDebounceFn((code: string) => {
 }, 300)
 
 watch(input, (newValue) => {
-  const code = newValue.join('')
+  const code = newValue.filter(v => v !== undefined).join('')
   if (code.length === codeLength.value) {
     debouncedValidateCode(code)
   }
@@ -567,14 +564,14 @@ const onSubmit = handleSubmit(async (values) => {
 
                   <!-- Code Inputs -->
                   <div class="flex flex-col items-center w-full">
-                    <div class="flex justify-center gap-2 sm:gap-3" :class="logged && 'pointer-events-none'">
+                    <div class="flex justify-center gap-1.5 sm:gap-3" :class="logged && 'pointer-events-none'">
                       <input v-for="i in codeLength" :key="`pin${i}`" :ref="(el) => {
                         inputElements[i] = el as HTMLInputElement
-                      }" v-focus="i === 1" type="text" :name="`pin${i}`" maxlength="1"
+                      }" v-focus="i === 1" type="text" inputmode="numeric" autocomplete="one-time-code"
+                        data-lpignore="true" data-1p-ignore data-autofill="false" :disabled="logged"
                         class="dark:bg-muted-800 dark:border-muted-700 h-14 w-12 sm:h-16 sm:w-14 rounded-xl border-2 border-muted-200 bg-white text-center text-3xl font-bold transition-all focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
-                        :value="input[i - 1] !== undefined ? input[i - 1] : ''" placeholder="&bull;"
-                        :disabled="input.length < i - 1 || logged" @paste.prevent="(event) => paste(event)"
-                        @keydown="(event) => type(event, i)">
+                        :value="input[i - 1] !== undefined ? input[i - 1] : ''" @paste.prevent="paste"
+                        @keydown="handleKeydown($event, i)" @input="handleInput($event, i)">
                     </div>
 
                     <!-- Status & Resend -->

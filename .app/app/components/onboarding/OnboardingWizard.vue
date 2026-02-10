@@ -892,6 +892,10 @@ onMounted(async () => {
                     </div>
                     <div class="sm:col-span-2">
                       <BaseField label="Razão Social" required>
+                        <template #label>
+                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">Razão Social <span
+                              class="text-red-500">*</span></span>
+                        </template>
                         <TairoInput v-model="company.name" placeholder="Ex: Contabilidade Silva & Associados"
                           icon="solar:buildings-bold-duotone" />
                       </BaseField>
@@ -903,7 +907,11 @@ onMounted(async () => {
                       </BaseField>
                     </div>
                     <div>
-                      <BaseField label="CNPJ">
+                      <BaseField label="CNPJ" required>
+                        <template #label>
+                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">CNPJ <span
+                              class="text-red-500">*</span></span>
+                        </template>
                         <TairoInput v-model="company.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
                           icon="solar:document-text-bold-duotone" />
                       </BaseField>
