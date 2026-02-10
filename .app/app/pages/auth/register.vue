@@ -651,7 +651,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
             Comece sua jornada
           </BaseHeading>
           <BaseParagraph class="text-muted-500 dark:text-muted-400 max-w-sm mx-auto">
-            Crie sua conta e tenha acesso a todas as ferramentas para gerenciar o IR dos seus clientes.
+            Crie sua conta e tenha acesso a todas as ferramentas para gerenciar os IRs dos seus clientes.
           </BaseParagraph>
         </div>
       </div>
