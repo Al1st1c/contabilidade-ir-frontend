@@ -4,7 +4,7 @@
 export const API_CONFIG = {
   // URL base da API - ajuste conforme seu ambiente
   // BASE_URL: process.env.API_BASE || 'https://dolphin-app-945a9.ondigitalocean.app', // URL do seu backend NestJS
-  BASE_URL: process.env.API_BASE || 'http://localhost:8080', // URL do seu backend NestJS
+  BASE_URL: process.env.API_BASE || 'https://api.gestorirpf.com.br', // URL do seu backend NestJS
 
   // Configurações de segurança
   SECURITY: {
