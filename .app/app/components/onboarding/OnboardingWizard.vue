@@ -2,6 +2,7 @@
 import { watchDebounced } from '@vueuse/core'
 import { API_CONFIG } from '~/utils/config'
 import { safeColors } from '~/utils/colors'
+import { permissionGroups } from '~/utils/permissions'
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useSubscription } from '~/composables/useSubscription'
 import { useTenant } from '~/composables/useTenant'
@@ -53,13 +54,21 @@ const allSteps = [
   {
     id: 3,
     meta: {
+      name: 'Configuração de Cargos',
+      title: 'Defina as Permissões',
+      subtitle: 'Personalize o que cada função pode fazer no sistema antes de convidar sua equipe.',
+    },
+  },
+  {
+    id: 4,
+    meta: {
       name: 'Cadastro de Equipe',
       title: 'Adicione sua equipe',
       subtitle: 'Convide funcionários e comece a operar com colaboradores',
     },
   },
   {
-    id: 4,
+    id: 5,
     meta: {
       name: 'Whitelabel',
       title: 'Identidade visual',
@@ -67,7 +76,7 @@ const allSteps = [
     },
   },
   {
-    id: 5,
+    id: 6,
     meta: {
       name: 'Finalização',
       title: 'Tudo pronto 🥳 ',
@@ -76,12 +85,71 @@ const allSteps = [
   },
 ] as const
 
+// Refs e funções para Configuração de Cargos (Step ID 4)
+const selectedRole = ref<any>(null)
+const isSavingRole = ref(false)
+const isCustomizingRoles = ref(false)
+
+function startCustomizingRoles() {
+  isCustomizingRoles.value = true
+  if (roles.value.length > 0 && !selectedRole.value) {
+    selectedRole.value = { ...roles.value[0] }
+  }
+}
+
+function selectRole(role: any) {
+  selectedRole.value = { ...role }
+}
+
+async function saveRolePermissions() {
+  if (!selectedRole.value) return
+
+  isSavingRole.value = true
+  try {
+    const permissions: any = {}
+    permissionGroups.forEach(group => {
+      group.permissions.forEach(p => {
+        permissions[p.key] = selectedRole.value[p.key]
+      })
+    })
+
+    const { data: response } = await useCustomFetch<any>(`/tenant/roles/${selectedRole.value.id}`, {
+      method: 'PATCH',
+      body: permissions
+    })
+
+    if (response.success) {
+      toaster.add({
+        title: 'Sucesso',
+        description: 'Permissões atualizadas com sucesso!',
+        icon: 'ph:check-circle-duotone'
+      })
+      await fetchRoles()
+      // Atualizar o selectedRole com os dados novos
+      const updated = roles.value.find(r => r.id === selectedRole.value.id)
+      if (updated) selectedRole.value = { ...updated }
+    }
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: error.message || 'Erro ao salvar permissões',
+      icon: 'ph:x-circle-duotone'
+    })
+  } finally {
+    isSavingRole.value = false
+  }
+}
+
 const steps = computed(() => {
   if (isOwner.value) {
+    if (currentSubscription.value && (currentSubscription.value.employeesLimit || 1) <= 1) {
+      // Se for plano individual, remove passos de Cargos (3) e Equipe (4)
+      return allSteps.filter(step => step.id !== 3 && step.id !== 4)
+    }
     return allSteps
   }
-  // For staff, only Welcome (0), Profile (1) and Finish (5)
-  return allSteps.filter(step => [0, 1, 5].includes(step.id))
+  // For staff, only Welcome (0), Profile (1) and Finish (6) - Finish is now ID 6
+  return allSteps.filter(step => [0, 1, 6].includes(step.id))
 })
 
 const totalSteps = computed(() => steps.value.length)
@@ -146,12 +214,7 @@ async function fetchAddressByCep(cep: string) {
       company.value.city = data.localidade || ''
       company.value.state = data.uf || ''
 
-      toaster.add({
-        title: 'CEP Encontrado',
-        description: 'Endereço preenchido automaticamente.',
-        icon: 'solar:check-circle-bold-duotone',
-        duration: 3000,
-      })
+
     }
   } catch (error) {
     console.error('Erro ao buscar CEP:', error)
@@ -575,10 +638,10 @@ const shouldShowFooterContinue = computed(() => {
   if (complete.value)
     return false
 
-  if (steps.value[currentStep.value]?.id === 4 && !hasWhitelabel.value)
+  if (steps.value[currentStep.value]?.id === 5 && !hasWhitelabel.value)
     return false
 
-  if (steps.value[currentStep.value]?.id === 3 && isTrial.value)
+  if (steps.value[currentStep.value]?.id === 4 && isTrial.value)
     return false
 
   return true
@@ -628,7 +691,7 @@ async function handleSubmit() {
       await saveCompany()
     }
 
-    if (steps.value[currentStep.value]?.id === 4 && hasWhitelabel.value) {
+    if (steps.value[currentStep.value]?.id === 5 && hasWhitelabel.value) {
       await saveWhitelabel()
     }
 
@@ -902,14 +965,13 @@ onMounted(async () => {
                   <div
                     class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-muted-50/50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
                     <div class="sm:col-span-2">
-                      <h4 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-2">Informações Básicas
+                      <h4 class="text-xs text-muted-400 uppercase tracking-widest mb-2">Informações Básicas
                       </h4>
                     </div>
                     <div class="sm:col-span-2">
                       <BaseField label="Razão Social" required>
                         <template #label>
-                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">Razão Social <span
-                              class="text-red-500">*</span></span>
+                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">Razão Social</span>
                         </template>
                         <TairoInput v-model="company.name" placeholder="Ex: Contabilidade Silva & Associados"
                           icon="solar:buildings-bold-duotone" />
@@ -924,8 +986,7 @@ onMounted(async () => {
                     <div>
                       <BaseField label="CNPJ" required>
                         <template #label>
-                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">CNPJ <span
-                              class="text-red-500">*</span></span>
+                          <span class="text-sm font-medium text-muted-800 dark:text-muted-100">CNPJ </span>
                         </template>
                         <TairoInput v-model="company.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
                           icon="solar:document-text-bold-duotone" />
@@ -962,7 +1023,7 @@ onMounted(async () => {
                   <div
                     class="grid grid-cols-1 sm:grid-cols-6 gap-6 p-6 bg-muted-50/50 dark:bg-muted-900/40 rounded-2xl border border-muted-200 dark:border-muted-800">
                     <div class="sm:col-span-6">
-                      <h4 class="text-xs font-bold text-muted-400 uppercase tracking-widest mb-2">Endereço do Escritório
+                      <h4 class="text-xs  text-muted-400 uppercase tracking-widest mb-2">Endereço do Escritório
                       </h4>
                     </div>
                     <div class="sm:col-span-2">
@@ -1007,8 +1068,153 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Step 3: Team -->
+            <!-- Step 3: Roles Configuration -->
             <div v-else-if="steps[currentStep]?.id === 3">
+              <!-- State 1: Educational / Summary (Default) -->
+              <div v-if="!isCustomizingRoles" class="max-w-4xl mx-auto">
+                <div class="text-center mb-10">
+                  <div class="flex items-center justify-center mb-6">
+                    <div
+                      class="size-20 rounded-3xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                      <Icon name="solar:shield-user-bold-duotone" class="size-10" />
+                    </div>
+                  </div>
+                  <h3 class="text-xl font-bold text-muted-800 dark:text-white mb-3">
+                    Permissões Pré-definidas
+                  </h3>
+                  <p class="text-muted-500 dark:text-muted-400 max-w-lg mx-auto leading-relaxed">
+                    Para agilizar seu início, já configuramos perfis de acesso padronizados para contabilidade.
+                    Seus colaboradores terão acesso apenas ao que precisam.
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                  <div v-for="role in roles.slice(0, 3)" :key="role.id"
+                    class="p-6 rounded-2xl border border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50 flex flex-col items-center text-center">
+                    <div class="size-12 rounded-xl mb-4 flex items-center justify-center"
+                      :class="role.name === 'admin' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' : 'bg-white dark:bg-muted-800 text-primary-500 shadow-sm'">
+                      <Icon :name="role.name === 'admin' ? 'solar:crown-bold-duotone' : 'solar:user-id-bold-duotone'"
+                        class="size-6" />
+                    </div>
+                    <h4 class="font-semibold text-muted-800 dark:text-white capitalize mb-1">{{ role.name }}</h4>
+                    <p class="text-xs text-muted-500 line-clamp-3">{{ role.description || 'Perfil padrão do sistema' }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <BaseButton rounded="sm" size="lg" class="w-full sm:w-auto h-12 px-8" @click="startCustomizingRoles">
+                    <Icon name="solar:settings-bold-duotone" class="me-2 size-5" />
+                    Personalizar Permissões
+                  </BaseButton>
+                  <BaseButton rounded="sm" variant="primary" shadow="primary" size="lg"
+                    class="w-full sm:w-auto h-12 px-8" @click="currentStep++">
+                    Manter Padrão e Continuar
+                    <Icon name="lucide:arrow-right" class="ms-2 size-5" />
+                  </BaseButton>
+                </div>
+              </div>
+
+              <!-- State 2: Editor (Optional) -->
+              <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Sidebar de Cargos -->
+                <div class="lg:col-span-4 xl:col-span-3">
+                  <BaseCard rounded="lg" class="p-4" :class="'min-h-[400px]'">
+                    <BaseHeading as="h3" size="sm" class="mb-4 px-2">
+                      Funções Disponíveis
+                    </BaseHeading>
+
+                    <div v-if="loadingRoles" class="flex justify-center p-4">
+                      <Icon name="svg-spinners:ring-resize" class="size-6 text-primary-500" />
+                    </div>
+
+                    <div v-else class="flex flex-col gap-2">
+                      <button v-for="role in roles" :key="role.id" type="button"
+                        class="flex flex-col rounded-lg p-3 text-left transition-colors" :class="[
+                          selectedRole?.id === role.id
+                            ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                            : 'hover:bg-muted-100 dark:hover:bg-muted-800'
+                        ]" @click="selectRole(role)">
+                        <div class="flex items-center gap-2">
+                          <span class="capitalize font-medium">{{ role.name }}</span>
+                          <span v-if="role.name === 'admin'"
+                            class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Admin</span>
+                        </div>
+                        <span class="text-xs text-muted-500 mt-1 line-clamp-2">{{ role.description || 'Sem descrição'
+                          }}</span>
+                      </button>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-muted-200 dark:border-muted-800">
+                      <button type="button"
+                        class="w-full text-xs text-muted-500 hover:text-primary-500 flex items-center justify-center gap-1 py-2"
+                        @click="isCustomizingRoles = false">
+                        <Icon name="lucide:arrow-left" class="size-3" />
+                        Voltar para resumo
+                      </button>
+                    </div>
+                  </BaseCard>
+                </div>
+
+                <!-- Painel de Permissões -->
+                <div class="lg:col-span-8 xl:col-span-9">
+                  <div v-if="selectedRole" class="space-y-6">
+                    <div
+                      class="flex items-center justify-between p-4 bg-muted-50 dark:bg-muted-900/50 rounded-lg border border-muted-200 dark:border-muted-800">
+                      <div>
+                        <h4 class="font-medium text-muted-800 dark:text-white">Editando: {{ selectedRole.name }}</h4>
+                        <p class="text-xs text-muted-500">Personalize o acesso deste cargo</p>
+                      </div>
+                      <BaseButton v-if="selectedRole.name !== 'admin'" size="sm" variant="primary"
+                        :loading="isSavingRole" @click="saveRolePermissions">
+                        Salvar Alterações
+                      </BaseButton>
+                    </div>
+
+                    <div v-if="selectedRole.name === 'admin'"
+                      class="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm flex items-center gap-2">
+                      <Icon name="ph:lock-key-duotone" class="size-5" />
+                      Permissões do administrador não podem ser alteradas.
+                    </div>
+
+                    <div v-else class="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                      <div v-for="group in permissionGroups" :key="group.name" class="space-y-3">
+                        <h5 class="text-xs uppercase tracking-wider font-bold text-muted-400 flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-primary-500"></span>
+                          {{ group.name }}
+                        </h5>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div v-for="permission in group.permissions" :key="permission.key"
+                            class="flex items-start gap-3 p-3 rounded-lg border border-muted-200 dark:border-muted-800 hover:border-primary-500/30 transition-colors bg-white dark:bg-muted-950">
+                            <BaseCheckbox v-model="selectedRole[permission.key]" color="primary" class="mt-1" />
+                            <div>
+                              <div class="flex items-center gap-1.5">
+                                <span class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ permission.label
+                                  }}</span>
+                                <BaseTooltip :content="permission.explanation" position="top">
+                                  <Icon name="ph:info" class="size-3.5 text-muted-400 cursor-help" />
+                                </BaseTooltip>
+                              </div>
+                              <p class="text-[11px] text-muted-500 leading-tight mt-0.5">{{ permission.description }}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else class="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-400">
+                    <Icon name="solar:user-id-linear" class="size-16 mb-4 opacity-50" />
+                    <p>Selecione um cargo ao lado para editar</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Team (Replaces Step 3) -->
+            <div v-else-if="steps[currentStep]?.id === 4">
               <AppPageLoading v-if="pendingMembers || loadingSub" message="Verificando seu plano..." />
               <div v-else>
                 <!-- Trial State -->
@@ -1218,8 +1424,8 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Step 4: Whitelabel -->
-            <div v-else-if="steps[currentStep]?.id === 4">
+            <!-- Step 5: Whitelabel (Replaces Step 4) -->
+            <div v-else-if="steps[currentStep]?.id === 5">
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <!-- Config / Upgrade Column -->
                 <div class="lg:col-span-6">
@@ -1371,8 +1577,8 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Step 5: Video / Finish -->
-            <div v-else-if="steps[currentStep]?.id === 5" class="max-w-3xl mx-auto space-y-8">
+            <!-- Step 6: Video / Finish (Replaces Step 5) -->
+            <div v-else-if="steps[currentStep]?.id === 6" class="max-w-3xl mx-auto space-y-8">
               <div v-if="isPreparing" class="py-20 flex flex-col items-center">
                 <AppPageLoading message="Personalizando sua plataforma.." />
               </div>
@@ -1413,14 +1619,15 @@ onMounted(async () => {
         </BaseButton>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <BaseButton v-if="steps[currentStep]?.id === 4 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
+          <BaseButton v-if="steps[currentStep]?.id === 5 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
             @click.prevent="continueWithoutUpgrade">
             <span>Pular Customização</span>
           </BaseButton>
 
-          <BaseButton v-if="shouldShowFooterContinue && !isPreparing" type="submit" rounded="sm" variant="primary"
-            shadow="primary" class="w-full sm:w-48 h-12" :loading="loading" :disabled="loading"
-            @click.prevent="handleSubmit">
+          <BaseButton
+            v-if="shouldShowFooterContinue && !isPreparing && (steps[currentStep]?.id !== 3 || isCustomizingRoles)"
+            type="submit" rounded="sm" variant="primary" shadow="primary" class="w-full sm:w-48 h-12" :loading="loading"
+            :disabled="loading" @click.prevent="handleSubmit">
             <span>{{ isLastStep ? 'Concluir' : 'Continuar' }}</span>
             <Icon v-if="!isLastStep" name="lucide:chevron-right" class="ms-2 size-4" />
             <Icon v-else name="lucide:check" class="ms-2 size-4" />

@@ -394,16 +394,34 @@ export function useApi() {
     }
 
     const finalOptions = { ...defaults, ...options, headers }
-    const data = await $fetch<T>(url, finalOptions)
 
-    // Verifica se há erro no payload (API NestJS retorna error: 1)
-    if (data && typeof data === 'object' && 'error' in data && (data as any).error === 1) {
-      const errorData = data as any
-      const errorMessage = errorData.message || 'Erro na requisição'
-      throw new Error(errorMessage)
+    try {
+      const data = await $fetch<T>(url, finalOptions)
+
+      // Verifica se há erro no payload (API NestJS retorna error: 1)
+      if (data && typeof data === 'object' && 'error' in data && (data as any).error === 1) {
+        const errorData = data as any
+        const errorMessage = errorData.message || 'Erro na requisição'
+        throw new Error(errorMessage)
+      }
+
+      return { data }
+    } catch (error: any) {
+      // Tenta extrair a mensagem de erro do backend (NestJS / OFetch)
+      const backendMessage = error.response?._data?.message || error.data?.message || error.message
+
+      // Se for array (erros de validação), junta as mensagens
+      const finalMessage = Array.isArray(backendMessage)
+        ? backendMessage.join(', ')
+        : backendMessage
+
+      // Se a mensagem for a URL (comportamento padrão do fetch error), usa mensagem genérica
+      if (finalMessage && (finalMessage.includes('http') || finalMessage.includes('fetch'))) {
+        throw new Error('Erro de conexão com o servidor')
+      }
+
+      throw new Error(finalMessage || 'Erro ao processar requisição')
     }
-
-    return { data }
   }
 
   return { useCustomFetch }
