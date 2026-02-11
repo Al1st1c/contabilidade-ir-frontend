@@ -14,13 +14,18 @@ export default defineNuxtRouteMiddleware((to) => {
   }
 
   // Se não estiver autenticado e tentar acessar rotas protegidas
-  if (!token.value && (to.path.startsWith('/dashboard') || to.path.startsWith('/client'))) {
+  if (!token.value && (to.path.startsWith('/dashboard') || to.path.startsWith('/client') || to.path.startsWith('/affiliate/dashboard'))) {
     return navigateTo('/')
   }
 
   // Redirecionamento baseado no tipo de usuário
   if (to.path.startsWith('/dashboard') && user.value?.userType === 'client') {
     return navigateTo('/client')
+  }
+
+  // Se o usuário for um afiliado tentando acessar o dashboard principal
+  if (to.path.startsWith('/dashboard') && user.value?.affiliateProfile && !user.value?.tenantId) {
+    return navigateTo('/affiliate/dashboard')
   }
 
   if (to.path.startsWith('/client') && user.value?.userType !== 'client') {

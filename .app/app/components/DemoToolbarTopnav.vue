@@ -53,11 +53,15 @@ const isOwner = computed(() => {
   return roleName === 'master' || user.value?.isAdmin
 })
 
+const isAffiliateOnly = computed(() => !!user.value?.affiliateProfile && !user.value?.tenantId)
+
 onMounted(() => {
-  fetchNotificationCount()
-  fetchMySubscription()
-  // Refresh every 2 minutes
-  setInterval(fetchNotificationCount, 120000)
+  if (!isAffiliateOnly.value) {
+    fetchNotificationCount()
+    fetchMySubscription()
+    // Refresh every 2 minutes
+    setInterval(fetchNotificationCount, 120000)
+  }
 })
 
 function openNotifications() {
@@ -107,7 +111,7 @@ function openSubscription() {
         <DropdownMenuTrigger
           class="group-hover:ring-primary-500 dark:ring-offset-muted-800 inline-flex size-10 items-center justify-center rounded-full ring-1 ring-transparent transition-all duration-300 group-hover:ring-offset-4 outline-none">
           <BaseChip size="sm" color="custom" :offset="3" class="text-success-500">
-            <BaseAvatar size="sm" :src="user?.photo || '/img/avatars/placeholder.jpg'"
+            <BaseAvatar size="sm" :src="user?.photo || '/img/logo-icon.png'"
               class="object-cover ring-2 ring-muted-200 dark:ring-muted-800" />
           </BaseChip>
         </DropdownMenuTrigger>

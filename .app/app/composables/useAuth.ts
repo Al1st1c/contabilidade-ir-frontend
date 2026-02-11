@@ -11,6 +11,8 @@ interface User {
   userType?: string
   isAdmin?: boolean
   level?: string
+  tenantId?: string
+  affiliateProfile?: any
   role?: {
     id: string
     name: string
@@ -214,6 +216,8 @@ export function useAuth() {
           canManageChecklist: rawUser.role.canManageChecklist,
           canManageKanban: rawUser.role.canManageKanban,
         } : undefined,
+        tenantId: rawUser.tenantId,
+        affiliateProfile: rawUser.affiliateProfile,
         tenant: rawUser.tenant ? {
           id: rawUser.tenant.id,
           name: rawUser.tenant.name,
@@ -360,35 +364,31 @@ export function useAuth() {
 
 // Composable para requisições autenticadas
 export function useApi() {
+  const auth = useAuth()
+
   const useCustomFetch = async <T = any>(
     url: string,
     options: any = {},
   ): Promise<{ data: T }> => {
     // Obter token fresh a cada requisição para evitar problemas de SSR/hidratação
-    const { token } = useAuth()
+    const { token } = auth
 
     // Debug: verificar se o token está disponível
-    console.log('Token disponível para requisição:', token.value ? 'SIM' : 'NÃO')
-    console.log('URL da requisição:', url)
+    // console.log('Token disponível para requisição:', token.value ? 'SIM' : 'NÃO')
+    // console.log('URL da requisição:', url)
 
     const headers: any = { ...options.headers }
     if (token.value) {
       headers.Authorization = `Bearer ${token.value}`
-      console.log('Header Authorization adicionado')
-    }
-    else {
-      console.log('Token não encontrado, requisição sem autenticação')
     }
 
     const defaults = {
       baseURL: API_CONFIG.BASE_URL,
       headers,
       onResponseError: (ctx: any) => {
-        console.log('Erro na resposta:', ctx)
         if (ctx?.response?.status === 401) {
           // Token expirado ou inválido
-          const { logout } = useAuth()
-          logout()
+          auth.logout()
         }
       },
     }
@@ -416,7 +416,7 @@ export function useApi() {
         : backendMessage
 
       // Se a mensagem for a URL (comportamento padrão do fetch error), usa mensagem genérica
-      if (finalMessage && (finalMessage.includes('http') || finalMessage.includes('fetch'))) {
+      if (finalMessage && (typeof finalMessage === 'string' && (finalMessage.includes('http') || finalMessage.includes('fetch')))) {
         throw new Error('Erro de conexão com o servidor')
       }
 

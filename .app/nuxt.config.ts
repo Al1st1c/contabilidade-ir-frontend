@@ -124,6 +124,12 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      meta: [
+        {
+          'http-equiv': 'Content-Security-Policy',
+          content: "script-src 'self' 'unsafe-eval' 'unsafe-inline' https:; object-src 'none'; base-uri 'self';",
+        },
+      ],
       script: [
         {
           src: `https://www.google.com/recaptcha/api.js?render=6LeaWz4rAAAAABMpDVUnge1SNvB2OtQ7JSwpQJSS`,
