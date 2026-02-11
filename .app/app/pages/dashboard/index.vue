@@ -239,8 +239,6 @@ async function fetchDashboard() {
 }
 
 async function fetchTeam() {
-  if (!canViewAll.value)
-    return
   try {
     const { data } = await useCustomFetch<any>('/tenant/members')
     teamMembers.value = data.data || data || []

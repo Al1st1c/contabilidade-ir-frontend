@@ -127,11 +127,13 @@ onMounted(fetchChecklist)
 
           <div class="space-y-4">
             <BaseField label="Título do Documento">
-              <BaseInput v-model="form.title" placeholder="Ex: Comprovante de Residência" />
+              <BaseInput v-model="form.title" placeholder="Ex: Comprovante de Residência" icon="ph:text-t"
+                rounded="md" />
             </BaseField>
 
             <BaseField label="Descrição/Instruções">
-              <BaseInput v-model="form.description" placeholder="Instruções para o cliente..." />
+              <BaseInput v-model="form.description" placeholder="Instruções para o cliente..." icon="ph:list-dashing"
+                rounded="md" />
             </BaseField>
 
             <div class="flex items-center justify-between py-2">
@@ -140,7 +142,7 @@ onMounted(fetchChecklist)
             </div>
 
             <BaseField label="Ordem de Exibição">
-              <BaseInput v-model="form.order" type="number" />
+              <BaseInput v-model="form.order" type="number" icon="ph:sort-ascending" rounded="md" />
             </BaseField>
           </div>
 

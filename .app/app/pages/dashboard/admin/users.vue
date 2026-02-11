@@ -237,29 +237,29 @@ function formatDate(date: string) {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BaseField label="Status da Assinatura">
-              <BaseSelect v-model="subForm.status">
-                <option value="ACTIVE">Ativo</option>
-                <option value="TRIAL">Trial</option>
-                <option value="PAST_DUE">Pagamento Pendente</option>
-                <option value="CANCELED">Cancelado</option>
-                <option value="EXPIRED">Expirado</option>
+              <BaseSelect v-model="subForm.status" icon="ph:info" rounded="md">
+                <BaseSelectItem value="ACTIVE">Ativo</BaseSelectItem>
+                <BaseSelectItem value="TRIAL">Trial</BaseSelectItem>
+                <BaseSelectItem value="PAST_DUE">Pagamento Pendente</BaseSelectItem>
+                <BaseSelectItem value="CANCELED">Cancelado</BaseSelectItem>
+                <BaseSelectItem value="EXPIRED">Expirado</BaseSelectItem>
               </BaseSelect>
             </BaseField>
 
             <BaseField label="Vencimento">
-              <BaseInput v-model="subForm.currentPeriodEnd" type="date" />
+              <BaseInput v-model="subForm.currentPeriodEnd" type="date" icon="ph:calendar" rounded="md" />
             </BaseField>
 
             <BaseField label="Limite Funcionários">
-              <BaseInput v-model="subForm.employeesLimit" type="number" />
+              <BaseInput v-model="subForm.employeesLimit" type="number" icon="ph:users" rounded="md" />
             </BaseField>
 
             <BaseField label="Limite IRs (Ano)">
-              <BaseInput v-model="subForm.taxDeclarationsLimit" type="number" />
+              <BaseInput v-model="subForm.taxDeclarationsLimit" type="number" icon="ph:files" rounded="md" />
             </BaseField>
 
             <BaseField label="Espaço Storage (MB)">
-              <BaseInput v-model="subForm.storageMbLimit" type="number" />
+              <BaseInput v-model="subForm.storageMbLimit" type="number" icon="ph:database" rounded="md" />
             </BaseField>
 
             <div class="space-y-4 pt-4 border-t border-muted-200 dark:border-muted-800 md:col-span-2">
