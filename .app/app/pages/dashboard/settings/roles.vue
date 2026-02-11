@@ -72,9 +72,15 @@ const permissionGroups = [
       },
       {
         key: 'canManageChecklist',
-        label: 'Gerenciar Checklist',
-        description: 'Configurar itens obrigatórios para coleta',
-        explanation: 'Habilitado: Pode personalizar o que é pedido ao cliente. Desabilitado: Segue o checklist padrão da empresa.'
+        label: 'Configurar Checklist',
+        description: 'Definir o que o cliente precisa enviar no onboarding',
+        explanation: 'Habilitado: Pode personalizar o checklist padrão da empresa. Desabilitado: Segue o fluxo fixo.'
+      },
+      {
+        key: 'canApproveChecklist',
+        label: 'Revisar Documentos',
+        description: 'Aprovar ou rejeitar documentos de clientes',
+        explanation: 'Habilitado: Pode dar baixa ou recusar arquivos enviados no IR. Desabilitado: Apenas visualiza os arquivos.'
       },
       {
         key: 'canDeleteRecords',
@@ -226,7 +232,18 @@ onMounted(fetchRoles)
                   ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
                   : 'hover:bg-muted-100 dark:hover:bg-muted-800'
               ]" @click="selectRole(role)">
-              <span class="capitalize">{{ role.name }}</span>
+              <div class="flex items-center gap-2">
+                <span class="capitalize">{{ role.name }}</span>
+                <BaseTag v-if="role.name === 'admin'" size="sm" variant="muted" color="warning">
+                  Admin
+                </BaseTag>
+                <BaseTag v-else-if="!role.tenantId" size="sm" variant="muted">
+                  Sistema
+                </BaseTag>
+                <BaseTag v-else size="sm" variant="muted" color="primary">
+                  Personalizado
+                </BaseTag>
+              </div>
               <span class="text-xs text-muted-500">{{ role.description || 'Sem descrição' }}</span>
             </button>
           </div>
@@ -243,9 +260,21 @@ onMounted(fetchRoles)
       <div class="lg:col-span-8 xl:col-span-9">
         <div v-if="selectedRole" class="space-y-6">
           <div v-for="group in permissionGroups" :key="group.name">
-            <BaseHeading as="h4" size="md" class="mb-4 flex items-center gap-2">
-              <span class="h-1 w-4 rounded-full bg-primary-500"></span>
-              {{ group.name }}
+            <BaseHeading as="h4" size="md" class="mb-4 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="h-1 w-4 rounded-full bg-primary-500"></span>
+                {{ group.name }}
+              </div>
+              <div v-if="group.name === 'Administração' && !selectedRole.tenantId"
+                class="flex items-center gap-1.5 rounded-full bg-muted-100 px-2.5 py-1 text-[10px]  uppercase tracking-wider text-muted-500 dark:bg-muted-800">
+                <Icon name="ph:seal-check-duotone" class="size-3.5" />
+                Cargos do Sistema
+              </div>
+              <div v-else-if="group.name === 'Administração' && selectedRole.tenantId && selectedRole.name !== 'admin'"
+                class="flex items-center gap-1.5 rounded-full bg-primary-500/10 px-2.5 py-1 text-[10px]  uppercase tracking-wider text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
+                <Icon name="ph:user-circle-gear-duotone" class="size-3.5" />
+                Personalizado
+              </div>
             </BaseHeading>
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -253,7 +282,7 @@ onMounted(fetchRoles)
                 class="flex items-start gap-4 p-4">
                 <div class="mt-1">
                   <BaseSwitchBall v-model="selectedRole[permission.key]" color="primary"
-                    :disabled="selectedRole.name === 'master' || selectedRole.name === 'admin'" />
+                    :disabled="selectedRole.name === 'admin'" />
                 </div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2">
@@ -272,13 +301,21 @@ onMounted(fetchRoles)
             </div>
           </div>
 
-          <div v-if="selectedRole.name === 'master' || selectedRole.name === 'admin'"
-            class="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+          <div v-if="!selectedRole.tenantId" class="rounded-lg bg-info-50 p-4 dark:bg-info-900/20">
             <div class="flex items-center gap-3">
-              <Icon name="ph:info-duotone" class="h-5 w-5 text-amber-500" />
+              <Icon name="ph:info-duotone" class="h-5 w-5 text-info-500" />
+              <BaseParagraph size="sm" class="text-info-800 dark:text-info-200">
+                Este é um cargo <strong>padrão do sistema</strong>. Ao realizar qualquer alteração, uma versão
+                personalizada exclusiva para sua empresa será criada automaticamente.
+              </BaseParagraph>
+            </div>
+          </div>
+          <div v-else-if="selectedRole.name === 'admin'" class="rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+            <div class="flex items-center gap-3">
+              <Icon name="ph:shield-warning-duotone" class="h-5 w-5 text-amber-500" />
               <BaseParagraph size="sm" class="text-amber-800 dark:text-amber-200">
-                Os cargos <strong>Master</strong> e <strong>Admin</strong> possuem acesso total ao sistema e suas
-                permissões não podem ser alteradas.
+                O cargo <strong>Admin</strong> é reservado para o suporte do sistema e suas permissões não podem ser
+                alteradas.
               </BaseParagraph>
             </div>
           </div>

@@ -30,7 +30,7 @@ const allSteps = [
     id: 0,
     meta: {
       name: 'Bem-vindo',
-      title: 'Bem-vindo ao Gestor IRPF',
+      title: 'Bem-vindo(a) ao Gestor IRPF',
       subtitle: 'Vamos configurar seu ambiente em poucos passos. Você pode concluir agora e ajustar depois nas configurações.',
     },
   },
@@ -363,10 +363,12 @@ async function fetchMembers() {
 }
 
 const totalMembers = computed(() => {
-  // Include the owner (current user) in the count
+  // Include the owner (current user) in the count only if they aren't already in teamData
   const membersCount = teamData.value?.total || 0
-  // Always add 1 for the owner if we have a user
-  return user.value ? membersCount + 1 : membersCount
+  const isOwnerInList = teamData.value?.data?.some((m: any) => m.id === user.value?.id)
+
+  // If user exists and is NOT in the list, count them as +1
+  return (user.value && !isOwnerInList) ? membersCount + 1 : membersCount
 })
 
 const canAddMember = computed(() => {
@@ -728,7 +730,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex h-full max-h-[90vh] min-h-[500px] flex-col overflow-hidden bg-white dark:bg-muted-950">
+  <div class="flex h-[100dvh] md:h-[800px] md:max-h-[90vh] flex-col overflow-hidden bg-white dark:bg-muted-950">
     <!-- Header: Progress -->
     <div
       class="flex shrink-0 items-center justify-between border-b border-muted-200 bg-muted-50/50 p-4 px-6 dark:border-muted-800 dark:bg-muted-900/50">
@@ -785,7 +787,7 @@ onMounted(async () => {
                     {{ isOwner ? 'Tudo pronto para começar?' : 'Bem-vindo ao time!' }}
                   </h2>
                   <p v-if="isOwner" class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
-                    Bem-vindo ao <b>Gestor IRPF</b>. Projetamos este guia para ajudar você a configurar seu
+                    Projetamos este guia para ajudar você a configurar seu
                     escritório em menos de 5 minutos.
                   </p>
                   <p v-else class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
@@ -825,17 +827,6 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <BaseButton rounded="sm" variant="primary" size="lg" shadow="primary" class="w-full sm:w-64 h-14"
-                  @click.prevent="startOnboarding">
-                  <span>Vamos Começar</span>
-                  <Icon name="lucide:arrow-right" class="ms-2 size-5" />
-                </BaseButton>
-                <!-- <BaseButton rounded="sm" size="lg" variant="ghost" class="w-full sm:w-48 h-14"
-                  @click.prevent="router.push('/dashboard')">
-                  <span>Pular Guia</span>
-                </BaseButton> -->
-              </div>
             </div>
 
             <!-- Step 1: User Profile -->
@@ -926,8 +917,8 @@ onMounted(async () => {
                     </div>
                     <div>
                       <BaseField label="Nome Fantasia">
-                        <TairoInput v-model="company.tradeName" :disabled="!hasWhitelabel"
-                          placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone" />
+                        <TairoInput v-model="company.tradeName" placeholder="Ex: Contábil Silva"
+                          icon="solar:shop-bold-duotone" />
                       </BaseField>
                     </div>
                     <div>
@@ -1037,9 +1028,6 @@ onMounted(async () => {
                       @click.prevent="handleUpgrade">
                       <Icon name="solar:crown-minimalistic-bold-duotone" class="me-2 size-5 text-amber-300" />
                       Assinar Plano
-                    </BaseButton>
-                    <BaseButton rounded="sm" size="lg" class="h-14 px-8" @click.prevent="continueFromTeamTrial">
-                      Pular Passo
                     </BaseButton>
                   </div>
                 </div>
@@ -1180,7 +1168,7 @@ onMounted(async () => {
                       </div>
 
                       <!-- Other Team Members -->
-                      <div v-for="member in teamData.data" :key="member.id"
+                      <div v-for="member in teamData.data.filter((m: any) => m.id !== user?.id)" :key="member.id"
                         class="group flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 hover:border-primary-500/50 transition-all duration-300">
                         <div class="relative shrink-0">
                           <img v-if="member.photo" :src="member.photo"
@@ -1404,7 +1392,8 @@ onMounted(async () => {
                   </div>
                   <div>
                     <p class="text-sm  text-muted-900 dark:text-white">Tudo configurado!</p>
-                    <p class="text-xs text-muted-500">Assista este tour rápido de 60 segundos ou clique em concluir.</p>
+                    <p class="text-xs text-muted-500">Assista este tour rápido de 60 segundos ou clique em concluir.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1415,7 +1404,7 @@ onMounted(async () => {
     </div>
 
     <!-- Footer: Navigation -->
-    <div v-if="!complete && steps[currentStep]?.id !== 0"
+    <div v-if="!complete"
       class="shrink-0 border-t border-muted-200 bg-white p-6 px-10 dark:border-muted-800 dark:bg-muted-950">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <BaseButton rounded="sm" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">

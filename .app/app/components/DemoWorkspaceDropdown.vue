@@ -133,10 +133,10 @@ const selectedMemberName = computed(() => {
       class="w-full max-w-[170px] rounded-lg py-1.5 pe-3 ps-2 border border-muted-200 dark:border-muted-800 transition-colors duration-300 hover:bg-muted-100 dark:hover:bg-muted-900/60 md:max-w-[240px]"
       :class="openDropdown && 'bg-muted-100 dark:bg-muted-900/60'" @click="toggleDropdown()">
       <span class="flex w-full items-center gap-3 text-start">
-        <BaseAvatar size="xxs" :src="tenant?.logo" :text="tenant?.tradeName?.charAt(0) || 'E'" />
+        <BaseAvatar size="xxs" :src="tenant?.logoBar" :text="tenant?.companyName?.charAt(0) || 'E'" />
         <div class="flex-1 min-w-0">
           <BaseText size="sm" class="line-clamp-1 block text-muted-800 dark:text-muted-200 font-medium">
-            {{ tenant?.tradeName || 'Meu Escritório' }}
+            {{ tenant?.companyName || 'Meu Escritório' }}
           </BaseText>
           <BaseText v-if="selectedMemberName" size="xs" class="text-primary-500 font-bold truncate block -mt-1">
             {{ selectedMemberName }}
@@ -154,7 +154,7 @@ const selectedMemberName = computed(() => {
         <div class="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-muted-200 md:dark:divide-muted-800">
           <!-- Left: Team Members -->
           <div>
-            <div class="font-sans flex items-center border-b border-muted-200 dark:border-muted-800">
+            <div v-if="canViewAll" class="font-sans flex items-center border-b border-muted-200 dark:border-muted-800">
               <div class="shrink-0 size-8 flex items-center justify-center">
                 <Icon name="lucide:search" class="size-4 text-muted-400 dark:text-muted-100" />
               </div>
@@ -162,63 +162,103 @@ const selectedMemberName = computed(() => {
                 class="h-10 px-2 w-full border-none outline-none bg-transparent text-sm text-muted-700 dark:text-muted-100"
                 placeholder="Buscar funcionário...">
             </div>
+            <div v-else
+              class="font-sans flex items-center justify-center border-b border-muted-200 dark:border-muted-800 h-10 bg-primary-500/5">
+              <BaseText size="xs" class="text-primary-600 uppercase">Minha Área de
+                Trabalho</BaseText>
+            </div>
             <div class="flex h-[calc(100%_-_2.5rem)] flex-col p-3">
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-2" v-if="canViewAll">
                 <BaseHeading as="h4" size="sm" weight="medium" class="text-muted-400">
                   Visualizar por
                 </BaseHeading>
-                <button v-if="selectedEmployeeId" type="button"
-                  class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
-                  @click="selectEmployee(null)">
-                  Limpar Filtro
-                </button>
               </div>
               <div class="my-1 xs:nui-slimscroll xs:max-h-[160px] xs:min-h-[160px]">
-                <!-- Loading -->
-                <div v-if="isLoading" class="space-y-2">
-                  <BasePlaceload v-for="i in 3" :key="i" class="h-10 w-full rounded-lg" />
-                </div>
-                <!-- Members List -->
-                <ul v-else-if="filteredMembers.length > 0" class="space-y-1">
-                  <!-- All Option -->
-                  <li>
-                    <button type="button"
-                      class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
-                      :class="!selectedEmployeeId && 'bg-primary-500/5 text-primary-600'" @click="selectEmployee(null)">
-                      <div
-                        class="size-6 rounded-full bg-muted-200 dark:bg-muted-800 flex items-center justify-center shrink-0">
-                        <Icon name="lucide:users" class="size-3" />
-                      </div>
-                      <BaseText size="sm" class="truncate block font-medium">
-                        Todos os Funcionários
-                      </BaseText>
-                      <Icon v-if="!selectedEmployeeId" name="lucide:check" class="ms-auto size-3" />
-                    </button>
-                  </li>
-                  <li v-for="member in filteredMembers" :key="member.id">
-                    <button type="button"
-                      class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
-                      :class="selectedEmployeeId === member.id && 'bg-primary-500/5 text-primary-600'"
-                      @click="selectEmployee(member.id)">
-                      <BaseAvatar size="xxs" :src="member.photo" :text="member.name?.charAt(0)" />
-                      <div class="flex-1 min-w-0">
+                <!-- Privileged View: Member List -->
+                <div v-if="canViewAll">
+                  <!-- Loading -->
+                  <div v-if="isLoading" class="space-y-2">
+                    <BasePlaceload v-for="i in 3" :key="i" class="h-10 w-full rounded-lg" />
+                  </div>
+                  <!-- Members List -->
+                  <ul v-else-if="filteredMembers.length > 0" class="space-y-1">
+                    <!-- All Option -->
+                    <li>
+                      <button type="button"
+                        class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
+                        :class="!selectedEmployeeId && 'bg-primary-500/5 text-primary-600'"
+                        @click="selectEmployee(null)">
+                        <div
+                          class="size-6 rounded-full bg-muted-200 dark:bg-muted-800 flex items-center justify-center shrink-0">
+                          <Icon name="lucide:users" class="size-3" />
+                        </div>
                         <BaseText size="sm" class="truncate block font-medium">
-                          {{ member.name }}
+                          Todos os Funcionários
                         </BaseText>
+                        <Icon v-if="!selectedEmployeeId" name="lucide:check" class="ms-auto size-3" />
+                      </button>
+                    </li>
+                    <li v-for="member in filteredMembers" :key="member.id">
+                      <button type="button"
+                        class="flex w-full items-center gap-2 rounded-lg py-2 pe-4 ps-2 transition-colors duration-200 hover:bg-muted-100 dark:hover:bg-muted-800 text-start"
+                        :class="selectedEmployeeId === member.id && 'bg-primary-500/5 text-primary-600'"
+                        @click="selectEmployee(member.id)">
+                        <BaseAvatar size="xxs" :src="member.photo" :text="member.name?.charAt(0)" />
+                        <div class="flex-1 min-w-0">
+                          <BaseText size="sm" class="truncate block font-medium">
+                            {{ member.name }}
+                          </BaseText>
+                        </div>
+                        <Icon v-if="selectedEmployeeId === member.id" name="lucide:check" class="ms-auto size-3" />
+                        <span v-else class="size-2 rounded-full shrink-0"
+                          :class="getRoleBadgeColor(member.role?.name)" />
+                      </button>
+                    </li>
+                  </ul>
+                  <!-- Empty State -->
+                  <div v-else class="text-center py-4">
+                    <BaseParagraph size="xs" class="text-muted-400">
+                      Nenhum funcionário encontrado
+                    </BaseParagraph>
+                  </div>
+                </div>
+
+                <!-- Staff View: Me vs General -->
+                <div v-else class="space-y-3 pt-2">
+                  <div class="grid grid-cols-1 gap-2">
+                    <button type="button"
+                      class="flex w-full flex-col gap-1 rounded-xl p-3 border-2 transition-all duration-200 text-start"
+                      :class="!selectedEmployeeId ? 'border-primary-500 bg-primary-500/5' : 'border-muted-200 dark:border-muted-800 hover:border-muted-300 dark:hover:border-muted-700'"
+                      @click="selectedEmployeeId = ''; openDropdown = false">
+                      <div class="flex items-center gap-2 mb-1">
+                        <Icon name="ph:buildings-bold" class="size-4"
+                          :class="!selectedEmployeeId ? 'text-primary-500' : 'text-muted-400'" />
+                        <BaseText size="sm"
+                          :class="!selectedEmployeeId ? 'text-primary-700 dark:text-primary-400' : 'text-muted-700 dark:text-muted-200'">
+                          Visão Geral</BaseText>
                       </div>
-                      <Icon v-if="selectedEmployeeId === member.id" name="lucide:check" class="ms-auto size-3" />
-                      <span v-else class="size-2 rounded-full shrink-0" :class="getRoleBadgeColor(member.role?.name)" />
+                      <BaseParagraph size="xs" class="text-muted-500">Acompanhe todos os processos do escritório.
+                      </BaseParagraph>
                     </button>
-                  </li>
-                </ul>
-                <!-- Empty State -->
-                <div v-else class="text-center py-4">
-                  <BaseParagraph size="xs" class="text-muted-400">
-                    Nenhum funcionário encontrado
-                  </BaseParagraph>
+
+                    <button type="button"
+                      class="flex w-full flex-col gap-1 rounded-xl p-3 border-2 transition-all duration-200 text-start"
+                      :class="selectedEmployeeId === user?.id ? 'border-primary-500 bg-primary-500/5' : 'border-muted-200 dark:border-muted-800 hover:border-muted-300 dark:hover:border-muted-700'"
+                      @click="selectedEmployeeId = user?.id || ''; openDropdown = false">
+                      <div class="flex items-center gap-2 mb-1">
+                        <Icon name="ph:user-bold" class="size-4"
+                          :class="selectedEmployeeId === user?.id ? 'text-primary-500' : 'text-muted-400'" />
+                        <BaseText size="sm"
+                          :class="selectedEmployeeId === user?.id ? 'text-primary-700 dark:text-primary-400' : 'text-muted-700 dark:text-muted-200'">
+                          Minha Atividade</BaseText>
+                      </div>
+                      <BaseParagraph size="xs" class="text-muted-500">Veja apenas as declarações sob sua
+                        responsabilidade.</BaseParagraph>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div class="mt-auto pt-2 border-t border-muted-100 dark:border-muted-800">
+              <div v-if="canViewAll" class="mt-auto pt-2 border-t border-muted-100 dark:border-muted-800">
                 <BaseButton rounded="md" size="sm" class="w-full" @click="goToCreateMember">
                   <Icon name="lucide:plus" class="size-3.5" />
                   <span>Gerenciar Equipe</span>

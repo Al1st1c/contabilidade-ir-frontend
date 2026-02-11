@@ -32,6 +32,10 @@ const isPreviewLoading = ref(false)
 const showGovPassword = ref(false)
 const showClientDetailsPanel = ref(false)
 const socket = ref<any>(null)
+const processingItems = ref(new Set<string>())
+const isUploading = ref(false)
+const isDeletingOfficial = ref('')
+const isDeleting = ref(false)
 const saveDebounced = useDebounceFn(() => {
   if (!isSaving.value)
     save()
@@ -358,6 +362,7 @@ async function syncChecklist() {
   finally { isSavingChecklist.value = false }
 }
 async function updateItemStatus(itemId: string, status: string, comment?: string) {
+  processingItems.value.add(itemId)
   try {
     await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/${itemId}`, {
       method: 'PATCH',
@@ -369,6 +374,9 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
     }
   }
   catch (error) { console.error('Erro ao atualizar status:', error) }
+  finally {
+    processingItems.value.delete(itemId)
+  }
 }
 
 // ─── Save / Delete ────────────────────────────────────────────────────────────
@@ -406,6 +414,7 @@ async function save() {
 async function confirmDelete() {
   if (!confirm('Tem certeza que deseja excluir esta declaração? Esta ação não pode ser desfeita.'))
     return
+  isDeleting.value = true
   try {
     const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}`, { method: 'DELETE' })
     if (data && data.success) {
@@ -417,6 +426,7 @@ async function confirmDelete() {
   catch (error: any) {
     toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao excluir', icon: 'ph:warning-circle-fill' })
   }
+  finally { isDeleting.value = false }
 }
 
 // ─── Collection Link ──────────────────────────────────────────────────────────
@@ -452,7 +462,7 @@ const selectedOfficialCategory = ref<string | null>(null)
 
 const officialDocumentSlots = [
   { label: 'Cópia de Segurança IRPF', category: 'irpf_backup', icon: 'solar:database-bold-duotone' },
-  { label: 'Recibo de Entrega', category: 'irpf_receipt', icon: 'solar:clippy-bold-duotone' },
+  { label: 'Recibo de Entrega', category: 'irpf_receipt', icon: 'solar:archive-check-bold-duotone' },
   { label: 'Declaração IRPF', category: 'irpf_declaration', icon: 'solar:file-text-bold-duotone' },
   { label: 'DARF do IR', category: 'irpf_darf', icon: 'solar:bill-list-bold-duotone' },
 ]
@@ -505,6 +515,7 @@ async function handleOfficialFileUpload(event: Event) {
 async function deleteOfficialDocument(id: string) {
   if (!confirm('Deseja excluir este documento oficial?'))
     return
+  isDeletingOfficial.value = id
   try {
     await useCustomFetch(`/declarations/${props.declarationId}/attachments/${id}`, { method: 'DELETE' })
     if (declaration.value?.attachments)
@@ -512,6 +523,7 @@ async function deleteOfficialDocument(id: string) {
     toaster.add({ title: 'Excluído', description: 'Documento oficial removido', icon: 'ph:check-circle-fill' })
   }
   catch (error) { console.error('Erro ao excluir:', error) }
+  finally { isDeletingOfficial.value = '' }
 }
 function triggerUpload() { fileInput.value?.click() }
 async function handleFileUpload(event: Event) {
@@ -532,6 +544,7 @@ async function handleFileUpload(event: Event) {
   }
 }
 async function uploadFile(file: File, checklistItemId: string | null, category: string | null = null) {
+  isUploading.value = true
   const formData = new FormData()
   formData.append('file', file)
   if (checklistItemId)
@@ -565,6 +578,7 @@ async function uploadFile(file: File, checklistItemId: string | null, category: 
     toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao enviar arquivo', icon: 'ph:warning-circle-fill' })
   }
   finally {
+    isUploading.value = false
     if (fileInput.value)
       fileInput.value.value = ''
   }
@@ -680,13 +694,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -926,7 +940,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
                         'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -955,7 +969,7 @@ onMounted(() => {
                 </span>
                 <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
                   'approved').length
-                  }}/{{ checklistItems.length }} aprovados</span>
+                }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
@@ -963,7 +977,8 @@ onMounted(() => {
             <div class="flex gap-2">
               <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante de renda..." size="sm"
                 rounded="lg" class="flex-1" @keyup.enter="addChecklistItem" />
-              <BaseButton size="sm" variant="primary" rounded="lg" @click="addChecklistItem">
+              <BaseButton size="sm" variant="primary" rounded="lg" :loading="isSavingChecklist"
+                @click="addChecklistItem">
                 <Icon name="lucide:plus" class="size-4 mr-1" /> Adicionar
               </BaseButton>
             </div>
@@ -1016,10 +1031,12 @@ onMounted(() => {
                   <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)">
                     <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                   </BaseButton>
-                  <BaseButton color="success" size="icon-sm" @click="updateItemStatus(item.id, 'approved')">
+                  <BaseButton color="success" size="icon-sm" :loading="processingItems.has(item.id)"
+                    @click="updateItemStatus(item.id, 'approved')">
                     <Icon name="lucide:check" class="size-3.5" />
                   </BaseButton>
-                  <BaseButton color="danger" size="icon-sm" @click="updateItemStatus(item.id, 'rejected')">
+                  <BaseButton color="danger" size="icon-sm" :loading="processingItems.has(item.id)"
+                    @click="updateItemStatus(item.id, 'rejected')">
                     <Icon name="lucide:x" class="size-3.5" />
                   </BaseButton>
                 </div>
@@ -1062,7 +1079,7 @@ onMounted(() => {
                     Anexos <span class="text-muted-300">({{ filteredAttachments.length }})</span>
                   </BaseText>
                 </div>
-                <BaseButton size="sm" variant="muted" rounded="lg" @click="triggerUpload">
+                <BaseButton size="sm" variant="muted" rounded="lg" :loading="isUploading" @click="triggerUpload">
                   <Icon name="lucide:upload" class="size-3.5 mr-1.5" /> Adicionar
                 </BaseButton>
               </div>
@@ -1149,27 +1166,25 @@ onMounted(() => {
                   </BaseTag>
                   <div class="flex gap-1 shrink-0">
                     <template v-if="getSlotAttachment(slot.category)">
-                      <button
-                        class="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-500 transition-colors"
+                      <BaseButton variant="ghost" color="primary" size="icon-sm"
                         @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })">
                         <Icon name="solar:eye-bold-duotone" class="size-4" />
-                      </button>
-                      <button
-                        class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 transition-colors"
+                      </BaseButton>
+                      <BaseButton variant="ghost" color="muted" size="icon-sm"
                         @click="handleDownload(getSlotAttachment(slot.category))">
                         <Icon name="lucide:download" class="size-4" />
-                      </button>
-                      <button
-                        class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-danger-500 transition-all"
+                      </BaseButton>
+                      <BaseButton variant="ghost" color="danger" size="icon-sm"
+                        class="opacity-0 group-hover:opacity-100 transition-all"
+                        :loading="isDeletingOfficial === getSlotAttachment(slot.category).id"
                         @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)">
                         <Icon name="lucide:trash-2" class="size-4" />
-                      </button>
+                      </BaseButton>
                     </template>
-                    <button v-else
-                      class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm"
+                    <BaseButton v-else variant="primary" size="icon-sm" :loading="isUploading"
                       @click="triggerOfficialUpload(slot.category)">
                       <Icon name="lucide:upload" class="size-4" />
-                    </button>
+                    </BaseButton>
                   </div>
                 </div>
               </div>
@@ -1319,17 +1334,15 @@ onMounted(() => {
                 <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
                   Responsável
                 </BaseText>
-                <BaseSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="saveDebounced">
-                  <BaseSelectItem value="unassigned">
-                    <span class="text-muted-400 text-xs">Sem responsável</span>
-                  </BaseSelectItem>
-                  <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id">
-                    <div class="flex items-center gap-2">
-                      <BaseAvatar :src="member.photo" :text="member.name?.charAt(0).toUpperCase()" size="xs" />
-                      <span class="text-xs font-medium">{{ member.name }}</span>
-                    </div>
-                  </BaseSelectItem>
-                </BaseSelect>
+                <TairoSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="saveDebounced">
+                  <template #icon>
+                    <BaseAvatar v-if="assignedMember?.photo" :src="assignedMember.photo" size="xxs" />
+                  </template>
+                  <TairoSelectItem value="unassigned" name="Sem responsável" text="Remover responsável"
+                    icon="ph:user-circle-minus" />
+                  <TairoSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id"
+                    :media="member.photo" :name="member.name" :text="member.role?.name" />
+                </TairoSelect>
               </div>
 
               <!-- Prioridade -->
@@ -1421,7 +1434,7 @@ onMounted(() => {
                   Tags
                 </BaseText>
                 <div class="flex flex-wrap gap-1.5">
-                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none"
+                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none" :id="'tag-' + Math.random()"
                     class="group relative text-[10px] pr-5 bg-primary-500 text-white">
                     {{ tag }}
                     <button
@@ -1446,8 +1459,8 @@ onMounted(() => {
                   Senha GOV.br
                 </BaseText>
                 <div class="relative">
-                  <BaseInput v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'" size="sm"
-                    rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
+                  <BaseInput v-model="form.govPassword" id="gvpas" :type="showGovPassword ? 'text' : 'password'"
+                    size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
                   <button type="button"
                     class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
                     @click="showGovPassword = !showGovPassword">
@@ -1464,7 +1477,7 @@ onMounted(() => {
             <div class="space-y-2">
               <BaseButton variant="muted" rounded="lg" size="sm"
                 class="w-full text-danger-500 hover:text-danger-600 hover:bg-danger-500/5 transition-colors"
-                @click="confirmDelete">
+                :loading="isDeleting" @click="confirmDelete">
                 <Icon name="lucide:trash-2" class="size-3.5 mr-2" /> Excluir Declaração
               </BaseButton>
             </div>
@@ -1540,7 +1553,7 @@ onMounted(() => {
             <BaseButton @click="cancelChecklistUpload">
               Cancelar
             </BaseButton>
-            <BaseButton variant="primary" rounded="lg" @click="confirmChecklistUpload">
+            <BaseButton variant="primary" rounded="lg" :loading="isUploading" @click="confirmChecklistUpload">
               <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" /> Enviar e Vincular
             </BaseButton>
           </div>

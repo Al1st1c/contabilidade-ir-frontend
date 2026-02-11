@@ -20,7 +20,7 @@ const companyLogo = computed(() => {
   if (hasWhitelabel && tenant.value?.logo) {
     return tenant.value.logo
   }
-  return '/img/logo.png'
+  return '/img/logo-icon.png'
 })
 
 onMounted(() => {
@@ -146,7 +146,7 @@ onMounted(() => {
                         <div class="hidden sm:block sm:col-span-2">
                           <div class="flex flex-col justify-end h-full w-full bg-primary-800 rounded-xl p-4">
                             <div>
-                              <img :src="companyLogo" alt="" class=" rounded-lg mb-3">
+                              <img :src="companyLogo" alt="" class="rounded-lg mb-3">
                               <BaseHeading class="text-white mb-2 leading-tight">
                                 {{ companyName }}
                               </BaseHeading>

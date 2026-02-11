@@ -439,6 +439,8 @@ function openCreateDeclaration() {
     onSaved: () => {
       fetchKanban()
     },
+  }, {
+    clickOutside: false,
   })
 }
 

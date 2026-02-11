@@ -54,6 +54,6 @@ watch(
       :class="current && current.overlay
         ? 'opacity-100 pointer-events-auto'
         : 'opacity-0 pointer-events-none'
-        " @mousedown="close" />
+        " @mousedown="current?.clickOutside !== false && close()" />
   </Teleport>
 </template>

@@ -7,7 +7,7 @@ import { reactiveOmit } from '#layers/@cssninja/tairo/utils/bundle/vueuse'
 export interface TairoSelectProps<T = AcceptableValue> extends BaseSelectProps<T> {
   icon?: string
 }
-export interface TairoSelectEmits<T = AcceptableValue> extends BaseSelectEmits<T> {}
+export interface TairoSelectEmits<T = AcceptableValue> extends BaseSelectEmits<T> { }
 </script>
 
 <script setup lang="ts" generic="T extends AcceptableValue = AcceptableValue">
@@ -37,32 +37,26 @@ const hasError = computed(() => toValue(ctx?.state) === 'error' || ('aria-invali
       props.rounded === 'md' ? 'rounded-md *:first:rounded-s-md *:[.nui-select]:rounded-e-md' : '',
       props.rounded === 'lg' ? 'rounded-lg *:first:rounded-s-lg *:[.nui-select]:rounded-e-lg' : '',
       props.rounded === 'full' ? 'rounded-full *:first:rounded-s-full *:[.nui-select]:rounded-e-full' : '',
-    ]"
-  >
-    <div
-      class="ps-3 border flex items-center justify-center group-has-disabled:opacity-50"
-      :class="[
-        props.variant === 'default'
-          ? 'bg-input-default-bg text-input-default-text/60'
-          : 'bg-input-muted-bg text-input-muted-text/60',
+    ]">
+    <div class="ps-3 border flex items-center justify-center group-has-disabled:opacity-50" :class="[
+      props.variant === 'default'
+        ? 'bg-input-default-bg text-input-default-text/60'
+        : 'bg-input-muted-bg text-input-muted-text/60',
 
-        hasError
-          ? 'border-destructive-base'
-          : props.variant === 'default'
-            ? 'border-input-default-border'
-            : 'border-input-muted-border',
-      ]"
-    >
-      <Icon v-if="props.icon" :name="props.icon" class="size-4" />
+      hasError
+        ? 'border-destructive-base'
+        : props.variant === 'default'
+          ? 'border-input-default-border'
+          : 'border-input-muted-border',
+    ]">
+      <slot name="icon">
+        <Icon v-if="props.icon" :name="props.icon" class="size-4" />
+      </slot>
     </div>
-    <BaseSelect
-      :ref="forwardRef"
-      class="ring-0! nui-select"
-      v-bind="{
-        ...forward,
-        ...attrs,
-      }"
-    >
+    <BaseSelect :ref="forwardRef" class="ring-0! nui-select" v-bind="{
+      ...forward,
+      ...attrs,
+    }">
       <slot />
     </BaseSelect>
   </div>

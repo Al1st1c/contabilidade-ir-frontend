@@ -796,18 +796,14 @@ onMounted(() => {
         </BaseField>
 
         <BaseField label="Responsável" class="z-20">
-          <BaseSelect v-model="serviceData.assignedToId" icon="ph:user-circle" placeholder="Selecione o responsável...">
-            <BaseSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" class="py-2">
-              <div class="flex items-center gap-2">
-                <BaseAvatar :src="member.photo" :text="member.name.charAt(0).toUpperCase()" size="xs"
-                  class="bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400" />
-                <div class="flex flex-col">
-                  <span class="font-medium text-xs">{{ member.name }}</span>
-                  <span class="text-[10px] text-muted-500">{{ member.role?.name }}</span>
-                </div>
-              </div>
-            </BaseSelectItem>
-          </BaseSelect>
+          <TairoSelect v-model="serviceData.assignedToId" icon="ph:user-circle"
+            placeholder="Selecione o responsável...">
+            <template #icon>
+              <BaseAvatar v-if="assignedMember?.photo" :src="assignedMember.photo" size="xs" />
+            </template>
+            <TairoSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id" :media="member.photo"
+              :name="member.name" :text="member.role?.name" />
+          </TairoSelect>
         </BaseField>
 
         <!-- <BaseField label="Tipo de IR">

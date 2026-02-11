@@ -319,8 +319,8 @@ export function useApi() {
       headers,
       onResponseError: (ctx: any) => {
         console.log('Erro na resposta:', ctx)
-        if (ctx?.response?.status === 401 || ctx?.response?.status === 403) {
-          // Token expirado, inválido ou sem permissão
+        if (ctx?.response?.status === 401) {
+          // Token expirado ou inválido
           const { logout } = useAuth()
           logout()
         }

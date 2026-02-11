@@ -7,6 +7,7 @@ interface PanelOptions {
   position?: 'left' | 'right' | 'top' | 'bottom'
   size?: 'sm' | 'md'
   overlay?: boolean
+  clickOutside?: boolean
 }
 
 interface Panel<T extends object = any> extends PanelOptions {
@@ -54,6 +55,7 @@ export function usePanels() {
       position,
       size: options?.size || 'sm',
       overlay: options?.overlay ?? true,
+      clickOutside: options?.clickOutside ?? true,
       promise,
       resolve,
       reject,
