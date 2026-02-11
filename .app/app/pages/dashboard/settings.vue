@@ -14,6 +14,8 @@ const isOwner = computed(() => {
 })
 
 const currentSection = computed(() => {
+  if (route.path.includes('/dashboard/settings/profile'))
+    return 'profile'
   if (route.path.includes('/dashboard/settings/account'))
     return 'account'
   if (route.path.includes('/dashboard/settings/team'))
@@ -23,12 +25,16 @@ const currentSection = computed(() => {
   if (route.path.includes('/dashboard/settings/roles'))
     return 'roles'
   return 'whitelabel'
-}) as ComputedRef<'whitelabel' | 'account' | 'team' | 'checklist' | 'roles'>
+}) as ComputedRef<'whitelabel' | 'account' | 'team' | 'checklist' | 'roles' | 'profile'>
 
 const sectionTitles: Record<string, { title: string, description: string }> = {
   whitelabel: {
     title: 'Personalização',
     description: 'Configure o logo e as cores do seu sistema',
+  },
+  profile: {
+    title: 'Meu Perfil',
+    description: 'Gerencie suas informações pessoais e segurança',
   },
   account: {
     title: 'Dados da Empresa',
@@ -49,6 +55,7 @@ const sectionTitles: Record<string, { title: string, description: string }> = {
 }
 
 const allTabs = [
+  { id: 'profile', label: 'Meu Perfil', icon: 'lucide:user', to: '/dashboard/settings/profile' },
   { id: 'whitelabel', label: 'Whitelabel', icon: 'lucide:palette', to: '/dashboard/settings' },
   { id: 'account', label: 'Empresa', icon: 'lucide:building-2', to: '/dashboard/settings/account' },
   { id: 'team', label: 'Equipe', icon: 'lucide:users', to: '/dashboard/settings/team' },
@@ -78,13 +85,13 @@ const tabs = computed(() => {
         <Icon name="lucide:chevron-right" class="size-4" />
         <span>Configurações</span>
         <Icon name="lucide:chevron-right" class="size-4" />
-        <span class="text-muted-800 dark:text-muted-100">{{ sectionTitles[currentSection].title }}</span>
+        <span class="text-muted-800 dark:text-muted-100">{{ sectionTitles[currentSection as string]?.title }}</span>
       </div>
       <BaseHeading as="h1" size="2xl" weight="medium">
-        {{ sectionTitles[currentSection].title }}
+        {{ sectionTitles[currentSection as string]?.title }}
       </BaseHeading>
       <BaseParagraph size="sm" class="text-muted-500">
-        {{ sectionTitles[currentSection].description }}
+        {{ sectionTitles[currentSection as string]?.description }}
       </BaseParagraph>
     </div>
 
