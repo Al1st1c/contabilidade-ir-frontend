@@ -68,7 +68,7 @@ function clearCashierCache() {
 }
 
 export function useAuth() {
-  const token = useCookie<string | null>(API_CONFIG.TOKEN.COOKIE_NAME, {
+  const tokenCookie = useCookie<string | null>(API_CONFIG.TOKEN.COOKIE_NAME, {
     default: () => null,
     maxAge: API_CONFIG.TOKEN.MAX_AGE,
     path: '/',
@@ -76,7 +76,7 @@ export function useAuth() {
     secure: process.env.NODE_ENV === 'production',
   })
 
-  const user = useCookie<User | null>(API_CONFIG.TOKEN.USER_COOKIE_NAME, {
+  const userCookie = useCookie<User | null>(API_CONFIG.TOKEN.USER_COOKIE_NAME, {
     default: () => null,
     maxAge: API_CONFIG.TOKEN.MAX_AGE,
     path: '/',
@@ -84,26 +84,28 @@ export function useAuth() {
     secure: process.env.NODE_ENV === 'production',
   })
 
-  const level = useCookie<string | null>('level', {
+  const levelCookie = useCookie<string | null>('level', {
     default: () => null,
     maxAge: API_CONFIG.TOKEN.MAX_AGE,
     path: '/',
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
   })
+
+  // Global reactive state synced with cookies
+  const token = useState('auth:token', () => tokenCookie.value)
+  const user = useState('auth:user', () => userCookie.value)
+  const level = useState('auth:level', () => levelCookie.value)
+
+  // Sync state to cookies
+  watch(token, (val) => { tokenCookie.value = val })
+  watch(user, (val) => { userCookie.value = val })
+  watch(level, (val) => { levelCookie.value = val })
 
   const isAuthenticated = computed(() => !!token.value)
 
   const currentUser = computed<User | null>(() => {
-    try {
-      // Nuxt useCookie handles JSON parsing automatically
-      return user.value as User | null
-    }
-    catch (e) {
-      console.error('Error parsing user cookie:', e)
-      user.value = null
-      return null
-    }
+    return user.value as User | null
   })
 
   // Função para fazer login (agora sempre requer 2FA)
@@ -147,6 +149,50 @@ export function useAuth() {
     }
   }
 
+  // Helper to sanitize user data for cookie storage (avoid 4KB limit)
+  const sanitizeUser = (rawUser: any): User => {
+    return {
+      id: rawUser.id,
+      name: rawUser.name,
+      email: rawUser.email,
+      photo: rawUser.photo,
+      onboardingStatus: rawUser.onboardingStatus,
+      userType: rawUser.userType,
+      isAdmin: rawUser.isAdmin,
+      level: rawUser.level,
+      role: rawUser.role ? {
+        id: rawUser.role.id,
+        name: rawUser.role.name,
+        canViewAllCards: rawUser.role.canViewAllCards,
+        canManageTeam: rawUser.role.canManageTeam,
+        canManageClients: rawUser.role.canManageClients,
+        canManageSettings: rawUser.role.canManageSettings,
+        canExportData: rawUser.role.canExportData,
+        canDeleteRecords: rawUser.role.canDeleteRecords,
+        canCreateIR: rawUser.role.canCreateIR,
+        canEditIR: rawUser.role.canEditIR,
+        canMoveToFinalColumn: rawUser.role.canMoveToFinalColumn,
+        canImportDocs: rawUser.role.canImportDocs,
+        canViewFinancialCharts: rawUser.role.canViewFinancialCharts,
+        canViewDrive: rawUser.role.canViewDrive,
+        canManageChecklist: rawUser.role.canManageChecklist,
+        canManageKanban: rawUser.role.canManageKanban,
+      } : undefined,
+      tenantId: rawUser.tenantId,
+      affiliateProfile: rawUser.affiliateProfile,
+      tenant: rawUser.tenant ? {
+        id: rawUser.tenant.id,
+        name: rawUser.tenant.name,
+        tradeName: rawUser.tenant.tradeName,
+        document: rawUser.tenant.document,
+        logo: rawUser.tenant.logo,
+        primaryColor: rawUser.tenant.primaryColor,
+        secondaryColor: rawUser.tenant.secondaryColor,
+        pixKey: rawUser.tenant.pixKey,
+      } : undefined,
+    } as User
+  }
+
   // Função para verificar 2FA
   const verifyTwoFactor = async (credentials: {
     code: string
@@ -187,50 +233,7 @@ export function useAuth() {
       token.value = authData.access_token
 
       // Sanitizar objeto de usuário para evitar estouro do tamanho do cookie (4KB)
-      // O backend retorna tenant.owner e outras relações profundas que não precisamos no cookie
-      const rawUser = authData.user as any
-      const sanitizedUser: User = {
-        id: rawUser.id,
-        name: rawUser.name,
-        email: rawUser.email,
-        photo: rawUser.photo,
-        onboardingStatus: rawUser.onboardingStatus,
-        userType: rawUser.userType,
-        isAdmin: rawUser.isAdmin,
-        level: rawUser.level,
-        role: rawUser.role ? {
-          id: rawUser.role.id,
-          name: rawUser.role.name,
-          canViewAllCards: rawUser.role.canViewAllCards,
-          canManageTeam: rawUser.role.canManageTeam,
-          canManageClients: rawUser.role.canManageClients,
-          canManageSettings: rawUser.role.canManageSettings,
-          canExportData: rawUser.role.canExportData,
-          canDeleteRecords: rawUser.role.canDeleteRecords,
-          canCreateIR: rawUser.role.canCreateIR,
-          canEditIR: rawUser.role.canEditIR,
-          canMoveToFinalColumn: rawUser.role.canMoveToFinalColumn,
-          canImportDocs: rawUser.role.canImportDocs,
-          canViewFinancialCharts: rawUser.role.canViewFinancialCharts,
-          canViewDrive: rawUser.role.canViewDrive,
-          canManageChecklist: rawUser.role.canManageChecklist,
-          canManageKanban: rawUser.role.canManageKanban,
-        } : undefined,
-        tenantId: rawUser.tenantId,
-        affiliateProfile: rawUser.affiliateProfile,
-        tenant: rawUser.tenant ? {
-          id: rawUser.tenant.id,
-          name: rawUser.tenant.name,
-          tradeName: rawUser.tenant.tradeName,
-          document: rawUser.tenant.document,
-          logo: rawUser.tenant.logo,
-          primaryColor: rawUser.tenant.primaryColor,
-          secondaryColor: rawUser.tenant.secondaryColor,
-          pixKey: rawUser.tenant.pixKey,
-        } : undefined,
-      } as User
-
-      user.value = sanitizedUser
+      user.value = sanitizeUser(authData.user)
 
       if (authData.level) {
         level.value = authData.level
@@ -260,11 +263,6 @@ export function useAuth() {
 
       // Limpar cache do caixa para forçar nova validação no dashboard
       clearCashierCache()
-
-      // Debug: verificar se o token foi salvo
-      console.log('Token salvo após 2FA:', token.value)
-      console.log('User salvo após 2FA (Sanitizado):', user.value)
-      console.log('Cache do caixa limpo para nova validação')
 
       return authData
     }
@@ -313,7 +311,7 @@ export function useAuth() {
     if (!token.value) return null
 
     try {
-      const data = await $fetch<User>(getApiUrl(API_CONFIG.ENDPOINTS.ME), {
+      const data = await $fetch<any>(getApiUrl(API_CONFIG.ENDPOINTS.ME), {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token.value}`,
@@ -321,9 +319,10 @@ export function useAuth() {
       })
 
       if (data) {
-        user.value = data
-        console.log('Dados do usuário atualizados:', data)
-        return data
+        const sanitized = sanitizeUser(data)
+        user.value = sanitized
+        console.log('Dados do usuário atualizados:', sanitized)
+        return sanitized
       }
       return null
     }
