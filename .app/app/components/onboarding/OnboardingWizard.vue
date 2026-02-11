@@ -16,11 +16,16 @@ const router = useRouter()
 
 const userCookie = useCookie<any>(API_CONFIG.TOKEN.USER_COOKIE_NAME)
 
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
 const currentStep = ref(0)
 const complete = ref(false)
 const loading = ref(false)
 
-const steps = [
+const allSteps = [
   {
     id: 0,
     meta: {
@@ -71,10 +76,18 @@ const steps = [
   },
 ] as const
 
-const totalSteps = computed(() => steps.length)
+const steps = computed(() => {
+  if (isOwner.value) {
+    return allSteps
+  }
+  // For staff, only Welcome (0), Profile (1) and Finish (5)
+  return allSteps.filter(step => [0, 1, 5].includes(step.id))
+})
+
+const totalSteps = computed(() => steps.value.length)
 const progress = computed(() => ((currentStep.value + 1) / totalSteps.value) * 100)
 const isLastStep = computed(() => currentStep.value === totalSteps.value - 1)
-const currentStepMeta = computed(() => steps[currentStep.value]?.meta)
+const currentStepMeta = computed(() => steps.value[currentStep.value]?.meta)
 const finalStepId = computed(() => totalSteps.value - 1)
 
 const target = ref(null)
@@ -560,17 +573,17 @@ const shouldShowFooterContinue = computed(() => {
   if (complete.value)
     return false
 
-  if (currentStep.value === 4 && !hasWhitelabel.value)
+  if (steps.value[currentStep.value]?.id === 4 && !hasWhitelabel.value)
     return false
 
-  if (currentStep.value === 3 && isTrial.value)
+  if (steps.value[currentStep.value]?.id === 3 && isTrial.value)
     return false
 
   return true
 })
 
 const nextButtonLabel = computed(() => {
-  if (currentStep.value === 0)
+  if (steps.value[currentStep.value]?.id === 0)
     return 'Começar'
 
   return 'Continue'
@@ -595,7 +608,7 @@ async function handleSubmit() {
     return
 
   // Validação: Dados da Empresa (Passo 2)
-  if (currentStep.value === 2) {
+  if (steps.value[currentStep.value]?.id === 2) {
     if (!company.value.name.trim() || !company.value.document.trim()) {
       toaster.add({
         title: 'Dados Obrigatórios',
@@ -609,11 +622,11 @@ async function handleSubmit() {
 
   loading.value = true
   try {
-    if (currentStep.value === 2) {
+    if (steps.value[currentStep.value]?.id === 2) {
       await saveCompany()
     }
 
-    if (currentStep.value === 4 && hasWhitelabel.value) {
+    if (steps.value[currentStep.value]?.id === 4 && hasWhitelabel.value) {
       await saveWhitelabel()
     }
 
@@ -762,20 +775,27 @@ onMounted(async () => {
           enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0"
           leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2">
-          <div :key="currentStep">
+          <div :key="steps[currentStep]?.id">
             <!-- Step 0: Welcome -->
-            <div v-if="currentStep === 0" class="space-y-8">
+            <div v-if="steps[currentStep]?.id === 0" class="space-y-8">
               <div
                 class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-muted-50/50 dark:bg-muted-900/40 p-6 rounded-2xl border border-muted-200 dark:border-muted-800">
                 <div>
                   <h2 class="text-lg font-semibold text-muted-800 dark:text-white mb-4">
-                    Tudo pronto para começar?
+                    {{ isOwner ? 'Tudo pronto para começar?' : 'Bem-vindo ao time!' }}
                   </h2>
-                  <p class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
+                  <p v-if="isOwner" class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
                     Bem-vindo ao <b>Gestor IRPF</b>. Projetamos este guia para ajudar você a configurar seu
                     escritório em menos de 5 minutos.
                   </p>
-                  <div class="space-y-4">
+                  <p v-else class="text-sm text-muted-600 dark:text-muted-400 leading-relaxed mb-6">
+                    A <b>{{ tenant?.tradeName || tenant?.name || 'sua empresa' }}</b> convidou você para participar da
+                    <b>Campanha de IR {{ new Date().getFullYear() }}</b>.
+                    Estamos felizes em ter você conosco!
+                    <br><br>
+                    Qualquer dúvida, você pode acionar nosso suporte ou falar com sua liderança direta.
+                  </p>
+                  <div v-if="isOwner" class="space-y-4">
                     <div v-for="(item, i) in [
                       { icon: 'lucide:user', title: 'Perfil', desc: 'Sua foto e identificação' },
                       { icon: 'lucide:building-2', title: 'Empresa', desc: 'Dados fiscais e PIX' },
@@ -819,7 +839,7 @@ onMounted(async () => {
             </div>
 
             <!-- Step 1: User Profile -->
-            <div v-else-if="currentStep === 1" class="max-w-md mx-auto py-4">
+            <div v-else-if="steps[currentStep]?.id === 1" class="max-w-md mx-auto py-4">
               <input ref="photoInput" type="file" accept="image/*" class="hidden" @change="handlePhotoChange">
               <div class="flex flex-col items-center gap-8 text-center">
                 <div class="relative group">
@@ -845,8 +865,12 @@ onMounted(async () => {
                 </div>
 
                 <div class="space-y-4">
-                  <p class="text-sm text-muted-600 dark:text-muted-400">
+                  <p v-if="isOwner" class="text-sm text-muted-600 dark:text-muted-400">
                     Apareça para seu time e clientes! Uma foto profissional transmite mais confiança.
+                  </p>
+                  <p v-else class="text-sm text-muted-600 dark:text-muted-400">
+                    Sua foto ajudará seus colegas a identificarem você no time e facilitará a comunicação com os
+                    clientes.
                   </p>
                   <BaseButton rounded="sm" shadow="flat" :disabled="uploadingPhoto" @click="triggerPhotoUpload"
                     class="h-12 px-8">
@@ -858,7 +882,7 @@ onMounted(async () => {
             </div>
 
             <!-- Step 2: Company Data -->
-            <div v-else-if="currentStep === 2" class="space-y-8">
+            <div v-else-if="steps[currentStep]?.id === 2" class="space-y-8">
               <div class="flex flex-col md:flex-row gap-10">
                 <div class="shrink-0 flex flex-col items-center">
                   <div class="relative group">
@@ -993,7 +1017,7 @@ onMounted(async () => {
             </div>
 
             <!-- Step 3: Team -->
-            <div v-else-if="currentStep === 3">
+            <div v-else-if="steps[currentStep]?.id === 3">
               <AppPageLoading v-if="pendingMembers || loadingSub" message="Verificando seu plano..." />
               <div v-else>
                 <!-- Trial State -->
@@ -1207,7 +1231,7 @@ onMounted(async () => {
             </div>
 
             <!-- Step 4: Whitelabel -->
-            <div v-else-if="currentStep === 4">
+            <div v-else-if="steps[currentStep]?.id === 4">
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <!-- Config / Upgrade Column -->
                 <div class="lg:col-span-6">
@@ -1360,7 +1384,7 @@ onMounted(async () => {
             </div>
 
             <!-- Step 5: Video / Finish -->
-            <div v-else-if="currentStep === 5" class="max-w-3xl mx-auto space-y-8">
+            <div v-else-if="steps[currentStep]?.id === 5" class="max-w-3xl mx-auto space-y-8">
               <div v-if="isPreparing" class="py-20 flex flex-col items-center">
                 <AppPageLoading message="Personalizando sua plataforma.." />
               </div>
@@ -1391,7 +1415,7 @@ onMounted(async () => {
     </div>
 
     <!-- Footer: Navigation -->
-    <div v-if="!complete && currentStep !== 0"
+    <div v-if="!complete && steps[currentStep]?.id !== 0"
       class="shrink-0 border-t border-muted-200 bg-white p-6 px-10 dark:border-muted-800 dark:bg-muted-950">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <BaseButton rounded="sm" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">
@@ -1400,7 +1424,7 @@ onMounted(async () => {
         </BaseButton>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <BaseButton v-if="currentStep === 4 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
+          <BaseButton v-if="steps[currentStep]?.id === 4 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
             @click.prevent="continueWithoutUpgrade">
             <span>Pular Customização</span>
           </BaseButton>

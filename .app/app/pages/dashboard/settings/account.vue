@@ -8,7 +8,13 @@ definePageMeta({
 
 const { useCustomFetch } = useApi()
 const { fetchMySubscription, currentSubscription, loading: loadingSub } = useSubscription()
+const { user } = useAuth()
 const toaster = useNuiToasts()
+
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
 
 // State
 const isLoading = ref(true)
@@ -149,24 +155,25 @@ onMounted(() => {
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="Razão Social" required>
-                  <TairoInput v-model="form.name" placeholder="Ex: Contabilidade Silva & Associados"
-                    icon="solar:buildings-linear" />
+                  <TairoInput v-model="form.name" :disabled="!isOwner"
+                    placeholder="Ex: Contabilidade Silva & Associados" icon="solar:buildings-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="Nome Fantasia">
-                  <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-linear" />
+                  <TairoInput v-model="form.tradeName" :disabled="!isOwner" placeholder="Ex: Contábil Silva"
+                    icon="solar:shop-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="CNPJ">
-                  <TairoInput v-model="form.document" v-maska="cnpjMask" placeholder="00.000.000/0000-00"
-                    icon="solar:document-text-linear" />
+                  <TairoInput v-model="form.document" v-maska="cnpjMask" :disabled="!isOwner"
+                    placeholder="00.000.000/0000-00" icon="solar:document-text-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="Chave PIX (Vai aparecer para o cliente pagar os honorários)">
-                  <TairoInput v-model="form.pixKey" placeholder="E-mail, CPF/CNPJ ou Aleatória"
+                  <TairoInput v-model="form.pixKey" :disabled="!isOwner" placeholder="E-mail, CPF/CNPJ ou Aleatória"
                     icon="solar:wallet-money-linear" />
                 </BaseField>
               </div>
@@ -192,19 +199,19 @@ onMounted(() => {
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12">
                 <BaseField label="E-mail de Contato">
-                  <TairoInput v-model="form.email" type="email" placeholder="contato@escritorio.com.br"
-                    icon="solar:letter-linear" />
+                  <TairoInput v-model="form.email" type="email" :disabled="!isOwner"
+                    placeholder="contato@escritorio.com.br" icon="solar:letter-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="WhatsApp (Oficial)">
-                  <TairoInput v-model="form.whatsapp" v-maska="phoneMask" placeholder="(00) 00000-0000"
-                    icon="fa6-brands:whatsapp" />
+                  <TairoInput v-model="form.whatsapp" v-maska="phoneMask" :disabled="!isOwner"
+                    placeholder="(00) 00000-0000" icon="fa6-brands:whatsapp" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
                 <BaseField label="Telefone Fixo">
-                  <TairoInput v-model="form.phone" v-maska="phoneMask" placeholder="(00) 0000-0000"
+                  <TairoInput v-model="form.phone" v-maska="phoneMask" :disabled="!isOwner" placeholder="(00) 0000-0000"
                     icon="solar:phone-rounded-linear" />
                 </BaseField>
               </div>
@@ -230,12 +237,13 @@ onMounted(() => {
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12 md:col-span-8">
                 <BaseField label="Cidade">
-                  <TairoInput v-model="form.city" placeholder="Ex: São Paulo" icon="solar:map-point-linear" />
+                  <TairoInput v-model="form.city" :disabled="!isOwner" placeholder="Ex: São Paulo"
+                    icon="solar:map-point-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-4">
                 <BaseField label="Estado">
-                  <TairoSelect v-model="form.state" icon="solar:earth-linear">
+                  <TairoSelect v-model="form.state" :disabled="!isOwner" icon="solar:earth-linear">
                     <BaseSelectItem v-for="uf in states" :key="uf" :value="uf">
                       {{ uf }}
                     </BaseSelectItem>
@@ -244,7 +252,7 @@ onMounted(() => {
               </div>
               <div class="col-span-12 md:col-span-4">
                 <BaseField label="CEP">
-                  <TairoInput v-model="form.zipCode" v-maska="cepMask" placeholder="00000-000"
+                  <TairoInput v-model="form.zipCode" v-maska="cepMask" :disabled="!isOwner" placeholder="00000-000"
                     icon="solar:streets-navigation-linear" />
                 </BaseField>
               </div>
@@ -375,7 +383,8 @@ onMounted(() => {
       </div>
 
       <!-- Action Footer -->
-      <div class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
+      <div v-if="isOwner"
+        class="flex items-center justify-end gap-3 pt-8 mt-12 border-t border-muted-200 dark:border-muted-800">
         <BaseButton type="submit" color="primary" rounded="lg" size="lg" :loading="isSaving" class="px-12">
           Salvar Alterações
         </BaseButton>

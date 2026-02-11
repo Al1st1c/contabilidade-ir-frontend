@@ -48,6 +48,11 @@ async function fetchNotificationCount() {
   }
 }
 
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
 onMounted(() => {
   fetchNotificationCount()
   fetchMySubscription()
@@ -71,7 +76,7 @@ function openSubscription() {
     </div>
 
     <!-- Plan Button -->
-    <button type="button"
+    <button v-if="isOwner" type="button"
       class="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
       title="Plano e Pagamentos" @click="openSubscription">
       <Icon name="solar:crown-bold-duotone" class="size-5 text-muted-400" />

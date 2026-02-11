@@ -140,6 +140,11 @@ const trendLabels = ref<string[]>([])
 // Employee Filter
 const teamMembers = ref<any[]>([])
 
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
 const canViewAll = computed(() => {
   const roleName = user.value?.role?.name?.toLowerCase()
   return roleName === 'master' || roleName === 'admin' || user.value?.role?.canViewAllCards
@@ -690,7 +695,14 @@ const showNoDeclarationsAlert = computed(() => {
 
                       <!-- Subscription Status / Upgrade Promotion -->
                       <div class="mt-2">
-                        <template v-if="!isPaidPlan">
+                        <template v-if="!isOwner">
+                          <div
+                            class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white border border-white/20">
+                            <Icon name="solar:buildings-bold-duotone" class="size-3 text-primary-300" />
+                            <span>{{ tenant?.tradeName || tenant?.name }}</span>
+                          </div>
+                        </template>
+                        <template v-else-if="!isPaidPlan">
                           <button
                             class="group flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white transition-all hover:bg-white/20 active:scale-95 border border-white/20"
                             @click="navigateTo('/dashboard/plans')">

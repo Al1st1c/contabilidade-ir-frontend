@@ -3,7 +3,15 @@ definePageMeta({
   title: 'Configurações',
 })
 
+import type { ComputedRef } from 'vue'
+
+const { user } = useAuth()
 const route = useRoute()
+
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
 
 const currentSection = computed(() => {
   if (route.path.includes('/dashboard/settings/account'))
@@ -15,7 +23,7 @@ const currentSection = computed(() => {
   if (route.path.includes('/dashboard/settings/roles'))
     return 'roles'
   return 'whitelabel'
-})
+}) as ComputedRef<'whitelabel' | 'account' | 'team' | 'checklist' | 'roles'>
 
 const sectionTitles: Record<string, { title: string, description: string }> = {
   whitelabel: {
@@ -40,13 +48,23 @@ const sectionTitles: Record<string, { title: string, description: string }> = {
   },
 }
 
-const tabs = [
+const allTabs = [
   { id: 'whitelabel', label: 'Whitelabel', icon: 'lucide:palette', to: '/dashboard/settings' },
   { id: 'account', label: 'Empresa', icon: 'lucide:building-2', to: '/dashboard/settings/account' },
   { id: 'team', label: 'Equipe', icon: 'lucide:users', to: '/dashboard/settings/team' },
   { id: 'checklist', label: 'Checklist', icon: 'lucide:list-checks', to: '/dashboard/settings/checklist' },
   { id: 'roles', label: 'Cargos', icon: 'lucide:briefcase', to: '/dashboard/settings/roles' },
 ]
+
+const tabs = computed(() => {
+  return allTabs.filter((tab) => {
+    if (tab.id === 'whitelabel') return isOwner.value
+    if (tab.id === 'team') return user.value?.role?.canManageTeam || isOwner.value
+    if (tab.id === 'roles') return user.value?.role?.canManageTeam || isOwner.value
+    if (tab.id === 'checklist') return user.value?.role?.canManageChecklist || isOwner.value
+    return true
+  })
+})
 </script>
 
 <template>

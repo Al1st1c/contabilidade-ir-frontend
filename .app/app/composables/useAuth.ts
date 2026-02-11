@@ -8,6 +8,7 @@ interface User {
   name: string
   photo?: string
   onboardingStatus?: string
+  isAdmin?: boolean
   level?: string
   role?: {
     id: string

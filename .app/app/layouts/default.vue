@@ -71,7 +71,7 @@ onMounted(() => {
             <TairoMenuList>
               <TairoMenuItem>
                 <TairoMenuLink as-child :active="$route.path === '/dashboard'">
-                  <NuxtLink to="/dashboard">
+                  <NuxtLink to="/dashboard" active-class="!text-primary-500 font-semibold">
                     Dashboard
                   </NuxtLink>
                 </TairoMenuLink>
@@ -79,7 +79,7 @@ onMounted(() => {
 
               <TairoMenuItem>
                 <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
-                  <NuxtLink to="/dashboard/ir">
+                  <NuxtLink to="/dashboard/ir" active-class="!text-primary-500 font-semibold">
                     Imposto de Renda
                   </NuxtLink>
                 </TairoMenuLink>
@@ -87,14 +87,15 @@ onMounted(() => {
 
               <TairoMenuItem v-if="user?.role?.canViewDrive">
                 <TairoMenuLink as-child :active="$route.path === '/dashboard/drive'">
-                  <NuxtLink to="/dashboard/drive">
+                  <NuxtLink to="/dashboard/drive" active-class="!text-primary-500 font-semibold">
                     Drive
                   </NuxtLink>
                 </TairoMenuLink>
               </TairoMenuItem>
 
               <TairoMenuItem>
-                <TairoMenuTrigger>
+                <TairoMenuTrigger
+                  :class="{ 'text-primary-500 font-semibold': $route.path.startsWith('/dashboard/clients') }">
                   <span>Clientes</span>
                   <Icon name="lucide:chevron-down"
                     class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
@@ -131,7 +132,8 @@ onMounted(() => {
               </TairoMenuItem>
 
               <TairoMenuItem>
-                <TairoMenuTrigger>
+                <TairoMenuTrigger
+                  :class="{ 'text-primary-500 font-semibold': $route.path.startsWith('/dashboard/settings') }">
                   <span>Minha Empresa</span>
                   <Icon name="lucide:chevron-down"
                     class="transition-transform duration-200 ease-in group-data-[state=open]:-rotate-180" />
@@ -257,6 +259,14 @@ onMounted(() => {
                 </TairoMenuContent>
               </TairoMenuItem>
 
+              <TairoMenuItem v-if="user?.isAdmin">
+                <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/admin')">
+                  <NuxtLink to="/dashboard/admin" active-class="!text-primary-500 font-semibold">
+                    Administração
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
               <TairoMenuIndicator />
             </TairoMenuList>
 
@@ -340,6 +350,14 @@ onMounted(() => {
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
               <Icon name="solar:shield-check-bold-duotone" class="size-5" />
               Cargos e Permissões
+            </NuxtLink>
+          </li>
+          <li v-if="user?.isAdmin">
+            <NuxtLink to="/dashboard/admin"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:shield-user-bold-duotone" class="size-5" />
+              Administração
             </NuxtLink>
           </li>
         </ul>
