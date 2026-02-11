@@ -78,18 +78,15 @@ const filters = reactive({
 })
 
 const columnSearch = reactive<Record<string, string>>({})
+const teamMembers = ref<any[]>([])
 
 // Computed values for filters
 const availableAssignees = computed(() => {
-  const assignees = new Map()
-  columns.value.forEach((col) => {
-    col.tasks.forEach((task) => {
-      if (task.assignee) {
-        assignees.set(task.assignee.id, task.assignee)
-      }
-    })
-  })
-  return Array.from(assignees.values()) as any[]
+  return teamMembers.value.map(m => ({
+    id: m.id,
+    name: m.name,
+    avatar: m.photo || '/img/avatars/placeholder.svg',
+  }))
 })
 
 const availableTags = computed(() => {
@@ -192,6 +189,16 @@ const tagColors: Record<string, string> = {
 }
 
 // Methods
+async function fetchTeam() {
+  try {
+    const { data } = await useCustomFetch<any>('/tenant/members')
+    teamMembers.value = data.data || data || []
+  }
+  catch (e) {
+    console.error('Error fetching team:', e)
+  }
+}
+
 async function fetchKanban() {
   try {
     isLoading.value = true
@@ -304,7 +311,10 @@ function initSortables() {
 
 // Initialize sortable for columns after mount
 onMounted(async () => {
-  await fetchKanban()
+  await Promise.all([
+    fetchKanban(),
+    fetchTeam(),
+  ])
 })
 
 // Limpeza ao destruir o componente

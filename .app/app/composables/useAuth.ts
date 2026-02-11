@@ -8,6 +8,7 @@ interface User {
   name: string
   photo?: string
   onboardingStatus?: string
+  userType?: string
   isAdmin?: boolean
   level?: string
   role?: {
@@ -318,8 +319,8 @@ export function useApi() {
       headers,
       onResponseError: (ctx: any) => {
         console.log('Erro na resposta:', ctx)
-        if (ctx?.response?.status === 401) {
-          // Token expirado ou inválido
+        if (ctx?.response?.status === 401 || ctx?.response?.status === 403) {
+          // Token expirado, inválido ou sem permissão
           const { logout } = useAuth()
           logout()
         }

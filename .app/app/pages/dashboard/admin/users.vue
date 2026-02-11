@@ -62,6 +62,7 @@ const subForm = ref<{
   hasReports: boolean
   hasApi: boolean
   hasTeamManagement: boolean
+  canViewAllFilesDrive: boolean
 }>({
   status: 'ACTIVE',
   currentPeriodEnd: '',
@@ -72,6 +73,7 @@ const subForm = ref<{
   hasReports: false,
   hasApi: false,
   hasTeamManagement: false,
+  canViewAllFilesDrive: false,
 })
 
 async function fetchPlans() {
@@ -93,6 +95,7 @@ function openSubscriptionModal(user: any) {
     hasReports: !!sub.hasReports,
     hasApi: !!sub.hasApi,
     hasTeamManagement: !!sub.hasTeamManagement,
+    canViewAllFilesDrive: !!sub.canViewAllFilesDrive,
   }
 
   if (plans.value.length === 0) fetchPlans()
@@ -275,6 +278,10 @@ function formatDate(date: string) {
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Gestão de Equipe</BaseText>
                 <BaseSwitch v-model="subForm.hasTeamManagement" />
+              </div>
+              <div class="flex items-center justify-between">
+                <BaseText size="sm">Ver todos os arquivos do Drive</BaseText>
+                <BaseSwitch v-model="subForm.canViewAllFilesDrive" />
               </div>
             </div>
           </div>
