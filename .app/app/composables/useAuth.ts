@@ -181,11 +181,77 @@ export function useAuth() {
       // Login bem-sucedido após 2FA
       const authData = data as AuthResponse
 
-      // Salva o token e dados do usuário
+      // Salva o token
       token.value = authData.access_token
-      user.value = authData.user
+
+      // Sanitizar objeto de usuário para evitar estouro do tamanho do cookie (4KB)
+      // O backend retorna tenant.owner e outras relações profundas que não precisamos no cookie
+      const rawUser = authData.user as any
+      const sanitizedUser: User = {
+        id: rawUser.id,
+        name: rawUser.name,
+        email: rawUser.email,
+        photo: rawUser.photo,
+        onboardingStatus: rawUser.onboardingStatus,
+        userType: rawUser.userType,
+        isAdmin: rawUser.isAdmin,
+        level: rawUser.level,
+        role: rawUser.role ? {
+          id: rawUser.role.id,
+          name: rawUser.role.name,
+          canViewAllCards: rawUser.role.canViewAllCards,
+          canManageTeam: rawUser.role.canManageTeam,
+          canManageClients: rawUser.role.canManageClients,
+          canManageSettings: rawUser.role.canManageSettings,
+          canExportData: rawUser.role.canExportData,
+          canDeleteRecords: rawUser.role.canDeleteRecords,
+          canCreateIR: rawUser.role.canCreateIR,
+          canEditIR: rawUser.role.canEditIR,
+          canMoveToFinalColumn: rawUser.role.canMoveToFinalColumn,
+          canImportDocs: rawUser.role.canImportDocs,
+          canViewFinancialCharts: rawUser.role.canViewFinancialCharts,
+          canViewDrive: rawUser.role.canViewDrive,
+          canManageChecklist: rawUser.role.canManageChecklist,
+          canManageKanban: rawUser.role.canManageKanban,
+        } : undefined,
+        tenant: rawUser.tenant ? {
+          id: rawUser.tenant.id,
+          name: rawUser.tenant.name,
+          tradeName: rawUser.tenant.tradeName,
+          document: rawUser.tenant.document,
+          logo: rawUser.tenant.logo,
+          primaryColor: rawUser.tenant.primaryColor,
+          secondaryColor: rawUser.tenant.secondaryColor,
+          pixKey: rawUser.tenant.pixKey,
+        } : undefined,
+      } as User
+
+      user.value = sanitizedUser
+
       if (authData.level) {
         level.value = authData.level
+      }
+
+      // Verificação de segurança: Checar se o cookie foi realmente setado
+      if (process.client) {
+        // Pequeno delay para garantir que o navegador processou o cookie
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        const tokenCookieName = API_CONFIG.TOKEN.COOKIE_NAME
+        const cookies = document.cookie.split(';')
+        const hasTokenCookie = cookies.some(c => c.trim().startsWith(`${tokenCookieName}=`))
+
+        if (!hasTokenCookie) {
+          // Rollback
+          token.value = null
+          user.value = null
+          level.value = null
+
+          return {
+            error: true,
+            message: 'Erro ao salvar sessão. Verifique se os cookies estão habilitados e tente novamente.',
+          }
+        }
       }
 
       // Limpar cache do caixa para forçar nova validação no dashboard
@@ -193,7 +259,7 @@ export function useAuth() {
 
       // Debug: verificar se o token foi salvo
       console.log('Token salvo após 2FA:', token.value)
-      console.log('User salvo após 2FA:', user.value)
+      console.log('User salvo após 2FA (Sanitizado):', user.value)
       console.log('Cache do caixa limpo para nova validação')
 
       return authData

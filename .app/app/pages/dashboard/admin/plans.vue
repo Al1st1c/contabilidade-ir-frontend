@@ -43,6 +43,94 @@ async function togglePlanStatus(plan: any) {
   }
 }
 
+const isEditModalOpen = ref(false)
+const selectedPlan = ref<any>(null)
+const planForm = ref<{
+  name: string
+  description: string
+  priceMonthly: number
+  priceYearly: number
+  employeesLimit: number
+  taxDeclarationsLimit: number
+  storageMbLimit: number
+  hasWhitelabel: boolean
+  hasReports: boolean
+  hasApi: boolean
+  hasTeamManagement: boolean
+}>({
+  name: '',
+  description: '',
+  priceMonthly: 0,
+  priceYearly: 0,
+  employeesLimit: 0,
+  taxDeclarationsLimit: 0,
+  storageMbLimit: 0,
+  hasWhitelabel: false,
+  hasReports: false,
+  hasApi: false,
+  hasTeamManagement: false,
+})
+
+function openEditModal(plan: any) {
+  selectedPlan.value = plan
+  planForm.value = {
+    name: plan.name,
+    description: plan.description,
+    priceMonthly: (plan.pricing?.monthly || 0) / 100,
+    priceYearly: (plan.pricing?.annual || 0) / 100,
+    employeesLimit: plan.planLimit?.employeesLimit || 0,
+    taxDeclarationsLimit: plan.planLimit?.taxDeclarationsLimit || 0,
+    storageMbLimit: plan.planLimit?.storageMbLimit || 0,
+    hasWhitelabel: !!plan.planLimit?.hasWhitelabel,
+    hasReports: !!plan.planLimit?.hasReports,
+    hasApi: !!plan.planLimit?.hasApi,
+    hasTeamManagement: !!plan.planLimit?.hasTeamManagement,
+  }
+  isEditModalOpen.value = true
+}
+
+async function updatePlan() {
+  try {
+    loading.value = true
+    await useCustomFetch(`/admin/plans/${selectedPlan.value.id}`, {
+      method: 'PATCH',
+      body: {
+        name: planForm.value.name,
+        description: planForm.value.description,
+        pricing: {
+          monthly: Math.round(planForm.value.priceMonthly * 100),
+          annual: Math.round(planForm.value.priceYearly * 100),
+        },
+        limits: {
+          employeesLimit: Number(planForm.value.employeesLimit),
+          taxDeclarationsLimit: Number(planForm.value.taxDeclarationsLimit),
+          storageMbLimit: Number(planForm.value.storageMbLimit),
+          hasWhitelabel: planForm.value.hasWhitelabel,
+          hasReports: planForm.value.hasReports,
+          hasApi: planForm.value.hasApi,
+          hasTeamManagement: planForm.value.hasTeamManagement,
+        }
+      },
+    })
+
+    toaster.add({
+      title: 'Sucesso',
+      description: 'Plano atualizado com sucesso.',
+      icon: 'ph:check-circle-fill',
+    })
+    isEditModalOpen.value = false
+    await fetchPlans()
+  } catch (error) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Erro ao atualizar plano.',
+      icon: 'ph:warning-circle-fill',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(fetchPlans)
 
 function formatCurrency(val: any) {
@@ -65,7 +153,7 @@ function formatCurrency(val: any) {
         </BaseButton>
       </div>
 
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="loading && !isEditModalOpen" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <BaseCard v-for="i in 3" :key="i" class="p-6 animate-pulse h-64 bg-muted-100 dark:bg-muted-800" />
       </div>
 
@@ -115,10 +203,86 @@ function formatCurrency(val: any) {
           </div>
 
           <div class="mt-6 pt-4 border-t border-muted-200 dark:border-muted-800">
-            <BaseButton block variant="muted" rounded="md">
+            <BaseButton block variant="muted" rounded="md" @click="openEditModal(plan)">
               <Icon name="lucide:edit" class="size-4 mr-1" />
               Editar Detalhes
             </BaseButton>
+          </div>
+        </BaseCard>
+      </div>
+
+      <!-- Edit Modal -->
+      <div v-if="isEditModalOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-muted-900/50 backdrop-blur-sm">
+        <BaseCard class="w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <BaseHeading as="h3" size="lg">Editar Plano {{ selectedPlan?.name }}</BaseHeading>
+              <BaseParagraph size="sm" class="text-muted-500">Ajuste os preços e limites do plano</BaseParagraph>
+            </div>
+            <BaseButton variant="muted" rounded="full" size="sm" @click="isEditModalOpen = false">
+              <Icon name="lucide:x" class="size-4" />
+            </BaseButton>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+              <BaseField label="Nome do Plano">
+                <BaseInput v-model="planForm.name" rounded="md" />
+              </BaseField>
+            </div>
+
+            <BaseField label="Preço Mensal (R$)">
+              <BaseInput v-model="planForm.priceMonthly" type="number" icon="ph:currency-dollar" rounded="md" />
+            </BaseField>
+
+            <BaseField label="Preço Anual (R$)">
+              <BaseInput v-model="planForm.priceYearly" type="number" icon="ph:currency-dollar" rounded="md" />
+            </BaseField>
+
+            <BaseField label="Limite Funcionários">
+              <BaseInput v-model="planForm.employeesLimit" type="number" icon="ph:users" rounded="md" />
+            </BaseField>
+
+            <BaseField label="Limite IRs (Ano)">
+              <BaseInput v-model="planForm.taxDeclarationsLimit" type="number" icon="ph:files" rounded="md" />
+            </BaseField>
+
+            <BaseField label="Espaço Storage (MB)">
+              <BaseInput v-model="planForm.storageMbLimit" type="number" icon="ph:database" rounded="md" />
+            </BaseField>
+
+            <div class="space-y-4 pt-4 border-t border-muted-200 dark:border-muted-800 md:col-span-2">
+              <BaseHeading as="h4" size="sm" class="mb-2">Funcionalidades</BaseHeading>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  class="flex items-center justify-between p-2 rounded border border-muted-200 dark:border-muted-800">
+                  <BaseText size="sm">Recurso Whitelabel</BaseText>
+                  <BaseCheckbox v-model="planForm.hasWhitelabel" color="primary" />
+                </div>
+                <div
+                  class="flex items-center justify-between p-2 rounded border border-muted-200 dark:border-muted-800">
+                  <BaseText size="sm">Relatórios Avançados</BaseText>
+                  <BaseCheckbox v-model="planForm.hasReports" color="primary" />
+                </div>
+                <div
+                  class="flex items-center justify-between p-2 rounded border border-muted-200 dark:border-muted-800">
+                  <BaseText size="sm">Acesso via API</BaseText>
+                  <BaseCheckbox v-model="planForm.hasApi" color="primary" />
+                </div>
+                <div
+                  class="flex items-center justify-between p-2 rounded border border-muted-200 dark:border-muted-800">
+                  <BaseText size="sm">Gestão de Equipe</BaseText>
+                  <BaseCheckbox v-model="planForm.hasTeamManagement" color="primary" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-end gap-3">
+            <BaseButton variant="muted" @click="isEditModalOpen = false">Cancelar</BaseButton>
+            <BaseButton variant="primary" :loading="loading" @click="updatePlan">Salvar Alterações</BaseButton>
           </div>
         </BaseCard>
       </div>

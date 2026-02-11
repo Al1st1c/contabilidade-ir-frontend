@@ -204,7 +204,7 @@ function formatDate(date: string) {
                 </td>
                 <td class="py-4 px-4 text-right">
                   <div class="flex justify-end gap-2">
-                    <BaseButton size="sm" variant="muted" rounded="md">
+                    <BaseButton size="sm" variant="muted" rounded="md" @click="openSubscriptionModal(user)">
                       <Icon name="lucide:edit" class="size-3" />
                     </BaseButton>
                   </div>
@@ -265,23 +265,23 @@ function formatDate(date: string) {
             <div class="space-y-4 pt-4 border-t border-muted-200 dark:border-muted-800 md:col-span-2">
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Recurso Whitelabel</BaseText>
-                <BaseSwitch v-model="subForm.hasWhitelabel" />
+                <BaseCheckbox v-model="subForm.hasWhitelabel" color="primary" />
               </div>
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Relatórios Avançados</BaseText>
-                <BaseSwitch v-model="subForm.hasReports" />
+                <BaseCheckbox v-model="subForm.hasReports" color="primary" />
               </div>
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Acesso via API</BaseText>
-                <BaseSwitch v-model="subForm.hasApi" />
+                <BaseCheckbox v-model="subForm.hasApi" color="primary" />
               </div>
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Gestão de Equipe</BaseText>
-                <BaseSwitch v-model="subForm.hasTeamManagement" />
+                <BaseCheckbox v-model="subForm.hasTeamManagement" color="primary" />
               </div>
               <div class="flex items-center justify-between">
                 <BaseText size="sm">Ver todos os arquivos do Drive</BaseText>
-                <BaseSwitch v-model="subForm.canViewAllFilesDrive" />
+                <BaseCheckbox v-model="subForm.canViewAllFilesDrive" color="primary" />
               </div>
             </div>
           </div>
