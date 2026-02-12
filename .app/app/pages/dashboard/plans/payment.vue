@@ -8,7 +8,7 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const toaster = useNuiToasts()
-const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon } = useSubscription()
+const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon, getPaymentStatus } = useSubscription()
 
 // Integração de estado com o layout original
 const customRadio = ref((route.query.plan as string) || 'enterprise')
@@ -142,6 +142,7 @@ const cardInfo = ref({
 const isInitialLoading = ref(true)
 const isSubmitting = ref(false)
 const isCouponLoading = ref(false)
+const isCheckingStatus = ref(false)
 const paymentResult = ref<any>(null)
 const isExitingPage = ref(false)
 
@@ -285,6 +286,45 @@ async function handlePayment() {
   }
 }
 
+async function checkPaymentStatus() {
+  if (!paymentResult.value?.paymentId || isCheckingStatus.value)
+    return
+
+  isCheckingStatus.value = true
+  try {
+    const result = await getPaymentStatus(paymentResult.value.paymentId)
+
+    if (result.success && result.status === 'PAID') {
+      toaster.add({
+        title: 'Pagamento Confirmado!',
+        description: 'Sua assinatura foi ativada com sucesso.',
+        icon: 'solar:check-circle-bold-duotone',
+      })
+
+      // Atualizar estado local
+      paymentResult.value.status = 'PAID'
+
+      // Redirecionar após sucesso
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+    }
+    else {
+      toaster.add({
+        title: 'Aguardando Pagamento',
+        description: 'Ainda não recebemos a confirmação do seu banco. Tente novamente em alguns instantes.',
+        icon: 'solar:info-circle-bold-duotone',
+      })
+    }
+  }
+  catch (err) {
+    console.error('Erro ao verificar status:', err)
+  }
+  finally {
+    isCheckingStatus.value = false
+  }
+}
+
 function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text)
 }
@@ -399,7 +439,8 @@ function formatCurrency(value: number) {
               <div class="flex items-center gap-2" :class="planColor">
                 <Icon name="solar:check-circle-bold-duotone" class="size-4" />
                 <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? `${Math.round((selectedPlan.limits.storage_mb ||
+                  {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? `${Math.round((selectedPlan?.limits?.storage_mb
+                    ||
                     0)
                     / 1024)
                     }GB` : `${selectedPlan?.limits?.storage_mb || 0}MB` }} de Drive
@@ -661,7 +702,7 @@ function formatCurrency(value: number) {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.employees
-                      }}</span>
+                        }}</span>
                     </div>
                     <div class="flex items-center justify-between text-muted-500">
                       <span class="flex items-center gap-2">
@@ -687,7 +728,7 @@ function formatCurrency(value: number) {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.sms_monthly || 0
-                      }}
+                        }}
                         /mês</span>
                     </div>
                   </div>
@@ -727,7 +768,7 @@ function formatCurrency(value: number) {
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
                       formatCurrency(currentCyclePrice)
-                    }}</span>
+                      }}</span>
                   </div>
                   <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
                     <span class="font-sans italic">Cupom ({{ appliedCoupon.code }})</span>
@@ -774,7 +815,8 @@ function formatCurrency(value: number) {
                   </BaseHeading>
 
                   <div class="flex justify-center mb-6 p-4 bg-white rounded-lg shadow-inner border border-muted-200">
-                    <img :src="paymentResult.paymentData?.qr_code_url || '/img/custom/pix-logo.png'"
+                    <img
+                      :src="paymentResult.paymentData?.qr_code ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${paymentResult.paymentData.qr_code}` : '/img/custom/pix-logo.png'"
                       class="size-48 object-contain" alt="QR Code PIX">
                   </div>
 
@@ -791,12 +833,19 @@ function formatCurrency(value: number) {
                     </BaseButton>
                   </div>
 
-                  <div class="flex items-center justify-center gap-2 text-success-600">
-                    <BaseLoader class="size-4" />
+                  <div class="flex items-center justify-center gap-2 text-success-600 mb-6">
+                    <BaseLoader v-if="isCheckingStatus" class="size-4" />
+                    <Icon v-else name="solar:reorder-bold-duotone" class="size-4" />
                     <BaseText size="xs" weight="medium" class="font-sans">
-                      Aguardando confirmação...
+                      {{ isCheckingStatus ? 'Verificando...' : 'Aguardando confirmação...' }}
                     </BaseText>
                   </div>
+
+                  <BaseButton type="button" variant="primary" color="success"
+                    class="w-full h-10 shadow-lg shadow-success-500/20 font-bold" :loading="isCheckingStatus"
+                    @click="checkPaymentStatus">
+                    Já paguei! Conferir agora
+                  </BaseButton>
                 </div>
 
                 <!-- Caso Boleto -->

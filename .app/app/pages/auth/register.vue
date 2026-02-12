@@ -686,7 +686,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
 
             <BaseCard rounded="lg" class="p-6 text-center">
               <img
-                :src="pixQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`"
+                :src="pixCode ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${pixCode}` : (pixQrCodeUrl || '/img/custom/pix-logo.png')"
                 alt="QR Code PIX"
                 class="mx-auto mb-4 rounded-lg border-4 border-muted-200 dark:border-muted-700 bg-white p-2" width="200"
                 height="200">
