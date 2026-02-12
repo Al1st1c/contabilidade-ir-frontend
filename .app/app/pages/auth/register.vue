@@ -182,6 +182,10 @@ const isFreeFlow = computed(() => {
   return selectedPlan.value === 'free' || currentPrice.value === 0
 })
 
+const isPaymentRequired = computed(() => {
+  return !isFreeFlow.value && finalPrice.value > 0
+})
+
 const canRedirectToDashboard = computed(() => {
   // Se for grátis, pode. Se for pago, só se showPixCheckout for false (ou seja, já passou pela ativação)
   // Mas a regra principal é: se showPixCheckout está aberto, não sai dali até pagar.
@@ -418,7 +422,7 @@ const onSubmit = (async () => {
         document: formData.value.document?.replace(/\D/g, '') || undefined,
         planSlug: selectedPlan.value,
         billingPeriod: billingCycle.value,
-        paymentMethod: isFreeFlow.value ? 'FREE' : paymentMethod.value,
+        paymentMethod: !isPaymentRequired.value ? 'FREE' : paymentMethod.value,
         couponCode: appliedCoupon.value?.code,
       },
     })
@@ -461,8 +465,8 @@ const onSubmit = (async () => {
       console.error('❌ Nenhum token recebido do backend!')
     }
 
-    // Fluxo gratuito - ir direto para dashboard
-    if (isFreeFlow.value || !response.payment) {
+    // Fluxo gratuito ou cupom 100% - ir direto para dashboard
+    if (!isPaymentRequired.value || !response.payment) {
       toaster.add({
         title: 'Sucesso!',
         description: 'Conta criada com sucesso!',
@@ -578,7 +582,7 @@ function confirmExit() {
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
   // Apenas interceptar se estiver na step 3, com plano pago e não estiver já saindo
-  if (step.value === 3 && !isFreeFlow.value && !isExitingPage.value && !isSubmitting.value) {
+  if (step.value === 3 && isPaymentRequired.value && !isExitingPage.value && !isSubmitting.value) {
     e.preventDefault()
     // Mostrar modal customizado (o navegador pode não mostrar a mensagem customizada)
     showExitModal.value = true
@@ -1074,7 +1078,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
               </BaseCard>
 
               <!-- Forma de Pagamento -->
-              <BaseCard v-if="!isFreeFlow" rounded="lg" class="p-4 mb-4">
+              <BaseCard v-if="isPaymentRequired" rounded="lg" class="p-4 mb-4">
                 <BaseText size="xs" weight="medium" class="text-muted-500 uppercase tracking-wider mb-3">
                   Forma de Pagamento
                 </BaseText>
@@ -1130,7 +1134,8 @@ watch([step, isFreeFlow, isSubmitting], () => {
               </BaseCard>
 
               <!-- Resumo Final -->
-              <BaseCard v-if="!isFreeFlow" rounded="lg" class="p-4 mb-4 bg-muted-50 dark:bg-muted-900">
+              <BaseCard v-if="!isFreeFlow" rounded="lg" class="p-4 mb-4"
+                :class="finalPrice === 0 ? 'bg-success-50 dark:bg-success-900/10 border-success-200 dark:border-success-800' : 'bg-muted-50 dark:bg-muted-900'">
                 <div class="space-y-2">
                   <div class="flex justify-between text-sm">
                     <span class="text-muted-500">Subtotal</span>
@@ -1159,11 +1164,15 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 </BaseButton>
                 <BaseButton variant="primary" rounded="lg" class="h-12 flex-1" :loading="isSubmitting"
                   @click="onSubmit">
-                  <Icon v-if="isFreeFlow" name="ph:check-circle-fill" class="size-5 mr-2" />
+                  <Icon v-if="!isPaymentRequired" name="ph:check-circle-fill" class="size-5 mr-2" />
                   <Icon v-else-if="paymentMethod === 'PIX'" name="ph:qr-code-fill" class="size-5 mr-2" />
                   <Icon v-else name="ph:arrow-square-out-fill" class="size-5 mr-2" />
-                  {{ isFreeFlow ? 'Criar Conta Grátis' : (paymentMethod === 'PIX' ? 'Gerar PIX' :
-                    'Ir para Pagamento Seguro') }}
+                  <template v-if="!isPaymentRequired">
+                    {{ selectedPlan === 'free' ? 'Criar Conta Grátis' : 'Ativar Plano Agora' }}
+                  </template>
+                  <template v-else>
+                    {{ paymentMethod === 'PIX' ? 'Gerar PIX' : 'Ir para Pagamento Seguro' }}
+                  </template>
                 </BaseButton>
               </div>
             </div>
