@@ -55,16 +55,12 @@ function formatCurrency(value: number) {
     </section>
 
     <!-- Skeleton if loading -->
-    <div v-if="isLoading" class="space-y-4">
-      <BasePlaceload v-for="i in 3" :key="i" class="h-24 w-full rounded-2xl" />
-    </div>
+    <AppPageLoading v-if="isLoading" message="Carregando seu histórico..." />
 
     <!-- History List -->
     <div v-else-if="history.length > 0" class="space-y-4">
-      <BaseCard
-        v-for="item in history" :key="item.year"
-        class="p-5 flex items-center justify-between hover:shadow-lg transition-all duration-300 border-none shadow-sm"
-      >
+      <BaseCard v-for="item in history" :key="item.year"
+        class="p-5 flex items-center justify-between hover:shadow-lg transition-all duration-300 border-none shadow-sm">
         <div class="flex items-center gap-4">
           <div class="size-12 rounded-2xl bg-muted-100 dark:bg-muted-800 flex items-center justify-center">
             <Icon name="solar:calendar-date-bold-duotone" class="size-6 text-primary-500" />
@@ -83,13 +79,11 @@ function formatCurrency(value: number) {
         </div>
 
         <div class="text-right">
-          <div
-            class="text-sm font-bold" :class="[
-              item.result === 'refund' ? 'text-emerald-500'
+          <div class="text-sm font-bold" :class="[
+            item.result === 'refund' ? 'text-emerald-500'
               : item.result === 'pay' ? 'text-rose-500'
                 : 'text-muted-500',
-            ]"
-          >
+          ]">
             {{ item.result === 'refund' ? '+' : item.result === 'pay' ? '-' : '' }}
             {{ formatCurrency(item.value) }}
           </div>

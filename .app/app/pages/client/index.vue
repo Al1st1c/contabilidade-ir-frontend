@@ -273,9 +273,7 @@ function goToDocuments() {
 
 <template>
   <div class="space-y-10 pb-24">
-    <div v-if="isLoading" class="px-4 space-y-4">
-      <BasePlaceload v-for="i in 2" :key="i" class="h-30 w-full rounded-2xl" />
-    </div>
+    <AppPageLoading v-if="isLoading" message="Carregando dados da sua declaração..." />
 
     <!-- Welcome Section -->
     <section v-if="!isLoading" class="pt-6 animate-in fade-in slide-in-from-top-4 duration-500">

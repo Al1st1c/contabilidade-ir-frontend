@@ -188,10 +188,7 @@ function getStatusLabel(status: string) {
       </BaseParagraph>
     </section>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="px-4 space-y-4">
-      <BasePlaceload v-for="i in 3" :key="i" class="h-24 w-full rounded-2xl" />
-    </div>
+    <AppPageLoading v-if="isLoading" message="Carregando seus documentos..." />
 
     <!-- Empty State -->
     <div v-else-if="!declaration" class="py-20 text-center px-4">
@@ -209,20 +206,16 @@ function getStatusLabel(status: string) {
 
     <!-- Documents List -->
     <div v-else class="px-4 space-y-4">
-      <div
-        v-for="doc in documents" :key="doc.id"
-        class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300"
-      >
+      <div v-for="doc in documents" :key="doc.id"
+        class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300">
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
                 {{ doc.title }}
               </BaseHeading>
-              <BaseTag
-                v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
-                class="text-[9px] uppercase font-bold py-0.5 px-2"
-              >
+              <BaseTag v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
+                class="text-[9px] uppercase font-bold py-0.5 px-2">
                 Obrigatório
               </BaseTag>
             </div>
@@ -231,10 +224,8 @@ function getStatusLabel(status: string) {
             </BaseParagraph>
 
             <!-- Rejection Reason -->
-            <div
-              v-if="doc.status === 'rejected' && doc.comment"
-              class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2"
-            >
+            <div v-if="doc.status === 'rejected' && doc.comment"
+              class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2">
               <Icon name="solar:info-circle-bold" class="size-4 text-danger-500 shrink-0 mt-0.5" />
               <p class="text-[10px] text-danger-600 dark:text-danger-400 font-medium leading-tight">
                 {{ doc.comment }}
@@ -244,26 +235,22 @@ function getStatusLabel(status: string) {
 
           <!-- Status / Action -->
           <div class="shrink-0 flex flex-col items-center gap-2">
-            <div
-              class="size-10 rounded-xl flex items-center justify-center transition-colors" :class="[getStatusColor(doc.status)]"
-            >
+            <div class="size-10 rounded-xl flex items-center justify-center transition-colors"
+              :class="[getStatusColor(doc.status)]">
               <Icon :name="getStatusIcon(doc.status)" class="size-6" />
             </div>
             <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
-            }}</span>
+              }}</span>
           </div>
         </div>
 
         <!-- Upload Button (only if not approved) -->
-        <div
-          v-if="doc.status !== 'approved'"
-          class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800 flex justify-end"
-        >
+        <div v-if="doc.status !== 'approved'"
+          class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800 flex justify-end">
           <label class="relative cursor-pointer">
             <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
             <div
-              class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20"
-            >
+              class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
               <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
               <Icon v-else name="solar:upload-linear" class="size-4" />
               {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
@@ -274,8 +261,7 @@ function getStatusLabel(status: string) {
 
       <!-- Optional Extra Files -->
       <BaseCard
-        class="p-6 border-dashed border-2 border-muted-200 dark:border-muted-800 bg-transparent flex flex-col items-center text-center"
-      >
+        class="p-6 border-dashed border-2 border-muted-200 dark:border-muted-800 bg-transparent flex flex-col items-center text-center">
         <BaseHeading as="h4" size="sm" weight="bold" class="mb-1 text-muted-600 dark:text-muted-300">
           Outros Documentos
         </BaseHeading>

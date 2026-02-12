@@ -1500,9 +1500,9 @@ onMounted(() => {
             <DialogTitle class="font-heading text-muted-900 text-lg font-medium dark:text-white">
               Vincular ao Checklist
             </DialogTitle>
-            <BaseButtonIcon rounded="full" variant="ghost" @click="cancelChecklistUpload">
+            <BaseButton rounded="full" variant="ghost" @click="cancelChecklistUpload">
               <Icon name="solar:close-circle-linear" class="size-5" />
-            </BaseButtonIcon>
+            </BaseButton>
           </div>
           <div class="nui-slimscroll overflow-y-auto p-8 space-y-6">
             <DialogDescription class="text-sm text-muted-500">
@@ -1587,9 +1587,9 @@ onMounted(() => {
                 </BaseText>
               </div>
             </div>
-            <BaseButtonIcon rounded="full" variant="ghost" @click="showPreviewModal = false">
+            <BaseButton rounded="full" variant="ghost" @click="showPreviewModal = false">
               <Icon name="solar:close-circle-linear" class="size-6" />
-            </BaseButtonIcon>
+            </BaseButton>
           </div>
           <!-- Body -->
           <div

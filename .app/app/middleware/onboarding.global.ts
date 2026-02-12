@@ -12,9 +12,10 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Se o onboarding está pendente e o usuário tem um plano ativo
   if (onboardingStatus === 'PENDING' && hasActivePlan) {
-    // Evita loop de redirecionamento
-    if (!to.path.startsWith('/dashboard')) {
-      return navigateTo('/dashboard')
+    // Evita loop de redirecionamento e permite acesso ao portal do cliente
+    if (!to.path.startsWith('/dashboard') && !to.path.startsWith('/client')) {
+      const target = user.value.userType === 'client' ? '/client' : '/dashboard'
+      return navigateTo(target)
     }
   }
 

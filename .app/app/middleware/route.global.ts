@@ -5,7 +5,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Rotas que não precisam de autenticação
   const publicRoutes = ['/', '/auth/login', '/auth/register', '/regulamento']
-  if (publicRoutes.includes(to.path) || to.path.startsWith('/invite')) {
+  const isClientPublic = to.path.startsWith('/client') && to.query.token
+
+  if (publicRoutes.includes(to.path) || to.path.startsWith('/invite') || isClientPublic) {
     // Se logado e tentando ir pro login, redireciona pro dashboard
     if (token.value && (to.path === '/' || to.path === '/auth/login')) {
       return navigateTo('/dashboard')
@@ -28,7 +30,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('/affiliate/dashboard')
   }
 
-  if (to.path.startsWith('/client') && user.value?.userType !== 'client') {
+  if (to.path.startsWith('/client') && user.value?.userType !== 'client' && !to.query.token) {
     return navigateTo('/dashboard')
   }
 })

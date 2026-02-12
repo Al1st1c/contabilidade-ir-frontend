@@ -366,10 +366,10 @@ const onSubmit = handleSubmit(async (values) => {
           <div class="mx-auto w-full max-w-md">
             <!-- Nav -->
             <div class="flex w-full items-center justify-between mb-8">
-              <BaseButtonIcon v-if="mode !== 'login'" rounded="full" variant="muted" size="sm"
+              <BaseButton v-if="mode !== 'login'" rounded="full" variant="muted" size="sm"
                 @click="mode = mode === 'recovery-verify' ? 'recovery-method' : 'login'">
                 <Icon name="ph:arrow-left-bold" class="size-4" />
-              </BaseButtonIcon>
+              </BaseButton>
               <div v-else></div>
               <BaseThemeToggle />
             </div>

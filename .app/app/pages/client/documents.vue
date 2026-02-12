@@ -126,10 +126,7 @@ function formatSize(bytes: number) {
       </div>
     </div>
 
-    <div v-if="isLoading" class="space-y-4">
-      <BasePlaceload class="h-24 w-full rounded-xl" />
-      <BasePlaceload class="h-24 w-full rounded-xl" />
-    </div>
+    <AppPageLoading v-if="isLoading" message="Buscando seus recibos oficiais..." />
 
     <div v-else-if="officialDocs.length === 0" class="py-12 text-center">
       <div class="size-16 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center mx-auto mb-4">
@@ -147,19 +144,16 @@ function formatSize(bytes: number) {
       <!-- Official Documents Section -->
       <section>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <BaseCard
-            v-for="doc in officialDocs" :key="doc.id"
+          <BaseCard v-for="doc in officialDocs" :key="doc.id"
             class="group p-4 flex items-center gap-4 cursor-pointer hover:border-primary-500/50 transition-all shadow-sm hover:shadow-md"
-            @click="downloadAttachment(doc)"
-          >
+            @click="downloadAttachment(doc)">
             <div class="size-10 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
               <Icon :name="getIcon(doc.mimeType)" class="size-6" />
             </div>
 
             <div class="flex-1 min-w-0">
               <h4
-                class="font-medium text-sm text-muted-800 dark:text-muted-100 truncate group-hover:text-primary-600 transition-colors"
-              >
+                class="font-medium text-sm text-muted-800 dark:text-muted-100 truncate group-hover:text-primary-600 transition-colors">
                 {{ doc.fileName }}
               </h4>
               <p class="text-xs text-muted-400 mt-0.5">
@@ -167,14 +161,10 @@ function formatSize(bytes: number) {
               </p>
             </div>
 
-            <BaseButton
-              size="icon-sm" variant="muted" class="transition-opacity"
-              :class="downloadingDocs.has(doc.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
-            >
-              <Icon
-                v-if="downloadingDocs.has(doc.id)" name="svg-spinners:ring-resize"
-                class="size-4 text-primary-500"
-              />
+            <BaseButton size="icon-sm" variant="muted" class="transition-opacity"
+              :class="downloadingDocs.has(doc.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'">
+              <Icon v-if="downloadingDocs.has(doc.id)" name="svg-spinners:ring-resize"
+                class="size-4 text-primary-500" />
               <Icon v-else name="lucide:download" class="size-4" />
             </BaseButton>
           </BaseCard>

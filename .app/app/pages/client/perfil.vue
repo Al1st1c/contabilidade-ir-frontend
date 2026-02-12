@@ -120,23 +120,13 @@ function handleLogout() {
 
 <template>
   <div class="space-y-6 pb-24">
-    <div v-if="isLoading" class="space-y-6 pt-10 px-4">
-      <div class="flex flex-col items-center">
-        <BasePlaceload class="size-24 rounded-full mb-4" />
-        <BasePlaceload class="h-6 w-48 rounded mb-2" />
-        <BasePlaceload class="h-4 w-32 rounded" />
-      </div>
-      <BasePlaceload class="h-48 w-full rounded-2xl" />
-      <BasePlaceload class="h-48 w-full rounded-2xl" />
-    </div>
+    <AppPageLoading v-if="isLoading" message="Carregando seu perfil..." />
 
     <div v-else-if="profile">
       <!-- Profile Header -->
       <section class="flex flex-col items-center py-6 text-center">
-        <BaseAvatar
-          :src="profile.photoUrl || '/img/avatars/placeholder.svg'" size="xl"
-          class="mb-4 ring-4 ring-white dark:ring-muted-900 shadow-xl"
-        />
+        <BaseAvatar :src="profile.photoUrl || '/img/avatars/placeholder.svg'" size="xl"
+          class="mb-4 ring-4 ring-white dark:ring-muted-900 shadow-xl" />
         <BaseHeading as="h2" size="xl" weight="bold" class="text-muted-800 dark:text-white px-4 leading-tight">
           {{ profile.name }}
         </BaseHeading>
@@ -227,10 +217,8 @@ function handleLogout() {
             <BaseHeading as="h3" size="sm" weight="semibold">
               Dados para Restituição
             </BaseHeading>
-            <button
-              v-if="!isEditingPix" class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
-              @click="isEditingPix = true"
-            >
+            <button v-if="!isEditingPix" class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
+              @click="isEditingPix = true">
               Editar PIX
             </button>
           </div>
@@ -251,16 +239,14 @@ function handleLogout() {
               <div class="flex items-center justify-between mb-1">
                 <span class="text-xs text-muted-500">Chave PIX</span>
                 <span v-if="!isEditingPix" class="text-sm font-mono font-bold text-primary-500">{{ profile.pixKey || '-'
-                }}</span>
+                  }}</span>
               </div>
 
               <div v-if="isEditingPix" class="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
                 <BaseInput v-model="editedPixKey" placeholder="Sua chave PIX" size="sm" rounded="lg" />
                 <div class="flex gap-2">
-                  <BaseButton
-                    color="primary" size="sm" rounded="lg" class="flex-1" :loading="isSaving"
-                    @click="savePixKey"
-                  >
+                  <BaseButton color="primary" size="sm" rounded="lg" class="flex-1" :loading="isSaving"
+                    @click="savePixKey">
                     Salvar
                   </BaseButton>
                   <BaseButton color="muted" size="sm" rounded="lg" @click="isEditingPix = false">
@@ -277,8 +263,7 @@ function handleLogout() {
           <!-- Security Badge -->
           <div class="absolute -top-1 -right-1">
             <div
-              class="bg-success-500/10 text-success-500 text-[8px] font-bold uppercase py-1 px-3 rounded-bl-xl border-b border-l border-success-500/20 flex items-center gap-1"
-            >
+              class="bg-success-500/10 text-success-500 text-[8px] font-bold uppercase py-1 px-3 rounded-bl-xl border-b border-l border-success-500/20 flex items-center gap-1">
               <Icon name="solar:shield-check-bold" class="size-2.5" />
               Criptografado
             </div>
@@ -293,10 +278,8 @@ function handleLogout() {
                 Seguro
               </BaseTag>
             </div>
-            <button
-              v-if="!isEditingGov" class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
-              @click="isEditingGov = true"
-            >
+            <button v-if="!isEditingGov" class="text-[10px] text-primary-500 font-bold uppercase hover:underline"
+              @click="isEditingGov = true">
               Atualizar Senha
             </button>
           </div>
@@ -307,10 +290,8 @@ function handleLogout() {
           </BaseParagraph>
 
           <div class="space-y-4">
-            <div
-              v-if="!isEditingGov"
-              class="flex items-center justify-between p-3 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-100 dark:border-muted-800"
-            >
+            <div v-if="!isEditingGov"
+              class="flex items-center justify-between p-3 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-100 dark:border-muted-800">
               <div class="flex items-center gap-3">
                 <div class="size-8 rounded-lg bg-white dark:bg-muted-800 flex items-center justify-center shadow-sm">
                   <Icon name="solar:lock-password-bold-duotone" class="size-5 text-muted-400" />
@@ -321,10 +302,8 @@ function handleLogout() {
                     <span class="text-sm font-mono font-bold tracking-widest text-muted-700 dark:text-muted-300">
                       {{ profile.govPassword ? (isGovVisible ? profile.govPassword : '••••••••') : 'Não informada' }}
                     </span>
-                    <button
-                      v-if="profile.govPassword" class="text-muted-400 hover:text-primary-500"
-                      @click="isGovVisible = !isGovVisible"
-                    >
+                    <button v-if="profile.govPassword" class="text-muted-400 hover:text-primary-500"
+                      @click="isGovVisible = !isGovVisible">
                       <Icon :name="isGovVisible ? 'solar:eye-closed-linear' : 'solar:eye-linear'" class="size-4" />
                     </button>
                   </div>
@@ -337,10 +316,8 @@ function handleLogout() {
                 <BaseParagraph size="xs" class="text-muted-500 font-bold uppercase ml-1">
                   Nova Senha Gov.br
                 </BaseParagraph>
-                <BaseInput
-                  v-model="editedGovPassword" type="password" placeholder="Digite sua senha do Gov.br"
-                  size="sm" rounded="lg" icon="solar:key-linear"
-                />
+                <BaseInput v-model="editedGovPassword" type="password" placeholder="Digite sua senha do Gov.br"
+                  size="sm" rounded="lg" icon="solar:key-linear" />
               </div>
 
               <div class="p-3 rounded-lg bg-primary-500/5 border border-primary-500/10 flex gap-2">
@@ -352,10 +329,8 @@ function handleLogout() {
               </div>
 
               <div class="flex gap-2">
-                <BaseButton
-                  color="primary" size="sm" rounded="lg" class="flex-1 font-bold" :loading="isSaving"
-                  @click="saveGovPassword"
-                >
+                <BaseButton color="primary" size="sm" rounded="lg" class="flex-1 font-bold" :loading="isSaving"
+                  @click="saveGovPassword">
                   Confirmar e Salvar
                 </BaseButton>
                 <BaseButton color="muted" size="sm" rounded="lg" @click="isEditingGov = false">
@@ -375,12 +350,10 @@ function handleLogout() {
           <div class="space-y-1">
             <button
               class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-danger-500/5 transition-colors group"
-              @click="handleLogout"
-            >
+              @click="handleLogout">
               <div class="flex items-center gap-3 text-danger-500">
                 <div
-                  class="size-8 rounded-lg bg-danger-500/10 flex items-center justify-center group-hover:bg-danger-500 group-hover:text-white transition-colors"
-                >
+                  class="size-8 rounded-lg bg-danger-500/10 flex items-center justify-center group-hover:bg-danger-500 group-hover:text-white transition-colors">
                   <Icon name="solar:logout-linear" class="size-5" />
                 </div>
                 <span class="text-sm font-bold">Sair do Aplicativo</span>
@@ -395,7 +368,7 @@ function handleLogout() {
             <TairoLogo class="size-5 text-muted-400" />
             <span class="text-xs font-bold text-muted-400 opacity-50 uppercase tracking-widest">{{ tenant?.tradeName
               || tenant?.name || 'CONSTAR'
-            }}</span>
+              }}</span>
           </div>
           <BaseParagraph size="xs" class="text-muted-400">
             Plataforma de Gestão IR • Versão 1.0.0
