@@ -50,13 +50,16 @@ interface AuthResponse {
   access_token: string
   user: User
   level?: string
-  // Adicione outros campos conforme necessário
+  two_factor?: boolean
+  phone?: string
+  email?: string
 }
 
 interface LoginCredentials {
   email: string
   password: string
   recaptchaToken?: string
+  method?: 'SMS' | 'EMAIL'
 }
 
 // Função para limpar cache do caixa
@@ -109,12 +112,13 @@ export function useAuth() {
   })
 
   // Função para fazer login (agora sempre requer 2FA)
-  const login = async (credentials: LoginCredentials): Promise<AuthResponse | { error: boolean, message: string, two_factor?: boolean, status?: string, phone?: string }> => {
+  const login = async (credentials: LoginCredentials): Promise<AuthResponse | { error: boolean, message: string, two_factor?: boolean, status?: string, phone?: string, email?: string }> => {
     try {
       // Primeiro, enviar código 2FA
       const requestBody: any = {
         email: credentials.email,
         password: credentials.password,
+        method: credentials.method || 'SMS',
       }
 
       const data = await $fetch<any>(getApiUrl('/auth/send-2fa'), {

@@ -17,6 +17,27 @@ const declaration = ref<any>(null)
 const collectionLink = ref<any>(null)
 const documents = ref<any[]>([])
 const isUploading = ref<string | null>(null)
+const notes = ref<Record<string, string>>({})
+const showNote = ref<Record<string, boolean>>({})
+
+const banks = ['Itaú', 'Bradesco', 'Santander', 'Nubank', 'Banco do Brasil']
+const customBanks = ref<Record<string, string>>({})
+const showCustomInput = ref<Record<string, boolean>>({})
+
+function isIncomeReport(title: string) {
+  return title?.toUpperCase().includes('INFORME DE RENDIMENTO')
+}
+
+function handleBankSelect(docId: string, bank: string) {
+  if (bank === 'Outro') {
+    showCustomInput.value[docId] = true
+    notes.value[docId] = customBanks.value[docId] || ''
+  }
+  else {
+    showCustomInput.value[docId] = false
+    notes.value[docId] = bank
+  }
+}
 
 async function loadDocuments() {
   if (!token.value && !user.value?.id)
@@ -109,6 +130,22 @@ async function handleFileUpload(event: Event, itemId: string) {
   }
 
   const file = target.files[0]
+
+  // Validação para Informe de Rendimento
+  const doc = documents.value.find(d => d.id === itemId)
+  if (doc && isIncomeReport(doc.title)) {
+    const note = notes.value[itemId]
+    if (!note || !note.trim()) {
+      add({
+        title: 'Seleção Obrigatória',
+        description: 'Por favor, informe o nome do banco para este Informe de Rendimento.',
+        icon: 'solar:info-circle-bold-duotone',
+      })
+      target.value = ''
+      return
+    }
+  }
+
   isUploading.value = itemId
 
   try {
@@ -119,6 +156,13 @@ async function handleFileUpload(event: Event, itemId: string) {
     if (itemId !== 'extra') {
       formData.append('checklistItemId', itemId)
     }
+
+    // Adicionar observação se houver
+    const note = notes.value[itemId]
+    if (note && note.trim()) {
+      formData.append('description', note.trim())
+    }
+
     formData.append('category', 'document')
 
     const result = await $fetch<any>(getApiUrl(`/public/${collectionLink.value.token}/upload`), {
@@ -144,6 +188,14 @@ async function handleFileUpload(event: Event, itemId: string) {
   }
   finally {
     isUploading.value = null
+    // Limpar nota após sucesso
+    if (itemId) {
+      notes.value[itemId] = ''
+      if (customBanks.value[itemId]) {
+        customBanks.value[itemId] = ''
+      }
+      showCustomInput.value[itemId] = false
+    }
   }
 }
 
@@ -240,22 +292,63 @@ function getStatusLabel(status: string) {
               <Icon :name="getStatusIcon(doc.status)" class="size-6" />
             </div>
             <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
-              }}</span>
+            }}</span>
           </div>
         </div>
 
-        <!-- Upload Button (only if not approved) -->
-        <div v-if="doc.status !== 'approved'"
-          class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800 flex justify-end">
-          <label class="relative cursor-pointer">
-            <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
-            <div
-              class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
-              <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
-              <Icon v-else name="solar:upload-linear" class="size-4" />
-              {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
+        <!-- Upload Area (only if not approved) -->
+        <div v-if="doc.status !== 'approved'" class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800">
+
+          <!-- Note input or Bank Selection -->
+          <div class="mb-4">
+            <!-- Caso seja Informe de Rendimento: Seleção de Banco -->
+            <div v-if="isIncomeReport(doc.title)" class="animate-fade-in">
+              <p class="text-[11px] font-bold text-muted-400 uppercase mb-3 flex items-center gap-2">
+                <Icon name="solar:bank-bold-duotone" class="size-4 text-primary-500" />
+                Selecione o Banco Emissor
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button v-for="bank in [...banks, 'Outro']" :key="bank" type="button"
+                  class="px-3 py-2.5 rounded-xl border text-[11px] font-bold transition-all text-center"
+                  :class="notes[doc.id] === bank || (bank === 'Outro' && showCustomInput[doc.id])
+                    ? 'border-primary-500 bg-primary-500/5 text-primary-600 shadow-sm'
+                    : 'border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50 text-muted-500 hover:border-primary-400'" @click="handleBankSelect(doc.id, bank)">
+                  {{ bank }}
+                </button>
+              </div>
+
+              <!-- Input para outro banco -->
+              <div v-if="showCustomInput[doc.id]" class="mt-3 animate-fade-in">
+                <BaseInput v-model="customBanks[doc.id]" placeholder="Digite o nome do banco..." size="sm" rounded="lg"
+                  class="bg-muted-50/50 dark:bg-muted-900/50 shadow-inner"
+                  @input="notes[doc.id] = customBanks[doc.id] || ''" />
+              </div>
             </div>
-          </label>
+
+            <!-- Caso normal: Observação opcional -->
+            <div v-else>
+              <div class="flex items-center gap-2 mb-2">
+                <BaseCheckbox :id="`note-check-${doc.id}`" v-model="showNote[doc.id]" shape="rounded" color="primary"
+                  label="Adicionar observação" />
+              </div>
+              <div v-if="showNote[doc.id]" class="animate-fade-in">
+                <BaseTextarea v-model="notes[doc.id]" placeholder="Ex: Este documento refere-se ao imóvel X..." rows="2"
+                  size="sm" class="bg-muted-50/50 dark:bg-muted-900/50" />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <label class="relative cursor-pointer">
+              <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
+              <div
+                class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
+                <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
+                <Icon v-else name="solar:upload-linear" class="size-4" />
+                {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -269,11 +362,23 @@ function getStatusLabel(status: string) {
           Envie qualquer outro arquivo adicional que considerar
           relevante.
         </BaseParagraph>
+        <div class="w-full max-w-xs mx-auto mb-4">
+          <div class="flex items-center justify-center gap-2 mb-2">
+            <BaseCheckbox id="note-check-extra" v-model="showNote['extra']" shape="rounded" color="primary"
+              label="Adicionar observação" />
+          </div>
+          <div v-if="showNote['extra']" class="animate-fade-in text-left">
+            <BaseTextarea v-model="notes['extra']" placeholder="Descreva o que é este documento..." rows="2" size="sm"
+              class="bg-muted-50/50 dark:bg-muted-900/50" />
+          </div>
+        </div>
+
         <label class="cursor-pointer">
           <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, 'extra')">
-          <BaseButton variant="muted" rounded="lg" size="sm" class="h-9 font-bold" :loading="isUploading === 'extra'">
-            <Icon name="solar:add-circle-linear" class="size-4 mr-2" />
-            Adicionar Extra
+          <BaseButton variant="primary" rounded="lg" size="sm" class="h-9 font-bold px-6"
+            :loading="isUploading === 'extra'">
+            <Icon name="solar:upload-minimalistic-linear" class="size-4 mr-2" />
+            Enviar Documento Extra
           </BaseButton>
         </label>
       </BaseCard>

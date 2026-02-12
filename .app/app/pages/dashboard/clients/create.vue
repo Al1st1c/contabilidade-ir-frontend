@@ -13,6 +13,7 @@ const router = useRouter()
 // Form State
 const step = ref(1)
 const isLoadingCpf = ref(false)
+const isLoadingCep = ref(false)
 const isSaving = ref(false)
 const cpfConsulted = ref(false)
 
@@ -106,6 +107,51 @@ async function consultCpf() {
     isLoadingCpf.value = false
   }
 }
+
+async function searchCep() {
+  const cep = form.value.zipCode.replace(/\D/g, '')
+  if (cep.length !== 8)
+    return
+
+  isLoadingCep.value = true
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    const data = await response.json()
+
+    if (data.erro) {
+      toaster.add({
+        title: 'CEP não encontrado',
+        description: 'Verifique o número digitado.',
+        icon: 'ph:warning-circle-fill',
+      })
+      return
+    }
+
+    form.value.address = data.logradouro
+    form.value.neighborhood = data.bairro
+    form.value.city = data.localidade
+    form.value.state = data.uf
+
+    // Focar no número se o endereço foi preenchido
+    nextTick(() => {
+      const numberInput = document.querySelector('input[placeholder="Ex: 123"]') as HTMLInputElement
+      if (numberInput)
+        numberInput.focus()
+    })
+  }
+  catch (error) {
+    console.error('Erro ao buscar CEP:', error)
+  }
+  finally {
+    isLoadingCep.value = false
+  }
+}
+
+watch(() => form.value.zipCode, (newVal) => {
+  if (newVal.replace(/\D/g, '').length === 8) {
+    searchCep()
+  }
+})
 
 async function saveClient() {
   isSaving.value = true
@@ -269,7 +315,8 @@ function prevStep() {
         <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
           <div class="md:col-span-4">
             <BaseField label="CEP">
-              <BaseInput v-model="form.zipCode" placeholder="00000-000" icon="lucide:map-pin" />
+              <BaseInput v-model="form.zipCode" placeholder="00000-000" icon="lucide:map-pin" :loading="isLoadingCep"
+                :masks="['99999-999']" />
             </BaseField>
           </div>
           <div class="md:col-span-8">

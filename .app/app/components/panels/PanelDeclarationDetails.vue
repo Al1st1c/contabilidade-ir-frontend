@@ -131,9 +131,13 @@ async function openPreview(item: any) {
     const { data } = await useCustomFetch<any>(item.attachment.previewUrl, {
       headers: { Authorization: `Bearer ${authToken}` },
     })
-    if (data?.url)
+    if (data?.url) {
       signedPreviewUrl.value = data.url
-    else throw new Error('URL de pré-visualização não retornada')
+      if (item?.attachment?.mimeType === 'application/pdf') {
+        signedPreviewUrl.value += '#navpanes=0&page=1'
+      }
+    }
+    else { throw new Error('URL de pré-visualização não retornada') }
   }
   catch (error: any) {
     console.error('Erro ao buscar URL de preview:', error)
@@ -488,9 +492,9 @@ function statusIcon(status: string) {
 }
 function statusTagClass(status: string) {
   const map: Record<string, string> = {
-    uploaded: 'bg-warning-500 text-white',
-    approved: 'bg-success-500 text-white',
-    rejected: 'bg-danger-500 text-white',
+    uploaded: 'bg-warning-500 text-white shadow-sm shadow-warning-500/20',
+    approved: 'bg-success-500 text-white shadow-sm shadow-success-500/20',
+    rejected: 'bg-danger-500 text-white shadow-sm shadow-danger-500/20',
   }
   return map[status] || ''
 }
@@ -1013,25 +1017,55 @@ onMounted(() => {
                 }">
                   <Icon :name="statusIcon(item.status)" class="size-3" />
                 </div>
+                <!-- Title & Observations -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
+                      {{ item.title }}
+                    </p>
+                    <BaseTag v-if="item.isRequired" size="sm" variant="none"
+                      class="text-[10px] font-bold shrink-0 bg-danger-600 px-2">
+                      Obrigatório
+                    </BaseTag>
+                    <BaseTag v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)"
+                      variant="none" class="text-[10px] font-bold shrink-0 capitalize px-2">
+                      {{ statusLabel(item.status) }}
+                    </BaseTag>
+                  </div>
 
-                <!-- Title -->
-                <div class="flex-1 min-w-0 flex items-center gap-2">
-                  <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
-                    {{ item.title }}
+                  <!-- Requirement Description (if any) -->
+                  <p v-if="item.description"
+                    class="text-[11px] text-muted-500 dark:text-muted-400 mt-1 line-clamp-1 italic">
+                    {{ item.description }}
                   </p>
-                  <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                    class="text-[9px] shrink-0 bg-danger-500 text-white">
-                    Obrigatório
-                  </BaseTag>
-                  <BaseTag v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)"
-                    variant="none" class="text-[9px] shrink-0 capitalize">
-                    {{ statusLabel(item.status) }}
-                  </BaseTag>
+
+                  <!-- File info and client note -->
+                  <div v-if="item.attachment"
+                    class="mt-2 p-2 rounded-lg bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 shadow-inner">
+                    <div class="flex items-center justify-between gap-2 overflow-hidden">
+                      <p
+                        class="text-[11px] font-bold text-muted-700 dark:text-muted-200 truncate flex items-center gap-1.5">
+                        <Icon name="solar:document-bold-duotone" class="size-3.5 text-primary-500" />
+                        {{ item.attachment.fileName }}
+                      </p>
+                      <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
+                      }}KB</span>
+                    </div>
+
+                    <div v-if="item.attachment.description"
+                      class="mt-2 pt-2 border-t border-muted-200 dark:border-muted-800">
+                      <p class="text-[11px] text-primary-600 dark:text-primary-400 font-semibold flex items-start gap-1.5"
+                        :title="item.attachment.description">
+                        <Icon name="solar:notes-bold-duotone" class="size-3.5 mt-0.5 shrink-0" />
+                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment.description
+                        }}"</span></span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Arquivo enviado: nome + ações -->
+                <!-- Arquivo enviado: ações -->
                 <div v-if="item.status === 'uploaded' && item.attachment" class="flex items-center gap-2 shrink-0">
-                  <span class="text-[10px] text-muted-400 truncate max-w-[100px]">{{ item.attachment.fileName }}</span>
                   <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)">
                     <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                   </BaseButton>
@@ -1104,6 +1138,10 @@ onMounted(() => {
                       </p>
                       <p class="text-[10px] text-muted-400 capitalize mt-0.5">
                         {{ att.category || 'Geral' }}
+                      </p>
+                      <p v-if="att.description" class="text-[10px] text-primary-500 italic mt-1 line-clamp-2"
+                        :title="att.description">
+                        "{{ att.description }}"
                       </p>
                     </div>
                   </div>

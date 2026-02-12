@@ -104,6 +104,8 @@ const loading = ref(false)
 const logged = ref(false)
 const isTwoFactor = ref(false)
 const recaptchaToken = ref('')
+const sendMethod = ref<'SMS' | 'EMAIL'>('SMS')
+const sentVia = ref('')
 
 async function getRecaptcha() {
   const { $recaptchaV3 } = useNuxtApp()
@@ -313,16 +315,18 @@ watch(input, (newValue) => {
 }, { deep: true })
 
 // Função para reenviar código 2FA
-async function resendCode() {
+async function resendCode(method: 'SMS' | 'EMAIL' = 'SMS') {
   try {
     await getRecaptcha()
 
-    console.log('Reenviando código 2FA...')
+    console.log(`Reenviando código 2FA via ${method}...`)
+    sendMethod.value = method
 
     const result = await login({
       email: email.value,
       password: password.value,
       recaptchaToken: recaptchaToken.value,
+      method,
     })
 
     if (result.error) {
@@ -335,9 +339,11 @@ async function resendCode() {
       return
     }
 
+    sentVia.value = method === 'SMS' ? (result.phone || '') : (result.email || '')
+
     toaster.add({
       title: 'Sucesso',
-      description: 'Código enviado com sucesso!',
+      description: `Código enviado para seu ${method === 'SMS' ? 'celular' : 'e-mail'} com sucesso!`,
       icon: 'ph:user-circle-fill',
       progress: true,
     })
@@ -412,12 +418,14 @@ const onSubmit = handleSubmit(async (values) => {
       email.value = values.email
       password.value = values.senha
       isTwoFactor.value = true
+      sendMethod.value = 'SMS'
+      sentVia.value = retorno.phone || ''
 
       // Mostrar telefone mascarado se disponível
       if (retorno.phone) {
         toaster.add({
           title: 'Código Enviado',
-          description: `Código enviado para ${retorno.phone}`,
+          description: `Código enviado para seu celular ${retorno.phone}`,
           icon: 'ph:check-circle-fill',
           progress: true,
         })
@@ -557,8 +565,10 @@ const onSubmit = handleSubmit(async (values) => {
                       Verificação de Segurança
                     </BaseHeading>
                     <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
-                      Digitie o código de 6 dígitos que enviamos para seu <span
-                        class="font-medium text-muted-800 dark:text-muted-100">celular</span>.
+                      Digite o código de 6 dígitos que enviamos para seu <span
+                        class="font-medium text-muted-800 dark:text-muted-100">{{ sendMethod === 'SMS' ? 'celular' :
+                        'e-mail' }}</span>
+                      <span v-if="sentVia" class="block text-xs mt-1">({{ sentVia }})</span>
                     </BaseParagraph>
                   </div>
 
@@ -581,13 +591,21 @@ const onSubmit = handleSubmit(async (values) => {
                         <BaseText size="xs" weight="medium">Verificando segurança...</BaseText>
                       </div>
 
-                      <div class="flex flex-col items-center gap-1">
+                      <div class="flex flex-col items-center gap-1.5">
                         <BaseText size="xs" class="text-muted-400">Não recebeu o código?</BaseText>
-                        <button type="button"
-                          class="text-primary-600 dark:text-primary-400 font-sans text-sm font-semibold hover:underline"
-                          @click="resendCode">
-                          Enviar novo código
-                        </button>
+                        <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                          <button type="button"
+                            class="text-primary-600 dark:text-primary-400 font-sans text-xs font-semibold hover:underline"
+                            @click="resendCode('SMS')">
+                            Reenviar por SMS
+                          </button>
+                          <span class="text-muted-300 dark:text-muted-600 hidden sm:block">|</span>
+                          <button type="button"
+                            class="text-primary-600 dark:text-primary-400 font-sans text-xs font-semibold hover:underline"
+                            @click="resendCode('EMAIL')">
+                            Receber por E-mail
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

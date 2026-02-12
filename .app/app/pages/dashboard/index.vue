@@ -250,19 +250,91 @@ async function fetchTeam() {
 
 onMounted(() => {
   console.log('🏠 Dashboard montado')
-  console.log('  - User:', user.value)
-  console.log('  - User name:', user.value?.name)
-  console.log('  - Onboarding status:', user.value?.onboardingStatus)
-  console.log('  - Should open onboarding?', isOnboardingOpen.value)
 
-  // Só buscar dados se NÃO estiver no onboarding
-  if (user.value?.onboardingStatus !== 'PENDING') {
-    fetchDashboard()
-    fetchTeam()
+  // MOCK DATA PARA PRINT DA LANDING PAGE
+  // Para remover o mock, basta comentar as linhas abaixo e descomentar fetchDashboard() e fetchTeam()
+  const useMockData = true
 
-    // Fetch tenant data for whitelabel if not already loaded
+  if (useMockData) {
+    isLoading.value = false
+    stats.value = {
+      total: 142,
+      completed: 87,
+      pending: 48,
+      docsWaiting: 15,
+      revenue: 4260000,
+      received: 3120000,
+      awaitingVerification: 850000,
+      overdue: 290000,
+      completedToday: 5,
+      stuckRevenue: 450000,
+    }
+
+    pipelineData.value = [
+      { name: 'Triagem', count: 12, color: 'primary' },
+      { name: 'Aguardando Doc.', count: 23, color: 'warning' },
+      { name: 'Em Preenchimento', count: 15, color: 'info' },
+      { name: 'Revisão Master', count: 8, color: 'purple' },
+      { name: 'Transmitido', count: 84, color: 'success' },
+    ]
+
+    teamProductivity.value = [
+      { id: '1', name: 'Alana Silva', count: 45, completed: 32, photo: '/img/avatars/2.svg' },
+      { id: '2', name: 'Carlos Ferreira', count: 38, completed: 25, photo: '/img/avatars/3.svg' },
+      { id: '3', name: 'Beatriz Costa', count: 32, completed: 20, photo: '/img/avatars/4.svg' },
+      { id: '4', name: 'Ricardo Santos', count: 27, completed: 10, photo: '/img/avatars/5.svg' },
+    ]
+
+    recentDeclarations.value = [
+      { id: 'd1', client: { name: 'João Guilherme Silva', image: '/img/avatars/10.svg' }, column: { name: 'Transmitido' }, taxYear: 2026 },
+      { id: 'd2', client: { name: 'Maria Eduarda Oliveira', image: '/img/avatars/11.svg' }, column: { name: 'Triagem' }, taxYear: 2026 },
+      { id: 'd3', client: { name: 'Roberto Carlos Medeiros', image: '/img/avatars/12.svg' }, column: { name: 'Em Preenchimento' }, taxYear: 2026 },
+      { id: 'd4', client: { name: 'Fernanda Lima', image: '/img/avatars/13.svg' }, column: { name: 'Revisão Master' }, taxYear: 2026 },
+      { id: 'd5', client: { name: 'Carlos Alberto Wagner', image: '/img/avatars/14.svg' }, column: { name: 'Aguardando Doc.' }, taxYear: 2026 },
+    ]
+
+    revenueTrend.value = [
+      { name: 'Receita Realizada (PIX/CC)', data: [12000, 18000, 25000, 22000, 31200, 0, 0] },
+      { name: 'Projeção (A receber)', data: [15000, 22000, 35000, 38000, 42600, 48000, 55000] },
+    ]
+    trendLabels.value = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul']
+
+    dashboardAlerts.value = {
+      waitingDocs: [
+        { id: 'a1', client: { name: 'Amanda Rocha' }, column: { name: 'Docs Pendentes' } },
+        { id: 'a2', client: { name: 'Pedro Henrique Antunes' }, column: { name: 'Docs Pendentes' } },
+      ],
+      nearDeadline: [
+        { id: 'a3', client: { name: 'Sonia Abrão' }, column: { name: 'Finalização' } },
+      ],
+      stuckClients: [
+        { id: 'a4', client: { name: 'Lucas Neto' }, column: { name: 'Triagem' } },
+      ],
+      errors: [
+        { id: 'a5', client: { name: 'Tirulipa Oliveira' }, column: { name: 'Revisão Master' } },
+      ],
+    }
+
+    // Tenant mock para whitelabel
     if (!tenant.value) {
-      fetchTenant()
+      tenant.value = {
+        name: 'MOCK CONTABILIDADE LTDA',
+        tradeName: 'Elite Contábil',
+        plan: 'enterprise',
+        logo: '/img/logo.png',
+      }
+    }
+  }
+  else {
+    // Só buscar dados reais se NÃO estiver no onboarding
+    if (user.value?.onboardingStatus !== 'PENDING') {
+      fetchDashboard()
+      fetchTeam()
+
+      // Fetch tenant data for whitelabel if not already loaded
+      if (!tenant.value) {
+        fetchTenant()
+      }
     }
   }
 })

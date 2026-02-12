@@ -15,6 +15,7 @@ const clientId = route.params.id as string
 const client = ref<any>(null)
 const loading = ref(true)
 const saving = ref(false)
+const isLoadingCep = ref(false)
 
 const form = ref({
   name: '',
@@ -122,6 +123,51 @@ async function saveClient() {
     saving.value = false
   }
 }
+
+async function searchCep() {
+  const cep = form.value.zipCode.replace(/\D/g, '')
+  if (cep.length !== 8)
+    return
+
+  isLoadingCep.value = true
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    const data = await response.json()
+
+    if (data.erro) {
+      toaster.add({
+        title: 'CEP não encontrado',
+        description: 'Verifique o número digitado.',
+        icon: 'ph:warning-circle-fill',
+      })
+      return
+    }
+
+    form.value.address = data.logradouro
+    form.value.neighborhood = data.bairro
+    form.value.city = data.localidade
+    form.value.state = data.uf
+
+    // Focar no número se o endereço foi preenchido
+    nextTick(() => {
+      const numberInput = document.querySelector('input[placeholder="Ex: 123"]') as HTMLInputElement
+      if (numberInput)
+        numberInput.focus()
+    })
+  }
+  catch (error) {
+    console.error('Erro ao buscar CEP:', error)
+  }
+  finally {
+    isLoadingCep.value = false
+  }
+}
+
+watch(() => form.value.zipCode, (newVal) => {
+  if (newVal && newVal.replace(/\D/g, '').length === 8) {
+    searchCep()
+  }
+})
 
 onMounted(fetchClient)
 </script>
@@ -305,7 +351,7 @@ onMounted(fetchClient)
                   <BaseInput v-model="form.email" type="email" icon="lucide:mail" rounded="lg" />
                 </BaseField>
                 <BaseField label="WhatsApp">
-                  <BaseInput v-model="form.whatsapp" icon="lucide:スマートフォン" rounded="lg" />
+                  <BaseInput v-model="form.whatsapp" icon="lucide:phone" rounded="lg" />
                 </BaseField>
               </div>
             </BaseCard>
@@ -330,7 +376,8 @@ onMounted(fetchClient)
               <div class="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
                 <div class="md:col-span-4">
                   <BaseField label="CEP">
-                    <BaseInput v-model="form.zipCode" icon="lucide:map" rounded="lg" />
+                    <BaseInput v-model="form.zipCode" icon="lucide:map" rounded="lg" :loading="isLoadingCep"
+                      :masks="['99999-999']" />
                   </BaseField>
                 </div>
                 <div class="md:col-span-8 text-right hidden md:block">

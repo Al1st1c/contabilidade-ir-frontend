@@ -58,6 +58,7 @@ interface Column {
 // Reactive state
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
+const isMockMode = ref(false)
 const taxYearFilter = ref(new Date().getFullYear())
 const irEndDate = ref('2026-05-31T23:59:59')
 
@@ -190,6 +191,15 @@ const tagColors: Record<string, string> = {
 
 // Methods
 async function fetchTeam() {
+  if (isMockMode.value) {
+    teamMembers.value = [
+      { id: 'm1', name: 'Ana Beatriz', photo: 'https://i.pravatar.cc/150?u=m1' },
+      { id: 'm2', name: 'Carlos Eduardo', photo: 'https://i.pravatar.cc/150?u=m2' },
+      { id: 'm3', name: 'Juliana Lopes', photo: 'https://i.pravatar.cc/150?u=m3' },
+    ]
+    return
+  }
+
   try {
     const { data } = await useCustomFetch<any>('/tenant/members')
     teamMembers.value = data.data || data || []
@@ -199,9 +209,181 @@ async function fetchTeam() {
   }
 }
 
+function toggleMockMode() {
+  isMockMode.value = !isMockMode.value
+  fetchKanban()
+  fetchTeam()
+}
+
 async function fetchKanban() {
   try {
     isLoading.value = true
+
+    if (isMockMode.value) {
+      const mockTeamData = [
+        { id: 'm1', name: 'Ana Beatriz', avatar: 'https://i.pravatar.cc/150?u=m1' },
+        { id: 'm2', name: 'Carlos Eduardo', avatar: 'https://i.pravatar.cc/150?u=m2' },
+        { id: 'm3', name: 'Juliana Lopes', avatar: 'https://i.pravatar.cc/150?u=m3' },
+      ]
+
+      columns.value = [
+        {
+          id: 'c1',
+          title: 'AGUARDANDO DOCUMENTOS',
+          color: 'info',
+          tasks: [
+            {
+              id: '1',
+              clientName: 'Ricardo de Oliveira Silva',
+              cpf: '123.456.789-00',
+              taxYear: 2026,
+              status: 'waiting',
+              priority: 'high',
+              declarationType: 'complete',
+              estimatedResult: 'refund',
+              estimatedValue: 2450.30,
+              paymentStatus: 'paid',
+              checklistTotal: 12,
+              checklistCompleted: 2,
+              tags: ['VIP', 'Investimentos'],
+              comments: 3,
+              attachments: 2,
+              whatsapp: '11999999999',
+              assignee: mockTeamData[0],
+              dueDate: '2026-05-31'
+            },
+            {
+              id: '2',
+              clientName: 'Fernanda Maria Santos',
+              cpf: '987.654.321-11',
+              taxYear: 2026,
+              status: 'waiting',
+              priority: 'medium',
+              declarationType: 'simplified',
+              estimatedResult: 'refund',
+              estimatedValue: 450.00,
+              paymentStatus: 'pending',
+              checklistTotal: 5,
+              checklistCompleted: 0,
+              tags: ['Recorrente'],
+              comments: 0,
+              attachments: 0,
+              assignee: mockTeamData[1]
+            }
+          ]
+        },
+        {
+          id: 'c2',
+          title: 'EM ANÁLISE',
+          color: 'warning',
+          tasks: [
+            {
+              id: '3',
+              clientName: 'Marcos Antônio Peixoto',
+              cpf: '456.789.012-33',
+              taxYear: 2026,
+              status: 'analyzing',
+              priority: 'high',
+              declarationType: 'complete',
+              estimatedResult: 'pay',
+              estimatedValue: 1200.00,
+              paymentStatus: 'paid',
+              checklistTotal: 15,
+              checklistCompleted: 11,
+              tags: ['Empresário', 'Ganho Capital'],
+              comments: 5,
+              attachments: 8,
+              assignee: mockTeamData[2],
+              dueDate: '2026-05-15'
+            }
+          ]
+        },
+        {
+          id: 'c3',
+          title: 'PENDÊNCIAS',
+          color: 'danger',
+          tasks: [
+            {
+              id: '4',
+              clientName: 'Patrícia Souza Lima',
+              cpf: '321.654.987-44',
+              taxYear: 2026,
+              status: 'pending',
+              priority: 'high',
+              declarationType: 'complete',
+              estimatedResult: 'neutral',
+              estimatedValue: 0,
+              paymentStatus: 'paid',
+              checklistTotal: 10,
+              checklistCompleted: 9,
+              tags: ['Médicos', 'Aluguéis'],
+              comments: 12,
+              attachments: 4,
+              assignee: mockTeamData[0],
+              dueDate: '2026-04-20'
+            }
+          ]
+        },
+        {
+          id: 'c4',
+          title: 'PRONTO PARA TRANSMITIR',
+          color: 'success',
+          tasks: [
+            {
+              id: '5',
+              clientName: 'Carlos Alberto Nobre',
+              cpf: '567.890.123-55',
+              taxYear: 2026,
+              status: 'ready',
+              priority: 'low',
+              declarationType: 'simplified',
+              estimatedResult: 'refund',
+              estimatedValue: 320.15,
+              paymentStatus: 'paid',
+              checklistTotal: 4,
+              checklistCompleted: 4,
+              tags: ['VIP'],
+              comments: 1,
+              attachments: 2,
+              assignee: mockTeamData[1],
+              dueDate: '2026-05-25'
+            }
+          ]
+        },
+        {
+          id: 'c5',
+          title: 'CONCLUÍDO',
+          color: 'primary',
+          tasks: [
+            {
+              id: '6',
+              clientName: 'Juliana Paes de Barros',
+              cpf: '234.567.890-12',
+              taxYear: 2026,
+              status: 'completed',
+              priority: 'medium',
+              declarationType: 'complete',
+              estimatedResult: 'refund',
+              estimatedValue: 1200.50,
+              paymentStatus: 'paid',
+              checklistTotal: 8,
+              checklistCompleted: 8,
+              tags: ['Recorrente'],
+              comments: 2,
+              attachments: 10,
+              assignee: mockTeamData[2],
+              dueDate: '2026-03-10'
+            }
+          ]
+        }
+      ]
+      isLoading.value = false
+      nextTick(() => {
+        initSortables()
+      })
+      return
+    }
+
     const { data } = await useCustomFetch<any>(`/declarations/kanban?taxYear=${taxYearFilter.value}`)
 
     if (data.success) {
@@ -603,6 +785,14 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
             <BaseTooltip content="Novo IR">
               <BaseButton size="icon-sm" rounded="full" variant="primary" @click="openCreateDeclaration">
                 <Icon name="lucide:plus" class="size-4" />
+              </BaseButton>
+            </BaseTooltip>
+
+            <!-- Mock Data Toggle for Screenshots -->
+            <BaseTooltip content="Ativar Dados Mockados (para Print)">
+              <BaseButton size="icon-sm" rounded="full" :variant="isMockMode ? 'info' : 'muted'"
+                @click="toggleMockMode">
+                <Icon name="lucide:layout-template" class="size-4" />
               </BaseButton>
             </BaseTooltip>
           </div>
