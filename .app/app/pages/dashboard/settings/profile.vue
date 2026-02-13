@@ -46,6 +46,8 @@ onMounted(async () => {
 
 // Photo upload logic
 const photoInput = ref<HTMLInputElement | null>(null)
+const localPreview = ref<string | null>(null)
+
 function triggerPhotoUpload() {
   photoInput.value?.click()
 }
@@ -54,6 +56,13 @@ async function handlePhotoUpload(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
+
+  // Create local preview immediately
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    localPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
 
   isUploadingPhoto.value = true
   try {
@@ -66,6 +75,8 @@ async function handlePhotoUpload(event: Event) {
     })
 
     await fetchUser() // Update global state
+    localPreview.value = null // Clear local preview once global state is updated
+
     toaster.add({
       title: 'Sucesso',
       description: 'Foto de perfil atualizada!',
@@ -73,6 +84,7 @@ async function handlePhotoUpload(event: Event) {
     })
   }
   catch (error: any) {
+    localPreview.value = null // Revert preview on error
     toaster.add({
       title: 'Erro',
       description: error.message || 'Erro ao enviar foto',
@@ -184,7 +196,8 @@ async function updatePassword() {
               <div class="relative group">
                 <div
                   class="size-32 rounded-full border-4 border-muted-200 dark:border-muted-800 bg-muted-50 dark:bg-muted-950 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:border-primary-500">
-                  <img v-if="user?.photo" :src="user.photo" alt="Avatar" class="size-full object-cover">
+                  <img v-if="localPreview" :src="localPreview" alt="Avatar Preview" class="size-full object-cover">
+                  <img v-else-if="user?.photo" :src="user.photo" alt="Avatar" class="size-full object-cover">
                   <Icon v-else name="solar:user-circle-bold-duotone" class="size-20 text-muted-300" />
 
                   <div

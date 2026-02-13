@@ -5,27 +5,51 @@ definePageMeta({
 
 const { user } = useAuth()
 const { useCustomFetch } = useApi()
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
+const token = computed(() => route.query.token as string | undefined)
+const isPublicMode = computed(() => Boolean(token.value))
 
 const isLoading = ref(true)
 const history = ref<any[]>([])
 
 async function loadHistory() {
-  if (!user.value?.id)
-    return
-
   try {
     isLoading.value = true
-    const { data } = await useCustomFetch(`/clients/${user.value.id}`)
-    if (data.success && data.data.taxDeclarations) {
-      history.value = data.data.taxDeclarations.map((d: any) => ({
-        year: Number(d.taxYear), // Ano do IR (Exercício)
-        status: d.status === 'submitted'
-          ? 'Entregue'
-          : d.status === 'finished' ? 'Finalizado' : 'Em Processamento',
-        result: d.result || 'neutral',
-        value: Number(d.resultValue) || 0,
-        date: d.submittedAt ? new Date(d.submittedAt).toLocaleDateString('pt-BR') : '-',
-      }))
+
+    if (isPublicMode.value) {
+      // Public mode: load limited data from public API
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
+      const result = await res.json()
+      if (result?.success && result.data?.declaration) {
+        const d = result.data.declaration
+        history.value = [{
+          year: Number(d.taxYear),
+          status: d.status === 'submitted'
+            ? 'Entregue'
+            : d.status === 'finished' ? 'Finalizado' : 'Em Processamento',
+          result: d.result || 'neutral',
+          value: Number(d.resultValue) || 0,
+          date: '-',
+        }]
+      }
+    } else {
+      // Authenticated mode
+      if (!user.value?.id) return
+
+      const { data } = await useCustomFetch(`/clients/${user.value.id}`)
+      if (data.success && data.data.taxDeclarations) {
+        history.value = data.data.taxDeclarations.map((d: any) => ({
+          year: Number(d.taxYear),
+          status: d.status === 'submitted'
+            ? 'Entregue'
+            : d.status === 'finished' ? 'Finalizado' : 'Em Processamento',
+          result: d.result || 'neutral',
+          value: Number(d.resultValue) || 0,
+          date: d.submittedAt ? new Date(d.submittedAt).toLocaleDateString('pt-BR') : '-',
+        }))
+      }
     }
   }
   catch (error) {

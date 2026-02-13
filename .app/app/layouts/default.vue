@@ -259,6 +259,14 @@ onMounted(() => {
                 </TairoMenuContent>
               </TairoMenuItem>
 
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/marketing')">
+                  <NuxtLink to="/dashboard/marketing" active-class="!text-primary-500 font-semibold">
+                    Marketing
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
               <TairoMenuItem v-if="user?.isAdmin">
                 <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/admin')">
                   <NuxtLink to="/dashboard/admin" active-class="!text-primary-500 font-semibold">
@@ -334,6 +342,14 @@ onMounted(() => {
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
               <Icon name="solar:settings-bold-duotone" class="size-5" />
               Minha Empresa
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/marketing"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:chat-round-dots-bold-duotone" class="size-5" />
+              Marketing
             </NuxtLink>
           </li>
           <li v-if="user?.role?.canManageChecklist">

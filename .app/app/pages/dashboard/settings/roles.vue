@@ -98,7 +98,7 @@ onMounted(fetchRoles)
     </div>
 
     <div v-if="isLoading" class="flex h-64 items-center justify-center">
-      <BasePlaceholderPage title="Carregando..." />
+      <AppPageLoading message="Carregando cargos..." />
     </div>
 
     <div v-else class="grid grid-cols-1 gap-6 lg:grid-cols-12">

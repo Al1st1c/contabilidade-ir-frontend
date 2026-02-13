@@ -7,6 +7,11 @@ const { tenant } = useTenant()
 const { user: authUser, logout } = useAuth()
 const { useCustomFetch } = useApi()
 const { add } = useNuiToasts()
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
+const token = computed(() => route.query.token as string | undefined)
+const isPublicMode = computed(() => Boolean(token.value))
 
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -21,16 +26,29 @@ const editedGovPassword = ref('')
 const isGovVisible = ref(false)
 
 async function loadProfile() {
-  if (!authUser.value?.id)
-    return
-
   try {
     isLoading.value = true
-    const { data } = await useCustomFetch(`/clients/${authUser.value.id}`)
-    if (data.success) {
-      profile.value = data.data
-      editedPixKey.value = data.data.pixKey || ''
-      editedGovPassword.value = data.data.govPassword || ''
+
+    if (isPublicMode.value) {
+      // Public mode: load limited data from public API
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
+      const result = await res.json()
+      if (result?.success) {
+        profile.value = {
+          name: result.data?.client?.name || 'Cliente',
+          isPublic: true,
+        }
+      }
+    } else {
+      // Authenticated mode: load full profile
+      if (!authUser.value?.id) return
+
+      const { data } = await useCustomFetch(`/clients/${authUser.value.id}`)
+      if (data.success) {
+        profile.value = data.data
+        editedPixKey.value = data.data.pixKey || ''
+        editedGovPassword.value = data.data.govPassword || ''
+      }
     }
   }
   catch (error) {
@@ -130,12 +148,46 @@ function handleLogout() {
         <BaseHeading as="h2" size="xl" weight="bold" class="text-muted-800 dark:text-white px-4 leading-tight">
           {{ profile.name }}
         </BaseHeading>
-        <BaseParagraph size="xs" class="text-muted-500 font-mono tracking-tighter mt-1">
+        <BaseParagraph v-if="profile.cpf" size="xs" class="text-muted-500 font-mono tracking-tighter mt-1">
           {{ profile.cpf }}
         </BaseParagraph>
       </section>
 
-      <div class="px-4 space-y-6">
+      <!-- Public Mode Notice -->
+      <div v-if="profile.isPublic" class="px-4 space-y-6">
+        <BaseCard class="p-6 border-none shadow-sm bg-white dark:bg-muted-950 text-center">
+          <div class="inline-flex p-4 rounded-full bg-primary-500/10 mb-4">
+            <Icon name="solar:lock-keyhole-minimalistic-bold-duotone" class="size-10 text-primary-500" />
+          </div>
+          <BaseHeading as="h3" size="md" weight="bold" class="text-muted-800 dark:text-white mb-2">
+            Acesso Limitado
+          </BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500 max-w-sm mx-auto mb-4">
+            Você está acessando via link público. Para ver seu perfil completo, dados bancários e editar suas
+            informações, faça login na sua conta.
+          </BaseParagraph>
+          <NuxtLink to="/auth/client">
+            <BaseButton color="primary" size="sm" rounded="lg" class="gap-2 font-bold">
+              <Icon name="solar:login-3-bold-duotone" class="size-4" />
+              Fazer Login
+            </BaseButton>
+          </NuxtLink>
+        </BaseCard>
+
+        <!-- Footer -->
+        <div class="text-center py-6">
+          <div class="flex items-center justify-center gap-2 mb-2">
+            <TairoLogo class="size-5 text-muted-400" />
+            <span class="text-xs font-bold text-muted-400 opacity-50 uppercase tracking-widest">{{ tenant?.tradeName ||
+              tenant?.name || 'CONSTAR' }}</span>
+          </div>
+          <BaseParagraph size="xs" class="text-muted-400">
+            Plataforma de Gestão IR • Versão 1.0.0
+          </BaseParagraph>
+        </div>
+      </div>
+
+      <div v-if="!profile.isPublic" class="px-4 space-y-6">
         <!-- Personal Info -->
         <BaseCard class="p-6 space-y-4 border-none shadow-sm bg-white dark:bg-muted-950">
           <BaseHeading as="h3" size="sm" weight="semibold" class="mb-2">

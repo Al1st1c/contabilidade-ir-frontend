@@ -56,6 +56,10 @@ export interface Subscription {
   storageUsedMb: number
   monthlyUsage: any
   yearlyUsage: any
+
+  // Créditos pré-pagos
+  smsPrepaidCredits: number
+  emailPrepaidCredits: number
 }
 
 const plans = ref<Plan[]>([])

@@ -84,4 +84,8 @@
   .external-library-class {
     @apply bg-primary-base text-primary-invert;
   }
+
+  .grecaptcha-badge {
+    visibility: hidden;
+  }
 }

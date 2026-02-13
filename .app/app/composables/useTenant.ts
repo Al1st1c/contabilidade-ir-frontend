@@ -19,6 +19,8 @@ export function useTenant() {
   })
 
   const isLoading = ref(false)
+  const config = useRuntimeConfig()
+  const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
 
   const fetchTenant = async (force = false) => {
     // If we have full data from API (not just cache) and not loading, we can skip
@@ -52,6 +54,52 @@ export function useTenant() {
     }
     finally {
       isLoading.value = false
+    }
+  }
+
+  const checkSubdomain = async () => {
+    if (!process.client) return
+
+    const hostname = window.location.hostname
+    const parts = hostname.split('.')
+
+    // Ignore common subdomains or localhost
+    const ignore = ['app', 'www', 'localhost', '127']
+
+    let slug = parts.length > 2 ? parts[0] : null
+
+    // For testing/dev if on localhost with a slug in query
+    const route = useRoute()
+    if (!slug && route.query.slug) {
+      slug = route.query.slug as string
+    }
+
+    if (slug && !ignore.includes(slug)) {
+      try {
+        isLoading.value = true
+        const res = await fetch(`${apiBaseUrl}/public/tenant/${slug}`)
+        const result = await res.json()
+
+        if (result.success && result.data) {
+          const source = result.data
+          tenant.value = source
+
+          if (source.primaryColor && source.secondaryColor) {
+            applyColors(
+              source.primaryColor,
+              source.secondaryColor,
+              source.logo,
+              source.name || source.tradeName,
+              source.tradeName,
+              true // Persist in cookie
+            )
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subdomain whitelabel:', error)
+      } finally {
+        isLoading.value = false
+      }
     }
   }
 
@@ -106,5 +154,6 @@ export function useTenant() {
     tenant,
     isLoading,
     fetchTenant,
+    checkSubdomain,
   }
 }

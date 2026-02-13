@@ -7,6 +7,12 @@ const route = useRoute()
  * Global head configuration
  * @see https://nuxt.com/docs/getting-started/seo-meta
  */
+const { checkSubdomain } = useTenant()
+
+onMounted(() => {
+  checkSubdomain()
+})
+
 useHead({
   title: () => route?.meta?.title ?? '',
   titleTemplate: (titleChunk) => {
@@ -91,5 +97,6 @@ useHead({
     </NuxtLayout>
 
     <TairoPanels />
+    <MarketingBalloon />
   </BaseProviders>
 </template>

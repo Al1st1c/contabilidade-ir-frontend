@@ -24,8 +24,10 @@ const currentSection = computed(() => {
     return 'checklist'
   if (route.path.includes('/dashboard/settings/roles'))
     return 'roles'
+  if (route.path.includes('/dashboard/settings/logs'))
+    return 'logs'
   return 'whitelabel'
-}) as ComputedRef<'whitelabel' | 'account' | 'team' | 'checklist' | 'roles' | 'profile'>
+}) as ComputedRef<'whitelabel' | 'account' | 'team' | 'checklist' | 'roles' | 'profile' | 'logs'>
 
 const sectionTitles: Record<string, { title: string, description: string }> = {
   whitelabel: {
@@ -52,6 +54,10 @@ const sectionTitles: Record<string, { title: string, description: string }> = {
     title: 'Cargos',
     description: 'Gerencie os cargos do seu escritório',
   },
+  logs: {
+    title: 'Logs de Atividade',
+    description: 'Histórico de uso de recursos e ações no sistema',
+  },
 }
 
 const allTabs = [
@@ -61,6 +67,7 @@ const allTabs = [
   { id: 'team', label: 'Equipe', icon: 'lucide:users', to: '/dashboard/settings/team' },
   { id: 'checklist', label: 'Checklist', icon: 'lucide:list-checks', to: '/dashboard/settings/checklist' },
   { id: 'roles', label: 'Cargos', icon: 'lucide:briefcase', to: '/dashboard/settings/roles' },
+  { id: 'logs', label: 'Logs', icon: 'lucide:activity', to: '/dashboard/settings/logs' },
 ]
 
 const tabs = computed(() => {
@@ -69,6 +76,7 @@ const tabs = computed(() => {
     if (tab.id === 'team') return user.value?.role?.canManageTeam || isOwner.value
     if (tab.id === 'roles') return user.value?.role?.canManageTeam || isOwner.value
     if (tab.id === 'checklist') return user.value?.role?.canManageChecklist || isOwner.value
+    if (tab.id === 'logs') return isOwner.value
     return true
   })
 })

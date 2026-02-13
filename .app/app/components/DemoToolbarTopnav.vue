@@ -55,6 +55,20 @@ const isOwner = computed(() => {
 
 const isAffiliateOnly = computed(() => !!user.value?.affiliateProfile && !user.value?.tenantId)
 
+// Credits display
+const smsUsed = computed(() => currentSubscription.value?.monthlyUsage?.sms || 0)
+const smsTotal = computed(() => {
+  const plan = currentSubscription.value?.smsMonthlyLimit || 0
+  const prepaid = (currentSubscription.value as any)?.smsPrepaidCredits || 0
+  return plan + prepaid
+})
+const emailUsed = computed(() => currentSubscription.value?.monthlyUsage?.emails || 0)
+const emailTotal = computed(() => {
+  const plan = currentSubscription.value?.emailsMonthlyLimit || 0
+  const prepaid = (currentSubscription.value as any)?.emailPrepaidCredits || 0
+  return plan + prepaid
+})
+
 onMounted(() => {
   if (!isAffiliateOnly.value) {
     fetchNotificationCount()
@@ -77,6 +91,23 @@ function openSubscription() {
   <div class="flex items-center gap-3 flex-1 justify-end">
     <div class="scale-[0.8]">
       <BaseThemeSwitch />
+    </div>
+
+    <!-- Credits Counters -->
+    <div v-if="isOwner && currentSubscription"
+      class="hidden sm:flex items-center gap-2 text-[10px] font-semibold tracking-wide">
+      <NuxtLink to="/dashboard/credits"
+        class="flex items-center gap-1 px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-800/60 hover:bg-muted-200 dark:hover:bg-muted-700 transition-colors cursor-pointer">
+        <Icon name="solar:chat-round-dots-bold-duotone" class="size-3.5 text-primary-400" />
+        <span class="text-muted-500 dark:text-muted-400">SMS</span>
+        <span class="text-muted-800 dark:text-muted-100">{{ smsUsed }}/{{ smsTotal }}</span>
+      </NuxtLink>
+      <NuxtLink to="/dashboard/credits"
+        class="flex items-center gap-1 px-2 py-1 rounded-full bg-muted-100 dark:bg-muted-800/60 hover:bg-muted-200 dark:hover:bg-muted-700 transition-colors cursor-pointer">
+        <Icon name="solar:letter-bold-duotone" class="size-3.5 text-info-400" />
+        <span class="text-muted-500 dark:text-muted-400">EMAIL</span>
+        <span class="text-muted-800 dark:text-muted-100">{{ emailUsed }}/{{ emailTotal }}</span>
+      </NuxtLink>
     </div>
 
     <!-- Plan Button -->

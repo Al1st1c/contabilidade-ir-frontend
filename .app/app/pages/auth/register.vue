@@ -95,6 +95,37 @@ const { token, user: authUser, fetchUser } = useAuth()
 // Mapear userCookie para o authUser do useAuth
 const userCookie = authUser
 
+// Availability checks
+const isCheckingAvailability = ref({ email: false, document: false })
+const availabilityErrors = ref({ email: '', document: '' })
+
+async function checkAvailability(type: 'email' | 'document', value: string) {
+  if (!value || value.length < 5) return
+
+  // Limpar mensagem anterior
+  availabilityErrors.value[type] = ''
+
+  const cleanValue = type === 'document' ? value.replace(/\D/g, '') : value.toLowerCase().trim()
+  if (type === 'document' && cleanValue.length < 11) return
+
+  isCheckingAvailability.value[type] = true
+  try {
+    const baseUrl = config.public.apiBase || 'http://localhost:3333'
+    const query = type === 'email' ? `email=${cleanValue}` : `document=${cleanValue}`
+    const response = await $fetch<any>(`${baseUrl}/public/availability?${query}`)
+
+    if (!response.available) {
+      availabilityErrors.value[type] = response.message
+    }
+  }
+  catch (err) {
+    console.error(`Erro ao verificar ${type}:`, err)
+  }
+  finally {
+    isCheckingAvailability.value[type] = false
+  }
+}
+
 // ===========================================================================
 // FORM VALIDATION
 // ===========================================================================
@@ -800,9 +831,17 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 </Field>
 
                 <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="email">
-                  <BaseField label="Email" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" required>
-                    <BaseInput :model-value="field.value" type="email" placeholder="seu@email.com" rounded="lg"
-                      :classes="{ input: 'h-12' }" @update:model-value="handleChange" @blur="handleBlur" />
+                  <BaseField label="Email" :state="(errorMessage || availabilityErrors.email) ? 'error' : 'idle'"
+                    :error="errorMessage || availabilityErrors.email" required>
+                    <div class="relative">
+                      <BaseInput :model-value="field.value" type="email" placeholder="seu@email.com" rounded="lg"
+                        :classes="{ input: 'h-12' }" @update:model-value="handleChange"
+                        @blur="(e: any) => { handleBlur(e); checkAvailability('email', field.value) }" />
+                      <div v-if="isCheckingAvailability.email"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                        <Icon name="svg-spinners:180-ring" class="size-4 text-primary-500" />
+                      </div>
+                    </div>
                   </BaseField>
                 </Field>
 
@@ -815,10 +854,18 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 </Field>
 
                 <Field v-slot="{ field, errorMessage, handleChange, handleBlur }" name="document">
-                  <BaseField label="CPF" :state="errorMessage ? 'error' : 'idle'" :error="errorMessage" required>
-                    <BaseInput v-maska="'###.###.###-##'" :model-value="field.value" type="text"
-                      placeholder="000.000.000-00" rounded="lg" :classes="{ input: 'h-12' }"
-                      @update:model-value="handleChange" @blur="handleBlur" />
+                  <BaseField label="CPF" :state="(errorMessage || availabilityErrors.document) ? 'error' : 'idle'"
+                    :error="errorMessage || availabilityErrors.document" required>
+                    <div class="relative">
+                      <BaseInput v-maska="'###.###.###-##'" :model-value="field.value" type="text"
+                        placeholder="000.000.000-00" rounded="lg" :classes="{ input: 'h-12' }"
+                        @update:model-value="handleChange"
+                        @blur="(e: any) => { handleBlur(e); checkAvailability('document', field.value) }" />
+                      <div v-if="isCheckingAvailability.document"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                        <Icon name="svg-spinners:180-ring" class="size-4 text-primary-500" />
+                      </div>
+                    </div>
                   </BaseField>
                 </Field>
 
@@ -838,7 +885,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                 </Field>
 
                 <BaseButton type="button" variant="primary" rounded="lg" class="h-12! w-full"
-                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword"
+                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || availabilityErrors.email || availabilityErrors.document"
                   @click="nextStep">
                   Continuar
                 </BaseButton>

@@ -674,7 +674,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
     })
 
     if (data.success && data.data?.url) {
-      const fullUrl = `${window.location.origin}${data.data.url}`
+      const fullUrl = data.data.url.startsWith('http') ? data.data.url : `${window.location.origin}${data.data.url}`
       await navigator.clipboard.writeText(fullUrl)
 
       toaster.add({

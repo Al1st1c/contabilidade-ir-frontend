@@ -22,6 +22,7 @@ const isUploadingLogo = ref(false)
 const form = ref({
   name: '',
   tradeName: '',
+  slug: '',
   primaryColor: 'army',
   secondaryColor: 'zinc',
 })
@@ -48,6 +49,7 @@ async function fetchTenant(force = false) {
       form.value = {
         name: source.name || '',
         tradeName: source.tradeName || '',
+        slug: source.slug || '',
         primaryColor: source.primaryColor || 'army',
         secondaryColor: source.secondaryColor || 'zinc',
       }
@@ -227,6 +229,51 @@ onMounted(() => fetchTenant(true))
                   <TairoInput v-model="form.tradeName" placeholder="Ex: Contábil Silva" icon="solar:shop-bold-duotone"
                     :disabled="!canEditWhitelabel" />
                 </BaseField>
+              </div>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
+
+      <!-- Section: Subdomain -->
+      <div class="grid grid-cols-12 gap-8 lg:gap-12 border-t border-muted-200 dark:border-muted-800 pt-16">
+        <div class="col-span-12 lg:col-span-4">
+          <div class="sticky top-24">
+            <BaseHeading as="h3" size="lg" weight="medium"
+              class="text-muted-800 dark:text-white mb-2 flex items-center gap-2">
+              Endereço Personalizado
+              <Icon v-if="!canEditWhitelabel" name="solar:lock-bold-duotone" class="size-5 text-warning-500" />
+            </BaseHeading>
+            <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+              Seu subdomínio onde seus clientes acessarão o portal. Use letras e números, sem espaços ou símbolos.
+            </BaseParagraph>
+          </div>
+        </div>
+        <div class="col-span-12 lg:col-span-8">
+          <BaseCard rounded="lg" class="p-8">
+            <div class="space-y-6">
+              <BaseField label="Subdomínio do Portal">
+                <div class="flex items-center gap-0">
+                  <div class="flex-1 min-w-0">
+                    <TairoInput v-model="form.slug" placeholder="ex: silva-contabil" icon="solar:link-bold-duotone"
+                      :disabled="!canEditWhitelabel" class="!rounded-r-none"
+                      @input="form.slug = form.slug.toLowerCase().replace(/[^a-z0-9-]/g, '')" />
+                  </div>
+                  <div
+                    class="bg-muted-100 dark:bg-muted-900 border border-l-0 border-muted-200 dark:border-muted-800 rounded-r-xl px-4 py-2 text-muted-500 font-medium h-[42px] flex items-center shrink-0">
+                    .irpf26.com
+                  </div>
+                </div>
+              </BaseField>
+
+              <div v-if="form.slug" class="p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
+                <BaseParagraph size="xs" class="text-muted-500 mb-1 font-semibold uppercase tracking-wider">
+                  Link do seu Portal do Cliente:
+                </BaseParagraph>
+                <div class="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-medium break-all">
+                  <Icon name="ph:globe" class="size-4" />
+                  https://{{ form.slug }}.irpf26.com
+                </div>
               </div>
             </div>
           </BaseCard>
