@@ -789,12 +789,12 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
             </BaseTooltip>
 
             <!-- Mock Data Toggle for Screenshots -->
-            <BaseTooltip content="Ativar Dados Mockados (para Print)">
+            <!-- <BaseTooltip content="Ativar Dados Mockados (para Print)">
               <BaseButton size="icon-sm" rounded="full" :variant="isMockMode ? 'info' : 'muted'"
                 @click="toggleMockMode">
                 <Icon name="lucide:layout-template" class="size-4" />
               </BaseButton>
-            </BaseTooltip>
+            </BaseTooltip> -->
           </div>
         </div>
       </div>

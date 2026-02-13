@@ -142,6 +142,7 @@ export function useAuth() {
         message: data.message || 'Código enviado com sucesso',
         two_factor: true,
         phone: data.phone,
+        email: data.email,
       }
     }
     catch (error: any) {

@@ -117,6 +117,9 @@ const password = ref('')
 const loading = ref(false)
 const logged = ref(false)
 const isTwoFactor = ref(false)
+const maskedPhone = ref('')
+const maskedEmail = ref('')
+const resendCooldown = ref(0)
 const recaptchaToken = ref('')
 
 // Verifica se já está autenticado
@@ -209,6 +212,7 @@ async function validate2FACode(code: string) {
 
 // Recovery Flow Actions
 async function startRecovery() {
+  if (resendCooldown.value > 0) return
   if (!recoveryForm.email) {
     toaster.add({ title: 'Campo obrigatório', description: 'Por favor, digite seu e-mail.', icon: 'ph:info-circle-fill' })
     return
@@ -224,6 +228,7 @@ async function startRecovery() {
       recoveryForm.maskedPhone = result.data.phone
       recoveryForm.hasPhone = result.data.hasPhone
       mode.value = 'recovery-method'
+      startCooldown()
     } else {
       toaster.add({ title: 'Erro', description: result.message, icon: 'ph:warning-circle-fill' })
     }
@@ -235,7 +240,16 @@ async function startRecovery() {
   }
 }
 
+function startCooldown() {
+  resendCooldown.value = 60
+  const timer = setInterval(() => {
+    resendCooldown.value--
+    if (resendCooldown.value <= 0) clearInterval(timer)
+  }, 1000)
+}
+
 async function sendRecoveryCode(method: 'EMAIL' | 'SMS') {
+  if (resendCooldown.value > 0) return
   recoveryForm.method = method
   loading.value = true
   try {
@@ -247,6 +261,7 @@ async function sendRecoveryCode(method: 'EMAIL' | 'SMS') {
       toaster.add({ title: 'Código enviado', description: `O código foi enviado para seu ${method === 'EMAIL' ? 'e-mail' : 'celular'}.`, icon: 'ph:check-circle-fill' })
       pinInput.value = []
       mode.value = 'recovery-verify'
+      startCooldown()
     } else {
       toaster.add({ title: 'Erro', description: result.message, icon: 'ph:warning-circle-fill' })
     }
@@ -313,6 +328,37 @@ async function resetPassword() {
   }
 }
 
+async function resend2FACode(method: 'SMS' | 'EMAIL' = 'SMS') {
+  if (resendCooldown.value > 0) return
+  loading.value = true
+  try {
+    const retorno = await login({
+      email: email.value,
+      password: password.value,
+      method,
+    })
+    if (retorno.error) {
+      toaster.add({ title: 'Erro', description: retorno.message, icon: 'ph:warning-circle-fill' })
+    } else {
+      if ('phone' in retorno && retorno.phone) maskedPhone.value = retorno.phone
+      if ('email' in retorno && retorno.email) maskedEmail.value = retorno.email
+
+      toaster.add({
+        title: 'Código Reenviado',
+        description: `Código enviado para seu ${method === 'SMS' ? 'celular' : 'e-mail'}`,
+        icon: 'ph:check-circle-fill',
+        progress: true
+      })
+      pinInput.value = []
+      startCooldown()
+    }
+  } catch (error: any) {
+    toaster.add({ title: 'Erro', description: 'Erro ao reenviar código', icon: 'ph:warning-circle-fill' })
+  } finally {
+    loading.value = false
+  }
+}
+
 const onSubmit = handleSubmit(async (values) => {
   try {
     await getRecaptcha()
@@ -332,6 +378,10 @@ const onSubmit = handleSubmit(async (values) => {
       password.value = values.senha
       isTwoFactor.value = true
       pinInput.value = []
+
+      if ('phone' in retorno && retorno.phone) maskedPhone.value = retorno.phone
+      if ('email' in retorno && retorno.email) maskedEmail.value = retorno.email
+
       if (retorno.phone) {
         toaster.add({ title: 'Código Enviado', description: `Código enviado para ${retorno.phone}`, icon: 'ph:check-circle-fill', progress: true })
       }
@@ -523,8 +573,10 @@ const onSubmit = handleSubmit(async (values) => {
                   </BaseHeading>
                   <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
                     Digite o código de {{ pinLength }} dígitos que enviamos para seu
-                    <span class="font-medium text-muted-800 dark:text-muted-100">{{ isTwoFactor ? 'celular' :
-                      (recoveryForm.method === 'EMAIL' ? 'e-mail' : 'celular') }}</span>.
+                    <span class="font-medium text-muted-800 dark:text-muted-100">
+                      {{ isTwoFactor ? (maskedPhone || 'celular') : (recoveryForm.method === 'EMAIL' ? 'e-mail' :
+                        'celular') }}
+                    </span>.
                   </BaseParagraph>
                 </div>
 
@@ -548,10 +600,30 @@ const onSubmit = handleSubmit(async (values) => {
 
                     <div v-if="!isTwoFactor" class="flex flex-col items-center gap-1">
                       <BaseText size="xs" class="text-muted-400">Não recebeu o código?</BaseText>
-                      <button type="button" @click="sendRecoveryCode(recoveryForm.method)"
-                        class="text-primary-600 dark:text-primary-400 font-sans text-sm font-semibold hover:underline">
-                        Enviar novo código
+                      <button type="button" :disabled="resendCooldown > 0"
+                        @click="sendRecoveryCode(recoveryForm.method)"
+                        class="text-primary-600 dark:text-primary-400 font-sans text-sm font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ resendCooldown > 0 ? `Aguarde ${resendCooldown}s` : 'Enviar novo código' }}
                       </button>
+                    </div>
+
+                    <div v-else class="flex flex-col items-center gap-2">
+                      <BaseText size="xs" class="text-muted-400">Não recebeu o código?</BaseText>
+                      <div class="flex flex-col gap-2">
+                        <button type="button" :disabled="resendCooldown > 0" @click="resend2FACode('SMS')"
+                          class="text-primary-600 dark:text-primary-400 font-sans text-xs font-semibold hover:underline flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <Icon name="ph:chats-teardrop-duotone" class="size-3.5" />
+                          {{ resendCooldown > 0 ? `Reenviar SMS em ${resendCooldown}s` : `Reenviar por SMS ${maskedPhone
+                            ?
+                            `(${maskedPhone})` : ''}` }}
+                        </button>
+                        <button type="button" :disabled="resendCooldown > 0" @click="resend2FACode('EMAIL')"
+                          class="text-primary-600 dark:text-primary-400 font-sans text-xs font-semibold hover:underline flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                          <Icon name="ph:envelope-duotone" class="size-3.5" />
+                          {{ resendCooldown > 0 ? `Reenviar E-mail em ${resendCooldown}s` : `Reenviar por E-mail
+                          ${maskedEmail ? `(${maskedEmail})` : ''}` }}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

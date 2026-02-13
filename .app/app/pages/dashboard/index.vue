@@ -253,7 +253,7 @@ onMounted(() => {
 
   // MOCK DATA PARA PRINT DA LANDING PAGE
   // Para remover o mock, basta comentar as linhas abaixo e descomentar fetchDashboard() e fetchTeam()
-  const useMockData = true
+  const useMockData = false
 
   if (useMockData) {
     isLoading.value = false
