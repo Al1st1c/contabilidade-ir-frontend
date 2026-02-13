@@ -298,7 +298,7 @@ function goToDocuments() {
             <BaseHeading as="h4" size="sm" weight="bold" class="text-warning-800 dark:text-warning-100 mb-1">
               Documentos Pendentes
             </BaseHeading>
-            <BaseParagraph size="xs" class="text-warning-700/80 dark:text-warning-300/80 font-medium leading-tight">
+            <BaseParagraph size="xs" class="text-warning-700 dark:text-warning-300 font-medium leading-tight">
               Você possui documentos pendentes no IRPF {{ clientData.currentYear }}. Envie seus documentos agora para
               iniciarmos.
             </BaseParagraph>
@@ -439,14 +439,7 @@ function goToDocuments() {
       <!-- Results & Payment Card (Refund/Pay/Fees) -->
       <BaseCard
         v-if="clientData.refund.status || clientData.status.steps[3].completed || clientData.status.steps[4].active || clientData.status.steps[4].completed"
-        rounded="lg" class="border-none shadow-xl relative overflow-hidden group">
-        <!-- Premium Background Effects -->
-        <div class="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none">
-          <div class="absolute -top-24 -right-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/40' : 'bg-danger-500/10'" />
-          <div class="absolute -bottom-24 -left-24 size-64 rounded-full blur-3xl transition-colors duration-500"
-            :class="clientData.refund.status === 'A Receber' ? 'bg-success-500/20' : 'bg-danger-500/5'" />
-        </div>
+        rounded="lg" class="border-none shadow-sm bg-white dark:bg-muted-950">
 
         <div class="relative flex flex-col h-full">
           <!-- Result Header -->

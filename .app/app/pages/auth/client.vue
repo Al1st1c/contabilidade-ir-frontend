@@ -128,29 +128,15 @@ async function verifyOtp() {
 </script>
 
 <template>
-  <div
-    class="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden bg-white dark:bg-muted-950 font-sans">
-    <!-- Premium Background Effects -->
-    <div class="absolute inset-0 z-0">
-      <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-primary-500/5 opacity-50">
-      </div>
-      <div class="absolute top-[-10%] left-[-10%] size-[40%] bg-primary-500/10 blur-[120px] rounded-full"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] size-[40%] bg-primary-500/10 blur-[120px] rounded-full"></div>
+  <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-muted-50 dark:bg-muted-950 font-sans">
 
-      <!-- Subtle Grid -->
-      <div
-        class="absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay pointer-events-none">
-      </div>
-    </div>
-
-    <div class="relative z-10 w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div class="w-full max-w-sm space-y-8">
       <!-- Header / Logo -->
       <div class="text-center space-y-6">
-        <div
-          class="inline-flex p-1 bg-white dark:bg-muted-900 rounded-2xl shadow-xl shadow-primary-500/10 animate-bounce-subtle">
-          <div class="p-3 bg-primary-100/50 dark:bg-primary-900/20 rounded-xl">
-            <TairoLogo class="h-12 w-auto" />
-          </div>
+        <div class="inline-flex justify-center">
+          <img v-if="tenant?.logo" :src="tenant.logo" :alt="tenant?.tradeName || tenant?.name"
+            class="h-16 w-auto object-contain" />
+          <TairoLogo v-else class="h-10 w-auto" />
         </div>
 
         <div class="space-y-2">
@@ -166,11 +152,7 @@ async function verifyOtp() {
 
       <!-- Auth Form Card -->
       <BaseCard
-        class="relative overflow-hidden p-8 md:p-10 border-muted-200/50 dark:border-muted-800/50 bg-white/80 dark:bg-muted-900/80 backdrop-blur-xl shadow-2xl rounded-3xl group">
-        <!-- Floating highlight -->
-        <div
-          class="absolute -top-10 -right-10 size-32 bg-primary-500/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-        </div>
+        class="p-8 shadow-xl rounded-2xl bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
 
         <div class="relative z-20">
           <Transition name="fade-slide" mode="out-in">
@@ -210,8 +192,8 @@ async function verifyOtp() {
                 <div class="group/otp relative">
                   <BaseInput v-model="otp" v-maska data-maska="######" placeholder="— — — — — —"
                     icon="solar:shield-keyhole-bold-duotone" rounded="lg" size="xl"
-                    class="text-center tracking-[0.8em] font-mono text-xl !bg-muted-50/50 dark:!bg-muted-800/50 group-focus-within/otp:ring-2 group-focus-within/otp:ring-primary-500/20"
-                    maxlength="6" autofocus @keyup.enter="verifyOtp" />
+                    class="text-center tracking-[0.8em] font-mono text-xl !bg-muted-50 dark:!bg-muted-800" maxlength="6"
+                    autofocus @keyup.enter="verifyOtp" />
                 </div>
 
                 <div class="text-center">
@@ -239,8 +221,7 @@ async function verifyOtp() {
         </div>
       </BaseCard>
 
-      <!-- Footer Info -->
-      <footer class="text-center space-y-6 animate-in fade-in duration-1000 delay-500">
+      <footer class="text-center space-y-6">
         <div class="space-y-2">
           <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
             Dúvidas ou dificuldades?
@@ -251,40 +232,12 @@ async function verifyOtp() {
             Suporte ao Cliente
           </a>
         </div>
-
-        <div class="flex items-center justify-center gap-6 pt-4 grayscale opacity-40">
-          <div class="flex items-center gap-2">
-            <Icon name="solar:shield-check-bold-duotone" class="size-5" />
-            <span class="text-[10px] font-black uppercase tracking-[0.2em]">Criptografado</span>
-          </div>
-          <div class="w-px h-3 bg-muted-400"></div>
-          <div class="flex items-center gap-2">
-            <Icon name="solar:lock-bold-duotone" class="size-5" />
-            <span class="text-[10px] font-black uppercase tracking-[0.2em]">Seguro</span>
-          </div>
-        </div>
       </footer>
     </div>
   </div>
 </template>
 
 <style scoped>
-.animate-bounce-subtle {
-  animation: bounce-subtle 3s ease-in-out infinite;
-}
-
-@keyframes bounce-subtle {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
