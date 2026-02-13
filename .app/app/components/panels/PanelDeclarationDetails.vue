@@ -98,36 +98,41 @@ const internalAttachments = computed(() => {
 const baseUrl = computed(() => {
   if (import.meta.server)
     return ''
-  return window.location.origin
+
+  const baseDomain = 'irpf26.com'
+
+  // Try to get slug from multiple sources
+  const { tenant } = useTenant() // Fresh tenant data
+  const auth = useAuth() // Auth cookie data
+
+  const slug = tenant.value?.slug || auth.user.value?.tenant?.slug
+
+  if (slug) {
+    return `https://${slug}.${baseDomain}`
+  }
+
+  return `https://${baseDomain}`
 })
 
 const collectionLinkUrl = computed(() => {
-  if (!collectionLink.value)
+  if (!collectionLink.value?.token)
     return ''
-  return collectionLink.value.url || (collectionLink.value.token ? `/client?token=${collectionLink.value.token}` : '')
+
+  console.log('Generating Link with token:', collectionLink.value.token)
+  return `/client?token=${collectionLink.value.token}`
 })
+
 const fullCollectionLink = computed(() => {
   if (!collectionLinkUrl.value)
     return ''
-  return collectionLinkUrl.value.startsWith('http') ? collectionLinkUrl.value : `${baseUrl.value}${collectionLinkUrl.value}`
+
+  const url = `${baseUrl.value}${collectionLinkUrl.value}`
+  console.log('Full Collection Link:', url)
+  return url
 })
 const isValidatingLink = ref(false)
 const linkValidation = ref<{ valid: boolean, reason?: string } | null>(null)
-async function validatePublicLink() {
-  if (!collectionLink.value?.token)
-    return
-  isValidatingLink.value = true
-  try {
-    const { data } = await useCustomFetch<any>(`/public/${collectionLink.value.token}/validate`)
-    linkValidation.value = data
-  }
-  catch (error) {
-    linkValidation.value = { valid: false, reason: 'Erro ao validar' }
-  }
-  finally {
-    isValidatingLink.value = false
-  }
-}
+
 const pendingChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'pending').length)
 const uploadedChecklistCount = computed(() => checklistItems.value.filter(i => i.status === 'uploaded').length)
 

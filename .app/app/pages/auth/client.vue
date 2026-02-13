@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import { vMaska } from 'maska/vue'
+
 definePageMeta({
   layout: 'empty',
 })
 
-const { tenant } = useTenant()
+const { tenant, checkSubdomain } = useTenant()
+
+// Check for subdomain whitelabel on mount
+onMounted(() => {
+  checkSubdomain()
+})
+
 const step = ref<'cpf' | 'otp'>('cpf')
 const cpf = ref('')
 const otp = ref('')
@@ -17,33 +25,41 @@ const user = useCookie(API_CONFIG.TOKEN.USER_COOKIE_NAME)
 
 const authMessage = computed(() => {
   return step.value === 'cpf'
-    ? 'Informe seu CPF para acessar seu painel.'
-    : 'Enviamos um código por SMS para o seu celular.'
+    ? 'Informe seu CPF para acessar seu painel de documentos.'
+    : 'Enviamos um código de segurança via SMS.'
 })
 
+const unmaskedCpf = computed(() => cpf.value.replace(/\D/g, ''))
+
 async function requestOtp() {
-  if (cpf.value.length < 11)
+  if (unmaskedCpf.value.length < 11) {
+    add({
+      title: 'CPF Inválido',
+      description: 'Por favor, informe seu CPF completo.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
     return
+  }
 
   isLoading.value = true
   try {
     const result = await $fetch<any>(getApiUrl('/auth/client/request-otp'), {
       method: 'POST',
-      body: { cpf: cpf.value.replace(/\D/g, '') },
+      body: { cpf: unmaskedCpf.value },
     })
 
     if (result.error || !result.success) {
       add({
-        title: 'Código Enviado',
-        description: `Enviamos um SMS para ${result.phone}`,
-        icon: 'solar:check-circle-bold-duotone',
+        title: 'Erro no Acesso',
+        description: result.message || 'Verifique se você possui uma declaração vinculada a este CPF.',
+        icon: 'solar:danger-circle-bold-duotone',
       })
       return
     }
 
     add({
-      title: 'Sucesso!',
-      description: 'Seja bem-vindo(a) de volta.',
+      title: 'Código Enviado',
+      description: `Enviamos um SMS para o final ${result.phone}`,
       icon: 'solar:check-circle-bold-duotone',
     })
     step.value = 'otp'
@@ -51,7 +67,7 @@ async function requestOtp() {
   catch (error: any) {
     add({
       title: 'Erro',
-      description: error.data?.message || 'Erro ao conectar com o servidor.',
+      description: error.data?.message || 'Algo deu errado. Tente novamente em instantes.',
       icon: 'solar:danger-circle-bold-duotone',
     })
   }
@@ -69,15 +85,15 @@ async function verifyOtp() {
     const result = await $fetch<any>(getApiUrl('/auth/client/verify-otp'), {
       method: 'POST',
       body: {
-        cpf: cpf.value.replace(/\D/g, ''),
+        cpf: unmaskedCpf.value,
         code: otp.value,
       },
     })
 
     if (result.error || !result.success) {
       add({
-        title: 'Erro',
-        description: result.message || 'Verifique seu CPF e tente novamente.',
+        title: 'Código Inválido',
+        description: result.message || 'O código informado está incorreto ou expirou.',
         icon: 'solar:danger-circle-bold-duotone',
       })
       return
@@ -91,8 +107,8 @@ async function verifyOtp() {
     }
 
     add({
-      title: 'Bem-vindo!',
-      description: `Olá ${result.user.name}, seu acesso foi validado.`,
+      title: 'Acesso Autorizado',
+      description: `Olá ${result.user.name}, bem-vindo(a)!`,
       icon: 'solar:check-circle-bold-duotone',
     })
 
@@ -100,8 +116,8 @@ async function verifyOtp() {
   }
   catch (error: any) {
     add({
-      title: 'Erro',
-      description: error.data?.message || 'Falha na verificação',
+      title: 'Falha na Verificação',
+      description: error.data?.message || 'Não foi possível validar seu código.',
       icon: 'solar:danger-circle-bold-duotone',
     })
   }
@@ -112,72 +128,188 @@ async function verifyOtp() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-muted-50 dark:bg-muted-950 flex flex-col items-center justify-center p-4">
-    <div class="w-full max-w-[360px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <!-- Header -->
-      <div class="text-center space-y-4">
-        <TairoLogo class="size-16 mx-auto text-primary-500" />
-        <div>
-          <BaseHeading as="h1" size="2xl" weight="bold" class="text-muted-800 dark:text-white">
+  <div
+    class="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden bg-white dark:bg-muted-950 font-sans">
+    <!-- Premium Background Effects -->
+    <div class="absolute inset-0 z-0">
+      <div class="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-primary-500/5 opacity-50">
+      </div>
+      <div class="absolute top-[-10%] left-[-10%] size-[40%] bg-primary-500/10 blur-[120px] rounded-full"></div>
+      <div class="absolute bottom-[-10%] right-[-10%] size-[40%] bg-primary-500/10 blur-[120px] rounded-full"></div>
+
+      <!-- Subtle Grid -->
+      <div
+        class="absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay pointer-events-none">
+      </div>
+    </div>
+
+    <div class="relative z-10 w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <!-- Header / Logo -->
+      <div class="text-center space-y-6">
+        <div
+          class="inline-flex p-1 bg-white dark:bg-muted-900 rounded-2xl shadow-xl shadow-primary-500/10 animate-bounce-subtle">
+          <div class="p-3 bg-primary-100/50 dark:bg-primary-900/20 rounded-xl">
+            <TairoLogo class="h-12 w-auto" />
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <BaseHeading as="h1" size="3xl" weight="bold"
+            class="text-muted-900 dark:text-white tracking-tight leading-tight">
             {{ tenant?.tradeName || tenant?.name || 'Acesso ao IRPF' }}
           </BaseHeading>
-          <BaseParagraph size="sm" class="text-muted-500 mt-2">
+          <BaseParagraph size="md" class="text-muted-500 dark:text-muted-400 font-medium">
             {{ authMessage }}
           </BaseParagraph>
         </div>
       </div>
 
-      <!-- Auth Form -->
-      <BaseCard class="p-6 md:p-8 border-none shadow-2xl">
-        <!-- Step 1: CPF -->
-        <div v-if="step === 'cpf'" class="space-y-6">
-          <div class="space-y-4">
-            <BaseInput
-              v-model="cpf" label="Seu CPF" placeholder="000.000.000-00" icon="solar:user-id-linear"
-              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900"
-            />
-          </div>
-          <BaseButton
-            variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="cpf.length < 11"
-            @click="requestOtp"
-          >
-            Continuar
-          </BaseButton>
+      <!-- Auth Form Card -->
+      <BaseCard
+        class="relative overflow-hidden p-8 md:p-10 border-muted-200/50 dark:border-muted-800/50 bg-white/80 dark:bg-muted-900/80 backdrop-blur-xl shadow-2xl rounded-3xl group">
+        <!-- Floating highlight -->
+        <div
+          class="absolute -top-10 -right-10 size-32 bg-primary-500/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700">
         </div>
 
-        <!-- Step 2: OTP -->
-        <div v-else class="space-y-6">
-          <div class="space-y-4">
-            <BaseInput
-              v-model="otp" label="Código de Acesso" placeholder="0000" icon="solar:shield-keyhole-linear"
-              rounded="md" size="lg" class="!bg-muted-50 dark:!bg-muted-900 text-center tracking-[1em]" maxlength="6"
-            />
-            <div class="text-center">
-              <button class="text-xs text-primary-500 font-medium hover:underline" @click="step = 'cpf'">
-                Não recebi o código ou CPF incorreto
-              </button>
+        <div class="relative z-20">
+          <Transition name="fade-slide" mode="out-in">
+            <!-- Step 1: CPF -->
+            <div v-if="step === 'cpf'" key="cpf" class="space-y-8">
+              <div class="space-y-5">
+                <div class="group/input">
+                  <BaseInput v-model="cpf" v-maska data-maska="###.###.###-##" label="Seu CPF"
+                    placeholder="000.000.000-00" icon="solar:user-id-bold-duotone" rounded="lg" size="lg"
+                    class="transition-all duration-300 group-focus-within/input:ring-2 group-focus-within/input:ring-primary-500/20"
+                    autofocus @keyup.enter="requestOtp" />
+                </div>
+              </div>
+
+              <BaseButton variant="primary" block size="xl" rounded="lg" :loading="isLoading"
+                :disabled="unmaskedCpf.length < 11"
+                class="shadow-lg shadow-primary-500/25 hover:translate-y-[-2px] active:translate-y-0 transition-all font-bold tracking-wide"
+                @click="requestOtp">
+                Solicitar Código
+                <Icon name="solar:arrow-right-bold-duotone" class="ml-2 size-5" />
+              </BaseButton>
             </div>
-          </div>
-          <BaseButton
-            variant="primary" block size="lg" rounded="md" :loading="isLoading" :disabled="otp.length < 4"
-            @click="verifyOtp"
-          >
-            Acessar Painel
-          </BaseButton>
+
+            <!-- Step 2: OTP -->
+            <div v-else key="otp" class="space-y-8">
+              <div class="space-y-6">
+                <div class="flex items-center justify-between px-1">
+                  <span class="text-xs font-semibold text-muted-400 uppercase tracking-widest">Código SMS</span>
+                  <button
+                    class="text-xs text-primary-500 font-bold hover:text-primary-600 transition-colors flex items-center gap-1"
+                    @click="step = 'cpf'">
+                    <Icon name="solar:undo-left-round-bold-duotone" class="size-3" />
+                    Alterar CPF
+                  </button>
+                </div>
+
+                <div class="group/otp relative">
+                  <BaseInput v-model="otp" v-maska data-maska="######" placeholder="— — — — — —"
+                    icon="solar:shield-keyhole-bold-duotone" rounded="lg" size="xl"
+                    class="text-center tracking-[0.8em] font-mono text-xl !bg-muted-50/50 dark:!bg-muted-800/50 group-focus-within/otp:ring-2 group-focus-within/otp:ring-primary-500/20"
+                    maxlength="6" autofocus @keyup.enter="verifyOtp" />
+                </div>
+
+                <div class="text-center">
+                  <BaseParagraph size="xs" class="text-muted-400">
+                    O código pode levar até 2 minutos para chegar.
+                  </BaseParagraph>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <BaseButton variant="primary" block size="xl" rounded="lg" :loading="isLoading"
+                  :disabled="otp.length < 4" class="shadow-lg shadow-primary-500/25 font-bold tracking-wide"
+                  @click="verifyOtp">
+                  Confirmar Acesso
+                  <Icon name="solar:lock-unlocked-bold-duotone" class="ml-2 size-5" />
+                </BaseButton>
+
+                <BaseButton variant="ghost" block size="md" rounded="lg" class="text-muted-500 hover:text-primary-500"
+                  @click="requestOtp">
+                  Reenviar Código
+                </BaseButton>
+              </div>
+            </div>
+          </Transition>
         </div>
       </BaseCard>
 
-      <!-- Footer -->
-      <div class="text-center space-y-4">
-        <BaseParagraph size="xs" class="text-muted-400">
-          Problemas com o acesso? <br>
-          <a href="#" class="text-primary-500 font-medium hover:underline">Entre em contato com seu contador</a>
-        </BaseParagraph>
-        <div class="flex items-center justify-center gap-2 opacity-50">
-          <Icon name="solar:shield-check-linear" class="size-4" />
-          <span class="text-[10px] font-bold uppercase tracking-widest">Acesso Seguro</span>
+      <!-- Footer Info -->
+      <footer class="text-center space-y-6 animate-in fade-in duration-1000 delay-500">
+        <div class="space-y-2">
+          <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+            Dúvidas ou dificuldades?
+          </BaseParagraph>
+          <a href="https://wa.me/5511999999999" target="_blank"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-muted-100 dark:bg-muted-800 text-muted-700 dark:text-muted-200 rounded-full text-xs font-bold hover:bg-primary-500 hover:text-white transition-all duration-300">
+            <Icon name="fa6-brands:whatsapp" class="size-3" />
+            Suporte ao Cliente
+          </a>
         </div>
-      </div>
+
+        <div class="flex items-center justify-center gap-6 pt-4 grayscale opacity-40">
+          <div class="flex items-center gap-2">
+            <Icon name="solar:shield-check-bold-duotone" class="size-5" />
+            <span class="text-[10px] font-black uppercase tracking-[0.2em]">Criptografado</span>
+          </div>
+          <div class="w-px h-3 bg-muted-400"></div>
+          <div class="flex items-center gap-2">
+            <Icon name="solar:lock-bold-duotone" class="size-5" />
+            <span class="text-[10px] font-black uppercase tracking-[0.2em]">Seguro</span>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
+
+<style scoped>
+.animate-bounce-subtle {
+  animation: bounce-subtle 3s ease-in-out infinite;
+}
+
+@keyframes bounce-subtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+</style>

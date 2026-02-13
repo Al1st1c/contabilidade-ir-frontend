@@ -41,6 +41,7 @@ interface User {
     primaryColor?: string
     secondaryColor?: string
     pixKey?: string
+    slug?: string
   }
 }
 
@@ -194,6 +195,7 @@ export function useAuth() {
         primaryColor: rawUser.tenant.primaryColor,
         secondaryColor: rawUser.tenant.secondaryColor,
         pixKey: rawUser.tenant.pixKey,
+        slug: rawUser.tenant.slug,
       } : undefined,
     } as User
   }
