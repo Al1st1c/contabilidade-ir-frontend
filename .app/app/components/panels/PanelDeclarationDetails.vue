@@ -539,6 +539,7 @@ function statusIcon(status: string) {
     approved: 'lucide:check',
     rejected: 'lucide:x',
     uploaded: 'lucide:upload',
+    not_owned: 'lucide:info',
     pending: 'lucide:circle-dashed',
   }
   return map[status] || 'lucide:circle-dashed'
@@ -548,6 +549,7 @@ function statusTagClass(status: string) {
     uploaded: 'bg-warning-500 text-white shadow-sm shadow-warning-500/20',
     approved: 'bg-success-500 text-white shadow-sm shadow-success-500/20',
     rejected: 'bg-danger-500 text-white shadow-sm shadow-danger-500/20',
+    not_owned: 'bg-info-500 text-white shadow-sm shadow-info-500/20',
   }
   return map[status] || ''
 }
@@ -556,6 +558,7 @@ function statusLabel(status: string) {
     uploaded: 'Enviado',
     approved: 'Aprovado',
     rejected: 'Rejeitado',
+    not_owned: 'Não Possui',
   }
   return map[status] || ''
 }
@@ -767,13 +770,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-          }}</span>
+            }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-          }}</span>
+            }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1052,7 +1055,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
                         'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                      }}</span>
+                        }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1081,7 +1084,7 @@ onMounted(() => {
                 </span>
                 <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
                   'approved').length
-                }}/{{ checklistItems.length }} aprovados</span>
+                  }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
@@ -1110,6 +1113,7 @@ onMounted(() => {
                   'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10': item.status === 'approved',
                   'border-danger-200 dark:border-danger-800 bg-danger-50/40 dark:bg-danger-900/10': item.status === 'rejected',
                   'border-warning-200 dark:border-warning-800 bg-warning-50/40 dark:bg-warning-900/10': item.status === 'uploaded',
+                  'border-info-200 dark:border-info-800 bg-info-50/40 dark:bg-info-900/10': item.status === 'not_owned',
                   'border-muted-200 dark:border-muted-800 hover:border-primary-300': item.status === 'pending',
                 }">
                 <!-- Status icon -->
@@ -1117,6 +1121,7 @@ onMounted(() => {
                   'bg-success-100 text-success-600': item.status === 'approved',
                   'bg-danger-100 text-danger-600': item.status === 'rejected',
                   'bg-warning-100 text-warning-600': item.status === 'uploaded',
+                  'bg-info-100 text-info-600': item.status === 'not_owned',
                   'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
                 }">
                   <Icon :name="statusIcon(item.status)" class="size-3" />
@@ -1144,33 +1149,36 @@ onMounted(() => {
                   </p>
 
                   <!-- File info and client note -->
-                  <div v-if="item.attachment"
+                  <div v-if="item.attachment || (item.status === 'not_owned' && item.comment)"
                     class="mt-2 p-2 rounded-lg bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 shadow-inner">
-                    <div class="flex items-center justify-between gap-2 overflow-hidden">
+                    <div v-if="item.attachment" class="flex items-center justify-between gap-2 overflow-hidden">
                       <p
                         class="text-[11px] font-bold text-muted-700 dark:text-muted-200 truncate flex items-center gap-1.5">
                         <Icon name="solar:document-bold-duotone" class="size-3.5 text-primary-500" />
                         {{ item.attachment.fileName }}
                       </p>
                       <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
-                        }}KB</span>
+                      }}KB</span>
                     </div>
 
-                    <div v-if="item.attachment.description"
+                    <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
                       class="mt-2 pt-2 border-t border-muted-200 dark:border-muted-800">
                       <p class="text-[11px] text-primary-600 dark:text-primary-400 font-semibold flex items-start gap-1.5"
-                        :title="item.attachment.description">
+                        :title="item.attachment?.description || item.comment">
                         <Icon name="solar:notes-bold-duotone" class="size-3.5 mt-0.5 shrink-0" />
-                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment.description
+                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment?.description ||
+                          item.comment
                             }}"</span></span>
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <!-- Arquivo enviado: ações -->
-                <div v-if="item.status === 'uploaded' && item.attachment" class="flex items-center gap-2 shrink-0">
-                  <BaseButton variant="ghost" color="primary" size="icon-sm" @click="openPreview(item)">
+                <!-- Arquivo enviado ou Justificativa: ações -->
+                <div v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'"
+                  class="flex items-center gap-2 shrink-0">
+                  <BaseButton v-if="item.attachment" variant="ghost" color="primary" size="icon-sm"
+                    @click="openPreview(item)">
                     <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                   </BaseButton>
                   <BaseButton color="success" size="icon-sm" :loading="processingItems.has(item.id)"
@@ -1184,7 +1192,8 @@ onMounted(() => {
                 </div>
 
                 <!-- Actions: required toggle + delete -->
-                <div v-if="item.status !== 'uploaded' || !item.attachment" class="flex items-center gap-0.5 shrink-0">
+                <div v-if="item.status === 'pending' || item.status === 'rejected'"
+                  class="flex items-center gap-0.5 shrink-0">
                   <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
                     :class="item.isRequired ? 'text-danger-500' : 'text-muted-400 hover:text-primary-500'"
                     @click="toggleItemRequired(idx)">

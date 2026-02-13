@@ -40,10 +40,10 @@ const mutedColors = [
 ]
 
 // Fetch tenant
-async function fetchTenant() {
+async function fetchTenant(force = false) {
   isLoading.value = true
   try {
-    const source = await fetchGlobalTenant()
+    const source = await fetchGlobalTenant(force)
     if (source) {
       form.value = {
         name: source.name || '',
@@ -177,7 +177,7 @@ watchDebounced(
   { debounce: 100 },
 )
 
-onMounted(fetchTenant)
+onMounted(() => fetchTenant(true))
 </script>
 
 <template>

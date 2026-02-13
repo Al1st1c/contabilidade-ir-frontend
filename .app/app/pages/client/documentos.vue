@@ -112,6 +112,59 @@ async function loadDocuments() {
   }
 }
 
+async function handleNotOwned(itemId: string) {
+  if (!collectionLink.value?.token) {
+    add({
+      title: 'Erro',
+      description: 'Link de coleta não disponível. Contate seu contador.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
+    return
+  }
+
+  const note = notes.value[itemId]
+  if (!note || !note.trim()) {
+    add({
+      title: 'Observação Obrigatória',
+      description: 'Por favor, explique por que você não possui este documento.',
+      icon: 'solar:info-circle-bold-duotone',
+    })
+    showNote.value[itemId] = true
+    return
+  }
+
+  isUploading.value = itemId
+
+  try {
+    const result = await $fetch<any>(getApiUrl(`/public/${collectionLink.value.token}/not-owned`), {
+      method: 'POST',
+      body: {
+        checklistItemId: itemId,
+        description: note.trim(),
+      },
+    })
+
+    if (result.success) {
+      add({
+        title: 'Sucesso!',
+        description: 'Marcado como "Não Possui".',
+        icon: 'solar:check-circle-bold-duotone',
+      })
+      await loadDocuments() // Recarregar lista
+    }
+  }
+  catch (error: any) {
+    add({
+      title: 'Erro',
+      description: error.data?.message || 'Não foi possível salvar sua observação.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
+  }
+  finally {
+    isUploading.value = null
+  }
+}
+
 // Recarrega quando mudar o ano no header
 watch(selectedTaxYear, loadDocuments)
 
@@ -220,6 +273,7 @@ function getStatusIcon(status: string) {
     case 'approved': return 'solar:check-circle-bold'
     case 'rejected': return 'solar:close-circle-bold'
     case 'uploaded': return 'solar:clock-circle-bold'
+    case 'not_owned': return 'solar:info-circle-bold'
     default: return 'solar:upload-minimalistic-bold'
   }
 }
@@ -229,6 +283,7 @@ function getStatusColor(status: string) {
     case 'approved': return 'text-success-500 bg-success-500/10'
     case 'rejected': return 'text-danger-500 bg-danger-500/10'
     case 'uploaded': return 'text-warning-500 bg-warning-500/10'
+    case 'not_owned': return 'text-info-500 bg-info-500/10'
     default: return 'text-muted-400 bg-muted-100 dark:bg-muted-800'
   }
 }
@@ -238,6 +293,7 @@ function getStatusLabel(status: string) {
     case 'approved': return 'Aprovado'
     case 'rejected': return 'Rejeitado'
     case 'uploaded': return 'Em Análise'
+    case 'not_owned': return 'Não Possui'
     default: return 'Pendente'
   }
 }
@@ -354,7 +410,13 @@ function getStatusLabel(status: string) {
             </div>
           </div>
 
-          <div class="flex justify-end">
+          <div class="flex justify-end gap-2">
+            <BaseButton v-if="doc.status === 'pending' || doc.status === 'rejected'" variant="muted" size="sm"
+              rounded="lg" class="h-8 text-[11px] font-bold" :disabled="!!isUploading" @click="handleNotOwned(doc.id)">
+              <Icon name="solar:info-circle-linear" class="size-3.5 mr-1" />
+              Não Possuo
+            </BaseButton>
+
             <label class="relative cursor-pointer">
               <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
               <div

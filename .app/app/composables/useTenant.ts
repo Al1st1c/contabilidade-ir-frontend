@@ -20,9 +20,9 @@ export function useTenant() {
 
   const isLoading = ref(false)
 
-  const fetchTenant = async () => {
+  const fetchTenant = async (force = false) => {
     // If we have full data from API (not just cache) and not loading, we can skip
-    if ((tenant.value?.name && !isLoading.value))
+    if ((tenant.value?.name && !isLoading.value && !force))
       return tenant.value
 
     isLoading.value = true
