@@ -232,6 +232,16 @@ async function verifyOtp() {
             Suporte ao Cliente
           </a>
         </div>
+
+        <div v-if="!tenant" class="pt-6 border-t border-muted-200 dark:border-muted-800">
+          <BaseParagraph size="xs" class="text-muted-400 mb-2">
+            Este é um painel para contadores e contabilidades.
+          </BaseParagraph>
+          <a href="https://gestorirpf.com.br" target="_blank"
+            class="text-xs text-primary-500 hover:text-primary-600 font-bold hover:underline transition-colors">
+            Caso queira contratar, acesse: https://gestorirpf.com.br
+          </a>
+        </div>
       </footer>
     </div>
   </div>
