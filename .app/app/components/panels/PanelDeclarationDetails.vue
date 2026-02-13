@@ -770,13 +770,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1055,7 +1055,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
                         'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1084,7 +1084,7 @@ onMounted(() => {
                 </span>
                 <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
                   'approved').length
-                  }}/{{ checklistItems.length }} aprovados</span>
+                }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
@@ -1143,10 +1143,17 @@ onMounted(() => {
                   </div>
 
                   <!-- Requirement Description (if any) -->
-                  <p v-if="item.description"
-                    class="text-[11px] text-muted-500 dark:text-muted-400 mt-1 line-clamp-1 italic">
-                    {{ item.description }}
-                  </p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <p v-if="item.description"
+                      class="text-[11px] text-muted-500 dark:text-muted-400 line-clamp-1 italic">
+                      {{ item.description }}
+                    </p>
+                    <span v-if="item.createdAt"
+                      class="text-[9px] text-muted-400 font-medium ml-auto shrink-0 flex items-center gap-1">
+                      <Icon name="lucide:calendar" class="size-3" />
+                      {{ new Date(item.createdAt).toLocaleString('pt-BR') }}
+                    </span>
+                  </div>
 
                   <!-- File info and client note -->
                   <div v-if="item.attachment || (item.status === 'not_owned' && item.comment)"
@@ -1158,7 +1165,7 @@ onMounted(() => {
                         {{ item.attachment.fileName }}
                       </p>
                       <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
-                      }}KB</span>
+                        }}KB</span>
                     </div>
 
                     <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
@@ -1249,9 +1256,14 @@ onMounted(() => {
                         :title="att.fileName">
                         {{ att.fileName }}
                       </p>
-                      <p class="text-[10px] text-muted-400 capitalize mt-0.5">
-                        {{ att.category || 'Geral' }}
-                      </p>
+                      <div class="flex items-center justify-between mt-0.5">
+                        <p class="text-[10px] text-muted-400 capitalize">
+                          {{ att.category || 'Geral' }}
+                        </p>
+                        <span v-if="att.createdAt" class="text-[8px] text-muted-300 font-medium shrink-0">
+                          {{ new Date(att.createdAt).toLocaleString('pt-BR') }}
+                        </span>
+                      </div>
                       <p v-if="att.description" class="text-[10px] text-primary-500 italic mt-1 line-clamp-2"
                         :title="att.description">
                         "{{ att.description }}"
