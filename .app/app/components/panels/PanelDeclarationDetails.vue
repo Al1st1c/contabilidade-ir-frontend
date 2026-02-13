@@ -73,6 +73,10 @@ const filteredAttachments = computed(() => {
     return []
   const officialCategories = ['irpf_backup', 'irpf_receipt', 'irpf_declaration', 'irpf_darf']
   return declaration.value.attachments.filter((a: any) => {
+    // Esconder documentos internos
+    if (a.category === 'internal')
+      return false
+
     // Esconder documentos oficiais
     if (officialCategories.includes(a.category))
       return false
@@ -83,6 +87,12 @@ const filteredAttachments = computed(() => {
 
     return true
   })
+})
+
+const internalAttachments = computed(() => {
+  if (!declaration.value?.attachments)
+    return []
+  return declaration.value.attachments.filter((a: any) => a.category === 'internal')
 })
 
 const baseUrl = computed(() => {
@@ -123,10 +133,21 @@ const uploadedChecklistCount = computed(() => checklistItems.value.filter(i => i
 
 // ─── Preview ──────────────────────────────────────────────────────────────────
 async function openPreview(item: any) {
-  if (!item?.attachment?.previewUrl) {
-    toaster.add({ title: 'Erro', description: 'Documento sem URL de visualização', icon: 'ph:warning-circle-fill' })
+  const attachment = item.attachment || (item.id ? item : null)
+  if (!attachment)
+    return
+
+  const previewUrl = attachment.previewUrl
+  const mimeType = attachment.mimeType
+
+  // Se não tem URL de preview ou não é um tipo pré-visualizável (Img/PDF), baixa direto
+  const isPreviewable = mimeType?.startsWith('image/') || mimeType === 'application/pdf'
+
+  if (!previewUrl || !isPreviewable) {
+    handleDownload(attachment)
     return
   }
+
   previewItem.value = item
   showPreviewModal.value = true
   signedPreviewUrl.value = ''
@@ -138,12 +159,12 @@ async function openPreview(item: any) {
       authToken = useCookie<string>('auth_token').value
     if (!authToken)
       throw new Error('Sessão expirada ou token não encontrado.')
-    const { data } = await useCustomFetch<any>(item.attachment.previewUrl, {
+    const { data } = await useCustomFetch<any>(previewUrl, {
       headers: { Authorization: `Bearer ${authToken}` },
     })
     if (data?.url) {
       signedPreviewUrl.value = data.url
-      if (item?.attachment?.mimeType === 'application/pdf') {
+      if (mimeType === 'application/pdf') {
         signedPreviewUrl.value += '#navpanes=0&page=1'
       }
     }
@@ -151,7 +172,9 @@ async function openPreview(item: any) {
   }
   catch (error: any) {
     console.error('Erro ao buscar URL de preview:', error)
-    toaster.add({ title: 'Erro de Visualização', description: error.message || 'Não foi possível carregar o documento', icon: 'ph:warning-circle-fill' })
+    // Em caso de erro no preview, tenta o download como fallback
+    showPreviewModal.value = false
+    handleDownload(attachment)
   }
   finally {
     isPreviewLoading.value = false
@@ -159,18 +182,37 @@ async function openPreview(item: any) {
 }
 
 async function handleDownload(item: any) {
+  if (!item)
+    return
+  const attachment = item.attachment || (item.id ? item : null)
+  if (!attachment)
+    return
+
+  const previewUrl = attachment.previewUrl
+  if (!previewUrl) {
+    toaster.add({ title: 'Erro', description: 'URL de download não disponível', icon: 'ph:warning-circle-fill' })
+    return
+  }
+
   try {
     const auth = useAuth()
     const authToken = auth.token.value || useCookie<string>('auth_token').value
     if (!authToken)
       throw new Error('Sessão expirada')
-    const { data } = await useCustomFetch<any>(item.previewUrl || item.attachment?.previewUrl, {
+
+    const { data } = await useCustomFetch<any>(previewUrl, {
       headers: { Authorization: `Bearer ${authToken}` },
     })
-    if (data?.url)
-      window.open(data.url, '_blank')
+    if (data?.url) {
+      // Pequeno timeout para não ser bloqueado como popup se vier de um fluxo automático
+      setTimeout(() => {
+        window.open(data.url, '_blank')
+      }, 100)
+    }
   }
-  catch (error) { console.error('Erro ao baixar:', error) }
+  catch (error) {
+    console.error('Erro ao baixar:', error)
+  }
 }
 
 // ─── SMS ──────────────────────────────────────────────────────────────────────
@@ -472,6 +514,7 @@ async function generateLink() {
 
 // ─── File Upload ──────────────────────────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null)
+const internalFileInput = ref<HTMLInputElement | null>(null)
 const officialFileInput = ref<HTMLInputElement | null>(null)
 const pendingFile = ref<File | null>(null)
 const showChecklistModal = ref(false)
@@ -529,6 +572,18 @@ async function handleOfficialFileUpload(event: Event) {
     return
   await uploadFile(file, null, selectedOfficialCategory.value)
   selectedOfficialCategory.value = null
+}
+function triggerInternalUpload() {
+  internalFileInput.value?.click()
+}
+async function handleInternalFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0)
+    return
+  const file = target.files[0]
+  if (!file)
+    return
+  await uploadFile(file, null, 'internal')
 }
 async function deleteOfficialDocument(id: string) {
   if (!confirm('Deseja excluir este documento oficial?'))
@@ -846,7 +901,7 @@ onMounted(() => {
             </div>
 
             <!-- Notas internas -->
-            <div class="space-y-2">
+            <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <Icon name="lucide:eye-off" class="size-4 text-primary-500" />
@@ -854,15 +909,54 @@ onMounted(() => {
                     Notas Internas
                   </BaseText>
                 </div>
-                <BaseTag size="sm" variant="none"
-                  class="text-[9px] uppercase font-bold tracking-tight bg-primary-500 text-white">
-                  Privado — apenas equipe
-                </BaseTag>
+                <div class="flex items-center gap-2">
+                  <BaseTag size="sm" variant="none"
+                    class="text-[9px] uppercase font-bold tracking-tight bg-primary-500 text-white leading-none px-2 py-1">
+                    Privado — apenas equipe
+                  </BaseTag>
+                  <!-- Botão de Upload Interno -->
+                  <button
+                    class="p-1 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 transition-colors"
+                    title="Anexar imagem/arquivo interno" @click="triggerInternalUpload">
+                    <Icon name="solar:gallery-add-bold-duotone" class="size-4" />
+                  </button>
+                  <input ref="internalFileInput" type="file" class="hidden" accept="image/*,application/pdf"
+                    @change="handleInternalFileUpload">
+                </div>
               </div>
               <BaseTextarea v-model="form.internalNotes" rounded="lg" rows="4"
                 placeholder="Notas visíveis apenas para a sua equipe..."
-                class="bg-primary-50/40 dark:bg-primary-900/10 border border-primary-200/60 dark:border-primary-800/40 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed italic transition-colors"
+                class="bg-primary-50/40 dark:bg-primary-900/10 border border-primary-200/60 dark:border-primary-800/40 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed italic transition-colors p-4"
                 @blur="saveDebounced" />
+
+              <!-- Listagem de Anexos Internos -->
+              <div v-if="internalAttachments.length > 0" class="flex flex-wrap gap-2 mt-2">
+                <div v-for="att in internalAttachments" :key="att.id"
+                  class="group relative size-16 rounded-xl border border-primary-200 dark:border-primary-800 overflow-hidden bg-white dark:bg-muted-950 shadow-sm transition-all hover:shadow-md">
+                  <div
+                    class="size-full flex flex-col items-center justify-center gap-1 bg-muted-50/50 dark:bg-muted-900/50 cursor-pointer group-hover:bg-primary-50/50"
+                    @click="openPreview({ attachment: att, title: 'Anexo Interno' })">
+                    <Icon v-if="att.mimeType.startsWith('image/')" name="solar:gallery-bold-duotone"
+                      class="size-6 text-primary-500" />
+                    <Icon v-else name="solar:file-bold-duotone" class="size-6 text-primary-500" />
+                    <span class="text-[8px] text-muted-400 uppercase font-bold px-1 truncate w-full text-center">{{
+                      att.fileName.split('.').pop() }}</span>
+                  </div>
+
+                  <!-- Overlay de ações -->
+                  <div
+                    class="absolute inset-x-0 bottom-0 py-1.5 bg-primary-900/80 translate-y-full group-hover:translate-y-0 flex items-center justify-center gap-3 transition-transform">
+                    <button class="text-white hover:text-primary-200 transition-colors" title="Visualizar"
+                      @click.stop="openPreview({ attachment: att, title: 'Anexo Interno' })">
+                      <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                    </button>
+                    <button class="text-white hover:text-danger-200 transition-colors" title="Excluir"
+                      @click.stop="deleteOfficialDocument(att.id)">
+                      <Icon name="lucide:trash-2" class="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Retificação (condicional) -->

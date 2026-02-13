@@ -299,7 +299,8 @@ function goToDocuments() {
               Documentos Pendentes
             </BaseHeading>
             <BaseParagraph size="xs" class="text-warning-700/80 dark:text-warning-300/80 font-medium leading-tight">
-              Você possui pendências no IRPF {{ clientData.currentYear }}. Envie seus documentos agora para iniciarmos.
+              Você possui documentos pendentes no IRPF {{ clientData.currentYear }}. Envie seus documentos agora para
+              iniciarmos.
             </BaseParagraph>
           </div>
           <BaseButton variant="none" rounded="lg" size="sm"

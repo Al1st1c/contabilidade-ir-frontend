@@ -17,6 +17,7 @@ const declaration = ref<any>(null)
 const collectionLink = ref<any>(null)
 const documents = ref<any[]>([])
 const isUploading = ref<string | null>(null)
+const documentTitle = ref('') // Título para documento extra
 const notes = ref<Record<string, string>>({})
 const showNote = ref<Record<string, boolean>>({})
 
@@ -156,6 +157,18 @@ async function handleFileUpload(event: Event, itemId: string) {
     if (itemId !== 'extra') {
       formData.append('checklistItemId', itemId)
     }
+    else {
+      // Documento extra precisa de título
+      if (!documentTitle.value.trim()) {
+        add({
+          title: 'Título Necessário',
+          description: 'Por favor, informe um título para o documento.',
+          icon: 'solar:pen-new-square-bold-duotone',
+        })
+        return
+      }
+      formData.append('title', documentTitle.value.trim())
+    }
 
     // Adicionar observação se houver
     const note = notes.value[itemId]
@@ -188,9 +201,12 @@ async function handleFileUpload(event: Event, itemId: string) {
   }
   finally {
     isUploading.value = null
-    // Limpar nota após sucesso
+    // Limpar campos após sucesso
     if (itemId) {
       notes.value[itemId] = ''
+      if (itemId === 'extra') {
+        documentTitle.value = ''
+      }
       if (customBanks.value[itemId]) {
         customBanks.value[itemId] = ''
       }
@@ -358,29 +374,47 @@ function getStatusLabel(status: string) {
         <BaseHeading as="h4" size="sm" weight="bold" class="mb-1 text-muted-600 dark:text-muted-300">
           Outros Documentos
         </BaseHeading>
-        <BaseParagraph size="xs" class="text-muted-400 mb-4">
+        <BaseParagraph size="xs" class="text-muted-400 mb-6">
           Envie qualquer outro arquivo adicional que considerar
           relevante.
         </BaseParagraph>
-        <div class="w-full max-w-xs mx-auto mb-4">
-          <div class="flex items-center justify-center gap-2 mb-2">
-            <BaseCheckbox id="note-check-extra" v-model="showNote['extra']" shape="rounded" color="primary"
-              label="Adicionar observação" />
+
+        <div class="w-full max-w-sm mx-auto space-y-4">
+          <!-- Campo de Título (Obrigatório para Extras) -->
+          <div class="text-left">
+            <BaseInput v-model="documentTitle" placeholder="Título do documento (ex: Recibo do Médico)" size="sm"
+              label="Título do Documento" :disabled="!!isUploading" />
           </div>
-          <div v-if="showNote['extra']" class="animate-fade-in text-left">
-            <BaseTextarea v-model="notes['extra']" placeholder="Descreva o que é este documento..." rows="2" size="sm"
-              class="bg-muted-50/50 dark:bg-muted-900/50" />
+
+          <!-- Observação opcional -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-center gap-2">
+              <BaseCheckbox id="note-check-extra" v-model="showNote['extra']" shape="rounded" color="primary"
+                label="Adicionar observação" />
+            </div>
+            <div v-if="showNote['extra']" class="animate-fade-in text-left">
+              <BaseTextarea v-model="notes['extra']" placeholder="Descreva o que é este documento..." rows="2" size="sm"
+                class="bg-muted-50/50 dark:bg-muted-900/50" />
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <label class="cursor-pointer"
+              :class="{ 'opacity-50 pointer-events-none': !documentTitle.trim() || isUploading }">
+              <input type="file" class="hidden" :disabled="!!isUploading || !documentTitle.trim()"
+                @change="handleFileUpload($event, 'extra')">
+              <div
+                class="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary-500/25 active:scale-95">
+                <Icon v-if="isUploading === 'extra'" name="line-md:loading-twotone-loop" class="size-4" />
+                <Icon v-else name="solar:upload-minimalistic-linear" class="size-4" />
+                Importar e Enviar
+              </div>
+            </label>
+            <p v-if="!documentTitle.trim()" class="text-[10px] text-muted-400 mt-2 italic">
+              * Informe o título antes de importar o arquivo
+            </p>
           </div>
         </div>
-
-        <label class="cursor-pointer">
-          <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, 'extra')">
-          <BaseButton variant="primary" rounded="lg" size="sm" class="h-9 font-bold px-6"
-            :loading="isUploading === 'extra'">
-            <Icon name="solar:upload-minimalistic-linear" class="size-4 mr-2" />
-            Enviar Documento Extra
-          </BaseButton>
-        </label>
       </BaseCard>
     </div>
   </div>

@@ -1018,7 +1018,7 @@ const showNoDeclarationsAlert = computed(() => {
                 class="w-full mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-muted-100 dark:border-muted-800 transition-all duration-300"
                 :class="{ 'blur-md select-none pointer-events-none': !showRevenue }">
                 <div class="flex flex-col">
-                  <span class="text-[10px] uppercase  text-muted-400 mb-1">Receita Esperada</span>
+                  <span class="text-[10px] uppercase  text-muted-400 mb-1">Receita Provisionada</span>
                   <span class="text-sm font-semibold text-muted-800 dark:text-muted-100">{{ showRevenue
                     ? formatCurrency(stats.revenue) : 'R$ ••••••' }}</span>
                 </div>
