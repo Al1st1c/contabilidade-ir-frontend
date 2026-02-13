@@ -105,7 +105,8 @@ const baseUrl = computed(() => {
   const { tenant } = useTenant() // Fresh tenant data
   const auth = useAuth() // Auth cookie data
 
-  const slug = tenant.value?.slug || auth.user.value?.tenant?.slug
+  // Try to get slug from multiple sources: Declaration > Tenant State > Auth User
+  const slug = declaration.value?.tenant?.slug || tenant.value?.slug || auth.user.value?.tenant?.slug
 
   if (slug) {
     return `https://${slug}.${baseDomain}`
@@ -775,13 +776,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1060,7 +1061,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
                         'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1089,7 +1090,7 @@ onMounted(() => {
                 </span>
                 <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
                   'approved').length
-                  }}/{{ checklistItems.length }} aprovados</span>
+                }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
@@ -1170,7 +1171,7 @@ onMounted(() => {
                         {{ item.attachment.fileName }}
                       </p>
                       <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
-                      }}KB</span>
+                        }}KB</span>
                     </div>
 
                     <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
