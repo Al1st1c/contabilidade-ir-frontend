@@ -399,8 +399,10 @@ const onSubmit = handleSubmit(async (values) => {
         <!-- Left Column: Content & Illustration -->
         <div class="bg-muted-100 dark:bg-muted-900 relative hidden w-1/2 items-center justify-center p-12 lg:flex">
           <div class="text-center">
-            <img src="assets/funil/background.png" alt="Gestor IRPF"
-              class="mx-auto mb-2 max-w-sm rounded-[2.5rem] w-60 shadow-xl border border-muted-200 dark:border-muted-800">
+            <img src="assets/funil/free-trial-wh.png" alt="Gestor IRPF"
+              class="dark:hidden mx-auto mb-2 max-w-sm rounded-[2.5rem]">
+            <img src="assets/funil/free-trial.png" alt="Gestor IRPF"
+              class="hidden dark:block mx-auto mb-2 max-w-sm rounded-[2.5rem]">
             <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
               Mais controle. Menos preocupações.
             </BaseHeading>

@@ -5,6 +5,14 @@ definePageMeta({
   layout: 'empty',
 })
 
+useSeoMeta({
+  title: 'Área do Cliente',
+  ogTitle: 'Área do Cliente',
+  description: 'Acesse seus documentos e gerencie sua declaração de imposto de renda.',
+  ogDescription: 'Acesse seus documentos e gerencie sua declaração de imposto de renda.',
+  robots: 'noindex, nofollow', // Client area might not need indexing
+})
+
 const { tenant, checkSubdomain } = useTenant()
 
 // Check for subdomain whitelabel on mount

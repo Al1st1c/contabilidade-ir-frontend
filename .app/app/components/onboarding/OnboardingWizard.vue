@@ -722,7 +722,7 @@ async function handleUpgrade() {
   catch {
   }
 
-  router.push('/plans')
+  router.push('/dashboard/plans')
 }
 
 function continueWithoutUpgrade() {
@@ -1141,7 +1141,7 @@ onMounted(async () => {
                             class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Admin</span>
                         </div>
                         <span class="text-xs text-muted-500 mt-1 line-clamp-2">{{ role.description || 'Sem descrição'
-                        }}</span>
+                          }}</span>
                       </button>
                     </div>
 
@@ -1191,7 +1191,7 @@ onMounted(async () => {
                             <div>
                               <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ permission.label
-                                }}</span>
+                                  }}</span>
                                 <BaseTooltip :content="permission.explanation" position="top">
                                   <Icon name="ph:info" class="size-3.5 text-muted-400 cursor-help" />
                                 </BaseTooltip>

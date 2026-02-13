@@ -681,7 +681,10 @@ watch([step, isFreeFlow, isSubmitting], () => {
       <!-- Coluna Esquerda -->
       <div class="relative hidden w-1/2 items-center justify-center p-12 lg:flex bg-muted-100 dark:bg-muted-900">
         <div class="text-center">
-          <img src="assets/funil/background.png" alt="Registro" class="mx-auto mb-8 max-w-xs" width="200" height="200">
+          <img src="assets/funil/free-trial-wh.png" alt="Gestor IRPF"
+            class="dark:hidden mx-auto mb-2 max-w-sm rounded-[2.5rem]">
+          <img src="assets/funil/free-trial.png" alt="Gestor IRPF"
+            class="hidden dark:block mx-auto mb-2 max-w-sm rounded-[2.5rem]">
           <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
             Comece sua jornada
           </BaseHeading>

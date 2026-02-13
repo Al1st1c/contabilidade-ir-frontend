@@ -8,14 +8,14 @@ import { API_CONFIG } from '~/utils/config'
 definePageMeta({
   layout: 'empty',
   title: 'Entrar ',
-  preview: {
-    title: 'Entrar',
-    description: 'For authentication and sign in',
-    categories: ['layouts', 'authentication'],
-    src: '/assets/funil/background.png',
-    srcDark: '/assets/funil/background.png',
-    order: 152,
-  },
+  loader: true,
+})
+
+useSeoMeta({
+  title: 'Entrar - Gestor IRPF',
+  ogTitle: 'Entrar - Gestor IRPF',
+  description: 'Acesse sua conta no Gestor IRPF e gerencie suas declarações de imposto de renda com eficiência.',
+  ogDescription: 'Acesse sua conta no Gestor IRPF e gerencie suas declarações de imposto de renda com eficiência.',
 })
 
 const VALIDATION_TEXT = {
@@ -464,7 +464,10 @@ const onSubmit = handleSubmit(async (values) => {
         <!-- Left Column: Content & Illustration -->
         <div class="bg-muted-100 dark:bg-muted-900 relative  hidden w-1/2 items-center justify-center p-12 lg:flex">
           <div class="text-center">
-            <img src="assets/funil/background.png" alt="Gestor IRPF" class="mx-auto mb-2 max-w-sm rounded-2xl w-60">
+            <img src="assets/funil/free-trial-wh.png" alt="Gestor IRPF"
+              class="dark:hidden mx-auto mb-2 max-w-sm rounded-[2.5rem]">
+            <img src="assets/funil/free-trial.png" alt="Gestor IRPF"
+              class="hidden dark:block mx-auto mb-2 max-w-sm rounded-[2.5rem]">
             <BaseHeading tag="h2" size="2xl" weight="bold" class="text-muted-800 dark:text-white mb-4">
               Mais controle. Menos preocupações.
             </BaseHeading>
@@ -567,7 +570,7 @@ const onSubmit = handleSubmit(async (values) => {
                     <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
                       Digite o código de 6 dígitos que enviamos para seu <span
                         class="font-medium text-muted-800 dark:text-muted-100">{{ sendMethod === 'SMS' ? 'celular' :
-                        'e-mail' }}</span>
+                          'e-mail' }}</span>
                       <span v-if="sentVia" class="block text-xs mt-1">({{ sentVia }})</span>
                     </BaseParagraph>
                   </div>
