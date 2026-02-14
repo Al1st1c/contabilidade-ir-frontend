@@ -886,9 +886,9 @@ watch([step, isFreeFlow, isSubmitting], () => {
                       :classes="{ input: 'h-12' }" @update:model-value="handleChange" @blur="handleBlur" />
                   </BaseField>
                 </Field>
-
+                {{ availabilityErrors }}
                 <BaseButton type="button" variant="primary" rounded="lg" class="h-12! w-full"
-                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || availabilityErrors.email || availabilityErrors.document"
+                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || availabilityErrors.email !== '' || availabilityErrors.document !== ''"
                   @click="nextStep">
                   Continuar
                 </BaseButton>
