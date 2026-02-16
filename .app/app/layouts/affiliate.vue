@@ -1,6 +1,14 @@
 <script setup lang="ts">
 const { user } = useAuth()
 const isMobileOpen = ref(false)
+const route = useRoute()
+
+watch(
+  () => route.fullPath,
+  () => {
+    isMobileOpen.value = false
+  }
+)
 
 const companyName = 'Gestor IRPF - Afiliados'
 const companyLogo = '/img/logo-icon.png'

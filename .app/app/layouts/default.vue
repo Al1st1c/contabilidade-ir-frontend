@@ -6,6 +6,7 @@ const { tenant } = useTenant()
 const { currentSubscription, fetchMySubscription } = useSubscription()
 const { user } = useAuth()
 const isMobileOpen = ref(false)
+const route = useRoute()
 
 const companyName = computed(() => {
   const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false
@@ -22,6 +23,13 @@ const companyLogo = computed(() => {
   }
   return '/img/logo-icon.png'
 })
+
+watch(
+  () => route.fullPath,
+  () => {
+    isMobileOpen.value = false
+  }
+)
 
 onMounted(() => {
   // Buscar status da assinatura se estiver no dashboard
