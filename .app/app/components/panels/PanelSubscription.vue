@@ -73,7 +73,8 @@ function calculatePercentage(current: number | undefined, max: number | undefine
 <template>
 
   <div class="flex h-full flex-col bg-white dark:bg-muted-900">
-    <FocusTrap class="border-muted-200 dark:border-muted-700 dark:bg-muted-800 border-l bg-white" trapped loop>
+    <FocusTrap class="border-muted-200 dark:border-muted-700 dark:bg-muted-800 flex h-full flex-col border-l bg-white"
+      trapped loop>
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-muted-200 px-6 py-4 dark:border-muted-800">
         <BaseHeading as="h3" size="lg">
