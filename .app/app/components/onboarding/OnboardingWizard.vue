@@ -730,26 +730,50 @@ function continueWithoutUpgrade() {
 }
 
 async function completeOnboarding() {
-  const { data } = await useCustomFetch<any>('/tenant/onboarding/complete', {
-    method: 'POST',
-  })
+  loading.value = true
+  try {
+    const { data } = await useCustomFetch<any>('/tenant/onboarding/complete', {
+      method: 'POST',
+    })
 
-  // CRÍTICO: Atualizar o token com tenantId
-  const { token } = useAuth()
-  if (data?.access_token) {
-    token.value = data.access_token
-  }
-
-  if (userCookie.value) {
-    userCookie.value = {
-      ...(userCookie.value || {}),
-      onboardingStatus: 'COMPLETED',
+    // CRÍTICO: Atualizar o token com tenantId
+    const { token, user: authUser, fetchUser } = useAuth()
+    if (data?.access_token) {
+      token.value = data.access_token
     }
-  }
 
-  complete.value = true
-  router.push('/dashboard')
+    // Atualizar o estado global do usuário imediatamente
+    if (authUser.value) {
+      authUser.value = {
+        ...authUser.value,
+        onboardingStatus: 'COMPLETED',
+      }
+    }
+
+    // Forçar atualização do cookie
+    if (userCookie.value) {
+      userCookie.value = {
+        ...(userCookie.value || {}),
+        onboardingStatus: 'COMPLETED',
+      }
+    }
+
+    // Buscar dados fresh do backend para garantir consistência
+    await fetchUser()
+
+    complete.value = true
+    router.push('/dashboard')
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: 'Ocorreu um erro ao finalizar seu onboarding. Tente novamente.',
+      icon: 'ph:warning-fill',
+    })
+  } finally {
+    loading.value = false
+  }
 }
+
 
 onMounted(async () => {
   try {
@@ -880,10 +904,8 @@ onMounted(async () => {
                 <div class="hidden md:block relative group">
                   <div
                     class="aspect-video rounded-xl overflow-hidden shadow-2xl border-4 border-white dark:border-muted-800 rotate-2 group-hover:rotate-0 transition-transform duration-500">
-                    <img src="/img/screens/dashboards-personal-2.png" alt="Dashboard"
-                      class="w-full h-full object-cover dark:hidden">
-                    <img src="/img/screens/dashboards-personal-2-dark.png" alt="Dashboard"
-                      class="hidden w-full h-full object-cover dark:block">
+                    <img src="/img/kanban.png" alt="Dashboard" class="w-full h-full object-cover dark:hidden">
+                    <img src="/img/kanban.png" alt="Dashboard" class="hidden w-full h-full object-cover dark:block">
                     <div class="absolute inset-0 bg-gradient-to-t from-primary-500/20 to-transparent" />
                   </div>
                   <div class="absolute -bottom-4 -right-4 size-20 bg-primary-500/10 rounded-full blur-3xl" />
@@ -1141,7 +1163,7 @@ onMounted(async () => {
                             class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Admin</span>
                         </div>
                         <span class="text-xs text-muted-500 mt-1 line-clamp-2">{{ role.description || 'Sem descrição'
-                          }}</span>
+                        }}</span>
                       </button>
                     </div>
 
@@ -1191,7 +1213,7 @@ onMounted(async () => {
                             <div>
                               <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ permission.label
-                                  }}</span>
+                                }}</span>
                                 <BaseTooltip :content="permission.explanation" position="top">
                                   <Icon name="ph:info" class="size-3.5 text-muted-400 cursor-help" />
                                 </BaseTooltip>
@@ -1459,7 +1481,7 @@ onMounted(async () => {
                     class="h-full flex flex-col justify-center p-10 bg-primary-500/5 rounded-3xl border border-primary-500/10 text-center lg:text-left">
                     <div
                       class="mb-6 flex size-16 items-center justify-center rounded-2xl bg-white dark:bg-muted-800 shadow-xl">
-                      <Icon name="solar:pallete-bold-duotone" class="size-8 text-primary-500" />
+                      <Icon name="solar:pallete-2-bold" class="size-8 text-primary-500" />
                     </div>
                     <h3 class="text-2xl  text-muted-800 dark:text-white mb-2">Sua Marca Aqui</h3>
                     <p class="text-muted-500 dark:text-muted-400 mb-8 max-w-sm">

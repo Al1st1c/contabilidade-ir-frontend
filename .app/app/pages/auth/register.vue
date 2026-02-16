@@ -535,11 +535,11 @@ const onSubmit = (async () => {
       return
     }
 
-    // Pagamento via PayPal - redirecionar
+    // Pagamento via Stripe - redirecionar
     if (paymentInfo.method === 'CREDIT_CARD' && paymentInfo.checkoutUrl) {
       toaster.add({
         title: 'Redirecionando...',
-        description: 'Você será redirecionado para o PayPal.',
+        description: 'Você será redirecionado para a Stripe.',
         icon: 'ph:arrow-square-out-fill',
       })
 
@@ -645,7 +645,7 @@ onMounted(async () => {
           showPixCheckout.value = true
           startPaymentPolling()
         } else {
-          // Se for Cartão/PayPal ou outro, o cadastro já foi feito (tem token).
+          // Se for Cartão/Stripe ou outro, o cadastro já foi feito (tem token).
           // Redireciona para o checkout seguro do dashboard para não ficar preso no Registro.
           toaster.add({
             title: 'Cadastro já realizado',
@@ -886,7 +886,6 @@ watch([step, isFreeFlow, isSubmitting], () => {
                       :classes="{ input: 'h-12' }" @update:model-value="handleChange" @blur="handleBlur" />
                   </BaseField>
                 </Field>
-                {{ availabilityErrors }}
                 <BaseButton type="button" variant="primary" rounded="lg" class="h-12! w-full"
                   :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || availabilityErrors.email !== '' || availabilityErrors.document !== ''"
                   @click="nextStep">
@@ -1158,12 +1157,12 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <TairoRadioCard value="CREDIT_CARD" class="p-3 data-[state=checked]:ring-primary-500!">
                     <div class="flex items-center gap-3">
                       <div class="flex items-center gap-1">
-                        <Icon name="logos:paypal" class="h-5" />
+                        <Icon name="logos:stripe" class="h-5" />
                       </div>
                       <div class="flex-1">
                         <BaseText weight="semibold" class="text-muted-800 dark:text-white block">Cartão de Crédito
                         </BaseText>
-                        <BaseText size="xs" class="text-muted-500 mt-0.5">Pagamento Seguro via PayPal</BaseText>
+                        <BaseText size="xs" class="text-muted-500 mt-0.5">Pagamento Seguro via Stripe</BaseText>
                       </div>
                       <BaseText weight="bold" class="text-muted-800 dark:text-white">{{ formatCurrency(cardPrice) }}
                       </BaseText>
@@ -1177,7 +1176,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <div class="flex items-start gap-2">
                     <Icon name="ph:info-fill" class="size-4 text-info-500 shrink-0 mt-0.5" />
                     <BaseText size="xs" class="text-info-600 dark:text-info-400">
-                      Ao continuar, você poderá pagar com seu cartão de crédito através do checkout seguro do PayPal.
+                      Ao continuar, você poderá pagar com seu cartão de crédito através do checkout seguro da Stripe.
                     </BaseText>
                   </div>
                 </div>

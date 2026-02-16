@@ -14,36 +14,37 @@ const verificationStatus = ref<'PENDING' | 'SUCCESS' | 'ERROR'>('PENDING')
 const errorMessage = ref('')
 
 async function verifyPayment() {
-  const token = route.query.token as string
-  const subscriptionId = (route.query.subscription_id as string) || (route.query.subscriptionId as string)
+  const paymentId = route.query.paymentId as string
+  const sessionId = route.query.session_id as string
 
-  if (!token && !subscriptionId) {
-    // Se não há tokens, assume que já foi processado ou é um acesso direto
-    verificationStatus.value = 'SUCCESS'
-    isVerifying.value = false
-    return
+  // Tenta verificar pelo paymentId se disponível
+  if (paymentId) {
+    try {
+      const res = await useCustomFetch<any>(`/payments/${paymentId}/status`)
+      if (res.data?.status === 'PAID') {
+        verificationStatus.value = 'SUCCESS'
+        await fetchUser()
+        setTimeout(() => router.push('/dashboard'), 5000)
+        return
+      }
+    } catch (e) {
+      console.error('Erro ao verificar status por ID:', e)
+    }
   }
 
+  // Fallback: Verificar se a assinatura do usuário já está ativa
   try {
-    const { data } = await useCustomFetch<any>('/payments/confirm-paypal', {
-      query: { token, subscription_id: subscriptionId },
-    })
+    await fetchUser()
+    const { data: sub } = await useCustomFetch<any>('/subscriptions/my-subscription')
 
-    if (data.status === 'PAID') {
+    if (sub?.status === 'ACTIVE') {
       verificationStatus.value = 'SUCCESS'
-      // Atualizar dados do usuário para refletir a nova assinatura
-      await fetchUser()
-
-      // Agendar redirecionamento
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 5000)
-    }
-    else {
+      setTimeout(() => router.push('/dashboard'), 5000)
+    } else {
+      // Se ainda não está ativa, tenta novamente em alguns segundos (pode ser delay do webhook)
       verificationStatus.value = 'PENDING'
-      errorMessage.value = data.message || 'Aguardando confirmação definitiva do PayPal...'
-      // Tenta novamente em 3 segundos
-      setTimeout(verifyPayment, 3000)
+      errorMessage.value = 'Aguardando confirmação do pagamento pela Stripe...'
+      setTimeout(verifyPayment, 4000)
     }
   }
   catch (err: any) {
@@ -55,6 +56,7 @@ async function verifyPayment() {
     isVerifying.value = false
   }
 }
+
 
 // Redirecionar para o dashboard após alguns segundos (apenas se sucesso)
 onMounted(() => {
@@ -75,7 +77,7 @@ onMounted(() => {
           Validando Pagamento
         </BaseHeading>
         <BaseParagraph size="md" class="text-muted-500 dark:text-muted-400 mb-4 font-sans italic">
-          {{ errorMessage || 'Estamos confirmando os detalhes com o PayPal...' }}
+          {{ errorMessage || 'Estamos confirmando os detalhes com a Stripe...' }}
         </BaseParagraph>
       </div>
 
@@ -134,10 +136,11 @@ onMounted(() => {
       <!-- Detalhes Extras Premium -->
       <div
         class="mt-12 pt-8 border-t border-muted-100 dark:border-muted-800 flex justify-center gap-8 opacity-50 grayscale">
-        <Icon name="logos:paypal" class="h-5" />
+        <Icon name="logos:stripe" class="h-5" />
         <Icon name="solar:shield-check-bold-duotone" class="size-5 text-success-500" />
         <Icon name="solar:lock-bold-duotone" class="size-5 text-muted-400" />
       </div>
+
     </BaseCard>
   </div>
 </template>

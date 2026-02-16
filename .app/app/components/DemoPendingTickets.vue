@@ -24,9 +24,9 @@ const tickets = [
   },
   {
     id: 45723,
-    title: 'Payment fails when using PayPal',
+    title: 'Payment fails when using Stripe',
     content:
-      'When I try to use PayPal as a payment method, it spins forever and I get an error message after that.',
+      'When I try to use Stripe as a payment method, it spins forever and I get an error message after that.',
     updated: '30 minutes ago',
     user: {
       name: 'Howard Wries',
@@ -49,32 +49,16 @@ const tickets = [
 
 <template>
   <div class="divide-muted-200 dark:divide-muted-700 divide-y">
-    <div
-      v-for="(ticket, index) in tickets"
-      :key="ticket.id"
-      class="flex flex-col gap-4 sm:flex-row py-4"
-      :class="index > 0 ? 'pt-6' : ''"
-    >
+    <div v-for="(ticket, index) in tickets" :key="ticket.id" class="flex flex-col gap-4 sm:flex-row py-4"
+      :class="index > 0 ? 'pt-6' : ''">
       <BaseTooltip :content="ticket.user.name">
-        <BaseAvatar
-          size="sm"
-          :src="ticket.user.src"
-          :text="ticket.user.name"
-        />
+        <BaseAvatar size="sm" :src="ticket.user.src" :text="ticket.user.name" />
       </BaseTooltip>
       <div class="max-w-md">
-        <BaseHeading
-          as="h3"
-          size="sm"
-          weight="medium"
-          class="text-muted-900 dark:text-muted-100 mb-1"
-        >
+        <BaseHeading as="h3" size="sm" weight="medium" class="text-muted-900 dark:text-muted-100 mb-1">
           <span>[#{{ ticket.id }}] {{ ticket.title }}</span>
         </BaseHeading>
-        <BaseParagraph
-          size="sm"
-          class="text-muted-500 dark:text-muted-400 mb-1"
-        >
+        <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 mb-1">
           <span>{{ ticket.content }}</span>
         </BaseParagraph>
         <BaseParagraph size="xs" class="text-muted-600 dark:text-muted-400 mt-2">

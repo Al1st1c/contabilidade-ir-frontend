@@ -356,7 +356,7 @@ export function useAuth() {
 
   return {
     token,
-    user: currentUser,
+    user,
     level,
     isAuthenticated,
     login,
@@ -367,6 +367,7 @@ export function useAuth() {
     debugCookies,
   }
 }
+
 
 // Composable para requisições autenticadas
 export function useApi() {

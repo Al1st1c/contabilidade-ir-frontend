@@ -146,7 +146,7 @@ export function useSubscription() {
   const subscribe = async (params: {
     planSlug: string
     billingPeriod: string
-    paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'PAYPAL'
+    paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'STRIPE'
     customLimits?: any
     customPrice?: number
   }) => {
@@ -215,7 +215,7 @@ export function useSubscription() {
     }
   }
 
-  const purchaseCredits = async (amount: number, paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'PAYPAL') => {
+  const purchaseCredits = async (amount: number, paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'STRIPE') => {
     loading.value = true
     error.value = null
     try {

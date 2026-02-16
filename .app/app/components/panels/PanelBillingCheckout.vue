@@ -224,7 +224,7 @@ function formatCurrency(amount: number) {
                 </div>
               </div>
               <span class="font-bold text-sm text-muted-900 dark:text-white shrink-0">{{ formatCurrency(p.amount)
-                }}</span>
+              }}</span>
             </button>
           </div>
         </div>
@@ -289,16 +289,16 @@ function formatCurrency(amount: number) {
             </div>
           </div>
 
-          <!-- Caso Cartão / PayPal -->
+          <!-- Caso Cartão / Stripe -->
           <div
-            v-else-if="selectedPayment.paymentMethod === 'CREDIT_CARD' || selectedPayment.method === 'CREDIT_CARD' || selectedPayment.paymentMethod === 'PAYPAL' || selectedPayment.method === 'PAYPAL'"
+            v-else-if="selectedPayment.paymentMethod === 'CREDIT_CARD' || selectedPayment.method === 'CREDIT_CARD' || selectedPayment.paymentMethod === 'STRIPE' || selectedPayment.method === 'STRIPE'"
             class="space-y-4">
             <div class="p-6 bg-primary-500/5 border border-primary-500/20 rounded-xl text-center">
-              <Icon name="logos:paypal" class="h-8 mx-auto mb-4" />
+              <Icon name="logos:stripe" class="h-8 mx-auto mb-4" />
               <h5 class="text-sm font-bold text-muted-900 dark:text-white mb-2">Pagamento via Cartão de Crédito</h5>
               <p class="text-[11px] text-muted-500 leading-relaxed mb-6">
-                Para sua segurança, o pagamento é processado através do checkout criptografado do PayPal.
-                Você não precisa de conta no PayPal para pagar com cartão.
+                Para sua segurança, o pagamento é processado através do checkout criptografado da Stripe.
+                Você será redirecionado para concluir o pagamento com segurança.
               </p>
 
               <BaseButton :to="checkoutUrl" target="_blank" variant="primary" rounded="lg" size="lg"
@@ -312,7 +312,7 @@ function formatCurrency(amount: number) {
               class="p-4 rounded-xl bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 flex items-start gap-3">
               <Icon name="ph:info-fill" class="size-4 text-primary-500 shrink-0 mt-0.5" />
               <p class="text-[10px] text-muted-500">
-                Após completar o pagamento no PayPal, sua assinatura será ativada automaticamente em alguns instantes.
+                Após completar o pagamento na Stripe, sua assinatura será ativada automaticamente em alguns instantes.
               </p>
             </div>
 

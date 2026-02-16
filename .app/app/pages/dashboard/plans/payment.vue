@@ -259,12 +259,12 @@ async function handlePayment() {
     if (result.success) {
       paymentResult.value = result.data
 
-      // Redirecionamento automático para PayPal se for cartão/paypal
+      // Redirecionamento automático para Stripe se for cartão/stripe
       if (paymentMethod.value === 'CREDIT_CARD' && result.data?.paymentData?.checkoutUrl) {
         toaster.add({
           title: 'Redirecionando...',
-          description: 'Você será redirecionado para o PayPal para concluir sua assinatura.',
-          icon: 'logos:paypal',
+          description: 'Você será redirecionado para a Stripe para concluir sua assinatura.',
+          icon: 'logos:stripe-icon',
         })
 
         setTimeout(() => {
@@ -654,7 +654,7 @@ function formatCurrency(value: number) {
                       <BaseRadioGroup v-model="paymentMethod" class="grid grid-cols-2 gap-2">
                         <TairoRadioCard value="CREDIT_CARD"
                           class="flex flex-col items-center justify-center p-3 h-20 gap-2 data-[state=checked]:ring-primary-500!">
-                          <Icon name="logos:paypal" class="h-5 group-data-[state=checked]:grayscale-0 grayscale" />
+                          <Icon name="logos:stripe" class="h-5 group-data-[state=checked]:grayscale-0 grayscale" />
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Cartão de Crédito
                           </BaseText>
@@ -790,7 +790,7 @@ function formatCurrency(value: number) {
                   </div>
                   <BaseParagraph size="xs" class="text-muted-400 text-right font-sans italic opacity-70">
                     {{ paymentMethod === 'CREDIT_CARD' ? 'Assinatura Recorrente' : 'Pagamento' }} via {{ paymentMethod
-                      === 'CREDIT_CARD' ? 'Cartão (PayPal)' : paymentMethod }}
+                      === 'CREDIT_CARD' ? 'Cartão (Stripe)' : paymentMethod }}
                   </BaseParagraph>
                 </div>
 
@@ -871,11 +871,11 @@ function formatCurrency(value: number) {
                     Redirecionando...
                   </BaseHeading>
                   <BaseParagraph size="xs" class="text-muted-500 mb-6 font-sans">
-                    Seja bem-vindo. Você será redirecionado para o PayPal.
+                    Seja bem-vindo. Você será redirecionado para a Stripe.
                   </BaseParagraph>
                   <BaseButton :to="paymentResult.paymentData?.checkoutUrl" variant="primary" color="success"
                     class="w-full">
-                    Pagar com PayPal
+                    Pagar com Stripe
                   </BaseButton>
                 </div>
               </div>
