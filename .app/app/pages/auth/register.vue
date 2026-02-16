@@ -3,6 +3,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { Field, useForm } from 'vee-validate'
 import { z } from 'zod'
 import { vMaska } from 'maska/vue'
+import { usePixel } from '~/composables/usePixel'
 
 definePageMeta({
   layout: 'empty',
@@ -91,6 +92,7 @@ const toaster = useNuiToasts()
 const config = useRuntimeConfig()
 const { useCustomFetch } = useApi()
 const { token, user: authUser, fetchUser } = useAuth()
+const { track } = usePixel()
 
 // Mapear userCookie para o authUser do useAuth
 const userCookie = authUser
@@ -496,8 +498,18 @@ const onSubmit = (async () => {
       console.error('❌ Nenhum token recebido do backend!')
     }
 
+    // Track registration success
+    track('CompleteRegistration')
+
     // Fluxo gratuito ou cupom 100% - ir direto para dashboard
     if (!isPaymentRequired.value || !response.payment) {
+      // For free plans, we can consider registration as the main conversion
+      track('Purchase', {
+        value: 0,
+        currency: 'BRL',
+        content_name: selectedPlan.value,
+        content_type: 'product'
+      })
       toaster.add({
         title: 'Sucesso!',
         description: 'Conta criada com sucesso!',
@@ -532,11 +544,24 @@ const onSubmit = (async () => {
 
       // Iniciar polling para detectar pagamento
       startPaymentPolling()
+
+      track('InitiateCheckout', {
+        value: finalPrice.value / 100,
+        currency: 'BRL',
+        content_name: selectedPlan.value,
+        content_category: 'subscription'
+      })
       return
     }
 
     // Pagamento via Stripe - redirecionar
     if (paymentInfo.method === 'CREDIT_CARD' && paymentInfo.checkoutUrl) {
+      track('InitiateCheckout', {
+        value: finalPrice.value / 100,
+        currency: 'BRL',
+        content_name: selectedPlan.value,
+        content_category: 'subscription'
+      })
       toaster.add({
         title: 'Redirecionando...',
         description: 'Você será redirecionado para a Stripe.',

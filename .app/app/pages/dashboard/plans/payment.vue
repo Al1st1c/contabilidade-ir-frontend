@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useSubscription } from '~/composables/useSubscription'
+import { usePixel } from '~/composables/usePixel'
 
 definePageMeta({
   title: 'Pagamento da Assinatura',
@@ -9,6 +10,7 @@ const route = useRoute()
 const router = useRouter()
 const toaster = useNuiToasts()
 const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon, getPaymentStatus } = useSubscription()
+const { track } = usePixel()
 
 // Integração de estado com o layout original
 const customRadio = ref((route.query.plan as string) || 'enterprise')
@@ -172,6 +174,11 @@ onMounted(async () => {
   }
   isInitialLoading.value = false
   window.addEventListener('beforeunload', handleBeforeUnload)
+
+  track('InitiateCheckout', {
+    content_name: selectedPlan.value?.name,
+    content_category: 'subscription'
+  })
 })
 
 onUnmounted(() => {
@@ -315,6 +322,13 @@ async function checkPaymentStatus() {
       setTimeout(() => {
         router.push('/dashboard')
       }, 2000)
+
+      track('Purchase', {
+        value: finalTotal.value / 100,
+        currency: 'BRL',
+        content_name: selectedPlan.value?.name,
+        content_type: 'product'
+      })
     }
     else {
       toaster.add({
