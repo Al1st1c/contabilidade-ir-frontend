@@ -13,69 +13,94 @@ onMounted(() => {
   checkSubdomain()
 })
 
+const siteDescription = computed(() => (route?.meta?.description as string) || 'O Gestor IRPF é a plataforma definitiva para contadores dominarem a temporada de Imposto de Renda. Organize, automatize e escale seu escritório com segurança.')
+const siteTitle = computed(() => route?.meta?.title ? `${route.meta.title} - Gestor IRPF` : 'Gestor IRPF - A Plataforma de Gestão do Contador Moderno')
+
 useHead({
-  title: () => route?.meta?.title ?? '',
+  title: () => route?.meta?.title as string ?? '',
   titleTemplate: (titleChunk) => {
     return titleChunk
       ? `${titleChunk} - Gestor IRPF`
-      : `Gestor IRPF`
+      : `Gestor IRPF - A Plataforma de Gestão do Contador Moderno`
   },
   htmlAttrs: {
-    lang: () => head.value.htmlAttrs!.lang,
-    dir: () => head.value.htmlAttrs!.dir as any,
+    lang: () => head.value.htmlAttrs!.lang || 'pt-BR',
+    dir: () => (head.value.htmlAttrs!.dir as any) || 'ltr',
   },
   link: () => [
     ...(head.value.link || []),
     {
       rel: 'icon',
       type: 'image/png',
-      href: '/img/logo.png',
+      href: '/img/logo-icon.png',
+    },
+    {
+      rel: 'canonical',
+      href: `https://gestorirpf.com.br${route.path}`,
     },
   ],
   meta: () => [
     ...(head.value.meta || []),
     {
-      name: 'description',
-      content: () =>
-        route?.meta?.description
-        ?? 'The most advanced Nuxt and Tailwind CSS dashboard template',
+      name: 'keywords',
+      content: 'imposto de renda, irpf 2026, gestão para contadores, contabilidade digital, automação irpf, software para contadores, declaração de imposto de renda, gestor irpf',
     },
     {
-      name: 'twitter:card',
-      content: 'summary_large_image',
+      name: 'author',
+      content: 'Gestor IRPF',
+    },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Gestor IRPF',
+        url: 'https://gestorirpf.com.br',
+        logo: 'https://gestorirpf.com.br/img/logo.png',
+        sameAs: [
+          'https://www.instagram.com/gestorirpf',
+          // 'https://www.linkedin.com/company/gestorirpf',
+        ],
+        description: 'Plataforma líder em gestão de declarações de Imposto de Renda para profissionais contábeis.',
+      }),
     },
     {
-      name: 'twitter:site',
-      content: '@cssninjaStudio',
-    },
-    {
-      name: 'og:image:type',
-      content: 'image/png',
-    },
-    {
-      name: 'og:image:width',
-      content: '1200',
-    },
-    {
-      name: 'og:image:height',
-      content: '630',
-    },
-    {
-      name: 'og:image',
-      content: `https://media.cssninja.io/embed/marketplace/product/wide.png?headline=${encodeURIComponent(
-        route?.meta?.description
-        || (route?.meta?.preview
-          ? `${route.meta?.preview?.title} - ${route.meta?.preview?.description}`
-          : 'Nuxt & Tailwind CSS dashboard system'),
-      )}&url=${encodeURIComponent(
-        'https://media.cssninja.io/content/products/logos/tairo-text-white.svg',
-      )}&previewUrl=${encodeURIComponent(
-        `https://tairo.cssninja.io${route.meta?.preview?.src || '/img/screens/documentation-hub.png'
-        }`,
-      )}`,
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'Gestor IRPF',
+        url: 'https://gestorirpf.com.br',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: 'https://gestorirpf.com.br/search?q={search_term_string}',
+          'query-input': 'required name=search_term_string',
+        },
+      }),
     },
   ],
 })
+
+useSeoMeta({
+  description: siteDescription,
+  ogType: 'website',
+  ogSiteName: 'Gestor IRPF',
+  ogUrl: computed(() => `https://gestorirpf.com.br${route.path}`),
+  ogTitle: siteTitle,
+  ogDescription: siteDescription,
+  ogImage: 'https://gestorirpf.com.br/img/og-image.png',
+  ogImageWidth: 1200,
+  ogImageHeight: 630,
+  twitterCard: 'summary_large_image',
+  twitterTitle: siteTitle,
+  twitterDescription: siteDescription,
+  twitterImage: 'https://gestorirpf.com.br/img/og-image.png',
+})
+
+
+
 </script>
 
 <template>

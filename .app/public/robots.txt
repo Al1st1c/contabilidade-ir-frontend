@@ -1,0 +1,10 @@
+# robots.txt for Gestor IRPF
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /client/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://gestorirpf.com.br/sitemap.xml

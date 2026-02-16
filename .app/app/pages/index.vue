@@ -11,10 +11,10 @@ definePageMeta({
 })
 
 useSeoMeta({
-  title: 'Entrar - Gestor IRPF | A Plataforma do Contador Moderno',
-  ogTitle: 'Entrar - Gestor IRPF | A Plataforma do Contador Moderno',
-  description: 'Acesse seu painel do Gestor IRPF e domine sua temporada de imposto de renda com organização e automação.',
-  ogDescription: 'Acesse seu painel do Gestor IRPF e domine sua temporada de imposto de renda com organização e automação.',
+  title: 'Gestor IRPF - A Plataforma do Contador Moderno | Organize sua Temporada',
+  ogTitle: 'Gestor IRPF - A Plataforma do Contador Moderno | Organize sua Temporada',
+  description: 'Transforme o caos do Imposto de Renda em um processo lucrativo. Organize documentos, automatize pedidos e escale seu escritório com o Gestor IRPF.',
+  ogDescription: 'Transforme o caos do Imposto de Renda em um processo lucrativo. Organize documentos, automatize pedidos e escale seu escritório com o Gestor IRPF.',
 })
 
 const VALIDATION_TEXT = {
