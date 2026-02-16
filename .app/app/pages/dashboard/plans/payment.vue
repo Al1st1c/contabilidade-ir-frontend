@@ -26,32 +26,38 @@ const customConfig = ref({
 })
 
 function calculateCustomPrice() {
+  // Se for o plano Empresa, o valor é fixo em R$ 850,00
+  if (customRadio.value === 'enterprise') {
+    return 85000
+  }
+
   let total = 4900 // Preço base em centavos (R$ 49,00)
 
-  // R$ 10,00 por usuário extra (acima de 1)
+  // R$ 6,00 por usuário extra (acima de 1)
   if (customConfig.value.employees > 1) {
-    total += (customConfig.value.employees - 1) * 1000
+    total += (customConfig.value.employees - 1) * 600
   }
 
-  // R$ 5,00 por bloco de 100 SMS (acima de 100)
+  // R$ 0,12 por SMS extra (acima de 100 inclusos)
   if (customConfig.value.sms_monthly > 100) {
-    total += Math.ceil((customConfig.value.sms_monthly - 100) / 100) * 500
+    total += (customConfig.value.sms_monthly - 100) * 12
   }
 
-  // R$ 5,00 por GB extra (acima de 5GB)
+  // R$ 2,50 por GB extra (acima de 5GB)
   if (customConfig.value.storage_gb > 5) {
-    total += (customConfig.value.storage_gb - 5) * 500
+    total += (customConfig.value.storage_gb - 5) * 250
   }
 
-  // R$ 2,00 por IR extra (acima de 50 IRs)
+  // R$ 8,00 por IR extra (acima de 50 IRs)
   if (customConfig.value.tax_declarations_yearly > 50) {
-    total += (customConfig.value.tax_declarations_yearly - 50) * 200
+    total += (customConfig.value.tax_declarations_yearly - 50) * 800
   }
 
   return total
 }
 
 function convertToCustom() {
+  if (customRadio.value === 'enterprise') return
   customRadio.value = 'custom'
 }
 
@@ -75,12 +81,13 @@ function toggleResourceCustomizer() {
 // No seed temos: basic, pro, enterprise, free
 const selectedPlan = computed(() => {
   // Caso venha do configurador customizado ou ativado via UI
-  if (customRadio.value === 'custom') {
+  // O plano Empresa (enterprise) também usa o configurador mas tem preço fixo
+  if (customRadio.value === 'custom' || customRadio.value === 'enterprise') {
     const monthlyPrice = calculateCustomPrice()
     return {
-      slug: 'custom',
-      name: 'Personalizado',
-      description: 'Configuração sob medida para seu escritório.',
+      slug: customRadio.value,
+      name: customRadio.value === 'enterprise' ? 'Empresa' : 'Personalizado',
+      description: customRadio.value === 'enterprise' ? 'Plano com valor fixo e recursos flexíveis.' : 'Configuração sob medida para seu escritório.',
       pricing: {
         monthly: monthlyPrice,
         quarterly: monthlyPrice * 3,

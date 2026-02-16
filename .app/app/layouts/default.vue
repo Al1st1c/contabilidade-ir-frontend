@@ -389,5 +389,6 @@ onMounted(() => {
     </TairoMobileDrawer>
 
     <SubscriptionOverlay />
+    <AppSupportButton />
   </TairoTopnavLayout>
 </template>

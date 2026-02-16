@@ -24,9 +24,13 @@ const customConfig = ref({
 })
 
 const customPrice = computed(() => {
+  if (pricingMode.value === 'enterprise') {
+    return 85000 // R$ 850,00 fixo
+  }
+
   const base = 4900 // R$ 49,00 base
-  const storageCost = customConfig.value.storage_gb * 500 // R$ 5,00 por GB
-  const smsCost = customConfig.value.sms_count * 10 // R$ 0,10 por SMS
+  const storageCost = customConfig.value.storage_gb * 250 // R$ 2,50 por GB
+  const smsCost = customConfig.value.sms_count * 12 // R$ 0,12 por SMS
   return base + storageCost + smsCost
 })
 
