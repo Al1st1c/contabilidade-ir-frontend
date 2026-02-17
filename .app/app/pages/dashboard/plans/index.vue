@@ -97,7 +97,7 @@ async function handleConfirm() {
 }
 
 const filteredPlans = computed(() => {
-  const targets = ['free', 'pro', 'enterprise']
+  const targets = ['free', 'basic', 'pro']
   return plans.value
     .filter(p => targets.includes(p.slug))
     .sort((a, b) => targets.indexOf(a.slug) - targets.indexOf(b.slug))
@@ -106,8 +106,8 @@ const filteredPlans = computed(() => {
 function getPlanIcon(slug: string) {
   switch (slug) {
     case 'free': return '/img/illustrations/onboarding/pricing-1.svg'
-    case 'pro': return '/img/illustrations/onboarding/pricing-2.svg'
-    case 'enterprise': return '/img/illustrations/onboarding/pricing-3.svg'
+    case 'basic': return '/img/illustrations/onboarding/pricing-2.svg'
+    case 'pro': return '/img/illustrations/onboarding/pricing-3.svg'
   }
   return '/img/custom/pro-plan.png'
 }

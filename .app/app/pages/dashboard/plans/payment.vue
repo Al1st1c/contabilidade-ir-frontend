@@ -82,19 +82,21 @@ function toggleResourceCustomizer() {
 // Mapeamento de planos reais para os slots do layout
 // No seed temos: basic, pro, enterprise, free
 const selectedPlan = computed(() => {
-  // Caso venha do configurador customizado ou ativado via UI
-  // O plano Empresa (enterprise) também usa o configurador mas tem preço fixo
-  if (customRadio.value === 'custom' || customRadio.value === 'enterprise') {
+  // Se o plano selecionado existe na lista vinda da API, use ele
+  const apiPlan = plans.value.find(p => p.slug === customRadio.value)
+
+  // Se for o plano personalizado (custom)
+  if (customRadio.value === 'custom') {
     const monthlyPrice = calculateCustomPrice()
     return {
-      slug: customRadio.value,
-      name: customRadio.value === 'enterprise' ? 'Empresa' : 'Personalizado',
-      description: customRadio.value === 'enterprise' ? 'Plano com valor fixo e recursos flexíveis.' : 'Configuração sob medida para seu escritório.',
+      slug: 'custom',
+      name: 'Personalizado',
+      description: 'Configuração sob medida para seu escritório.',
       pricing: {
         monthly: monthlyPrice,
-        quarterly: monthlyPrice * 3,
-        semiannual: monthlyPrice * 6,
-        annual: monthlyPrice * 12,
+        quarterly: Math.round(monthlyPrice * 3 * 0.95), // 5% OFF
+        semiannual: Math.round(monthlyPrice * 6 * 0.92), // 8% OFF
+        annual: Math.round(monthlyPrice * 12 * 0.90), // 10% OFF
       },
       limits: {
         employees: customConfig.value.employees,
@@ -102,21 +104,22 @@ const selectedPlan = computed(() => {
         sms_monthly: customConfig.value.sms_monthly,
         tax_declarations_yearly: customConfig.value.tax_declarations_yearly,
       },
-      features: ['Suporte Prioritário', 'Relatórios Automáticos', 'Multi-usuários', 'Gestão Customizada'],
+      features: ['DRIVE', 'KANBAN', 'REPORTS', 'TEAM_MANAGEMENT'],
     }
   }
 
-  const p = plans.value.find(p => p.slug === customRadio.value)
-  if (!p)
+  if (!apiPlan)
     return null
 
+  const baseMonthly = apiPlan.pricing.monthly
+
   return {
-    ...p,
+    ...apiPlan,
     pricing: {
-      monthly: p.pricing.monthly,
-      quarterly: p.pricing.monthly * 3,
-      semiannual: p.pricing.monthly * 6,
-      annual: p.pricing.monthly * 12, // No seed p.pricing.annual exists as yearly
+      monthly: baseMonthly,
+      quarterly: Math.round(baseMonthly * 3 * 0.95), // 5% OFF
+      semiannual: Math.round(baseMonthly * 6 * 0.92), // 8% OFF
+      annual: apiPlan.pricing.annual || Math.round(baseMonthly * 12 * 0.90), // 10% OFF
     },
   }
 })
@@ -172,6 +175,15 @@ onMounted(async () => {
   if (route.query.billing) {
     billingCycles.value = (route.query.billing as string).toLowerCase()
   }
+
+  // Sincronizar limites iniciais a partir do plano selecionado
+  if (selectedPlan.value && customRadio.value !== 'custom') {
+    customConfig.value.employees = selectedPlan.value.limits?.employees || 1
+    customConfig.value.sms_monthly = selectedPlan.value.limits?.sms_monthly || 100
+    customConfig.value.storage_gb = (selectedPlan.value.limits?.storage_mb || 1024) / 1024
+    customConfig.value.tax_declarations_yearly = selectedPlan.value.limits?.tax_declarations_yearly || 50
+  }
+
   isInitialLoading.value = false
   window.addEventListener('beforeunload', handleBeforeUnload)
 
@@ -190,11 +202,41 @@ const currentCyclePrice = computed(() => {
     return 0
   switch (billingCycles.value) {
     case 'monthly': return selectedPlan.value.pricing.monthly || 0
-    case 'quarterly': return selectedPlan.value.pricing.quarterly || (selectedPlan.value.pricing.monthly * 3) || 0
-    case 'semiannual': return selectedPlan.value.pricing.semiannual || (selectedPlan.value.pricing.monthly * 6) || 0
-    case 'annual': return selectedPlan.value.pricing.annual || (selectedPlan.value.pricing.monthly * 12) || 0
+    case 'quarterly': return selectedPlan.value.pricing.quarterly || 0
+    case 'semiannual': return selectedPlan.value.pricing.semiannual || 0
+    case 'annual': return selectedPlan.value.pricing.annual || 0
   }
   return 0
+})
+
+const rawCyclePrice = computed(() => {
+  if (!selectedPlan.value || customRadio.value === 'custom') {
+    // Para personalizados, o subtotal bruto é o mensal * meses
+    const base = calculateCustomPrice()
+    switch (billingCycles.value) {
+      case 'monthly': return base
+      case 'quarterly': return base * 3
+      case 'semiannual': return base * 6
+      case 'annual': return base * 12
+    }
+  }
+
+  // Para planos da API, usamos o monthly do plano original
+  const apiPlan = plans.value.find(p => p.slug === customRadio.value)
+  if (!apiPlan) return 0
+
+  const base = apiPlan.pricing.monthly
+  switch (billingCycles.value) {
+    case 'monthly': return base
+    case 'quarterly': return base * 3
+    case 'semiannual': return base * 6
+    case 'annual': return base * 12
+  }
+  return 0
+})
+
+const cycleDiscountAmount = computed(() => {
+  return Math.max(0, rawCyclePrice.value - currentCyclePrice.value)
 })
 
 const couponCode = ref('')
@@ -353,6 +395,17 @@ function copyToClipboard(text: string) {
 function formatCurrency(value: number) {
   return (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
+
+const featureMap: Record<string, string> = {
+  'DRIVE': 'Armazenamento em Nuvem',
+  'KANBAN': 'Gestão de Processos (Kanban)',
+  'REPORTS': 'Relatórios e Dashboards',
+  'SMS': 'Notificações via SMS',
+  'WHATSAPP': 'Integração WhatsApp',
+  'TEAM_MANAGEMENT': 'Gestão de Colaboradores',
+  'API': 'Acesso via API',
+  'WHITE_LABEL': 'White Label (Marca Própria)',
+}
 </script>
 
 <template>
@@ -489,12 +542,15 @@ function formatCurrency(value: number) {
                   /mês
                 </BaseText>
               </div>
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  Gestão Kanban
-                </BaseText>
-              </div>
+              <template v-for="feature in selectedPlan?.features" :key="feature">
+                <div v-if="featureMap[feature] && feature !== 'DRIVE' && feature !== 'SMS'"
+                  class="flex items-center gap-2" :class="planColor">
+                  <Icon name="solar:check-circle-bold-duotone" class="size-4" />
+                  <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
+                    {{ featureMap[feature] }}
+                  </BaseText>
+                </div>
+              </template>
               <div class="flex items-center gap-2" :class="planColor">
                 <Icon name="solar:check-circle-bold-duotone" class="size-4" />
                 <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
@@ -526,8 +582,8 @@ function formatCurrency(value: number) {
             </BaseParagraph>
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <BaseAvatar src="/img/custom/user-slot.png" size="sm" />
-                <BaseAvatar v-if="(selectedPlan?.limits?.employees || 0) > 1" src="/img/custom/user-slot.png"
+                <BaseAvatar src="/img/custom/user-slot-army.png" size="sm" />
+                <BaseAvatar v-if="(selectedPlan?.limits?.employees || 0) > 1" src="/img/custom/user-slot-army.png"
                   size="sm" />
                 <div v-if="(selectedPlan?.limits?.employees || 0) > 2" class="text-muted-400 text-xs font-medium ml-2">
                   +{{ (selectedPlan?.limits?.employees || 0) - 2 }} extras
@@ -555,7 +611,9 @@ function formatCurrency(value: number) {
               <BaseHeading as="h4" size="sm" weight="medium">
                 Personalização
               </BaseHeading>
+
               <div class="flex gap-2">
+
                 <BaseTag rounded="full" color="muted" size="sm">
                   {{ Math.round((selectedPlan?.limits?.storage_mb || 0)
                     / 1024) }}GB
@@ -565,12 +623,13 @@ function formatCurrency(value: number) {
                 </BaseTag>
               </div>
             </div>
+            <BaseParagraph size="xs" class="text-muted-500 mb-6">
+              Espaço de armazenamento e SMS mensal
+            </BaseParagraph>
             <div class="flex items-center justify-between">
+
               <div class="flex gap-4">
-                <BaseAvatar src="/img/custom/drive-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
-                <BaseAvatar src="/img/custom/sms-resource.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
-                <BaseAvatar src="/img/illustrations/onboarding/pricing-1.svg" size="sm"
-                  class="bg-muted-100 dark:bg-muted-800 p-1" />
+                <BaseAvatar src="/img/custom/resources-army.png" size="sm" class="bg-muted-100 dark:bg-muted-800 p-1" />
               </div>
               <BaseButton type="button" size="sm" variant="muted" class="h-8" @click="toggleResourceCustomizer">
                 <Icon name="solar:pen-2-linear" class="size-3 mr-1" />
@@ -648,18 +707,31 @@ function formatCurrency(value: number) {
                           </BaseText>
                         </TairoRadioCard>
                         <TairoRadioCard value="quarterly"
-                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          class="p-2 text-center data-[state=checked]:ring-primary-500! relative overflow-hidden">
+                          <div
+                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[7px] font-bold text-white uppercase">
+                            5% OFF
+                          </div>
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Trimestral
                           </BaseText>
                         </TairoRadioCard>
                         <TairoRadioCard value="semiannual"
-                          class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                          class="p-2 text-center data-[state=checked]:ring-primary-500! relative overflow-hidden">
+                          <div
+                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[7px] font-bold text-white uppercase">
+                            8% OFF
+                          </div>
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Semestral
                           </BaseText>
                         </TairoRadioCard>
-                        <TairoRadioCard value="annual" class="p-2 text-center data-[state=checked]:ring-primary-500!">
+                        <TairoRadioCard value="annual"
+                          class="p-2 text-center data-[state=checked]:ring-primary-500! relative overflow-hidden">
+                          <div
+                            class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[7px] font-bold text-white uppercase">
+                            10% OFF
+                          </div>
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Anual
                           </BaseText>
@@ -723,7 +795,7 @@ function formatCurrency(value: number) {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.employees
-                        }}</span>
+                      }}</span>
                     </div>
                     <div class="flex items-center justify-between text-muted-500">
                       <span class="flex items-center gap-2">
@@ -749,7 +821,7 @@ function formatCurrency(value: number) {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.sms_monthly || 0
-                        }}
+                      }}
                         /mês</span>
                     </div>
                   </div>
@@ -788,8 +860,15 @@ function formatCurrency(value: number) {
                   <div class="flex justify-between text-sm">
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
-                      formatCurrency(currentCyclePrice)
-                      }}</span>
+                      formatCurrency(rawCyclePrice)
+                    }}</span>
+                  </div>
+                  <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
+                    <span class="font-sans italic">Desconto {{ currentCycleLabel }} ({{
+                      billingCycles === 'quarterly' ? '5%' :
+                        billingCycles === 'semiannual' ? '8%' : '10%'
+                    }})</span>
+                    <span class="font-medium font-sans">- {{ formatCurrency(cycleDiscountAmount) }}</span>
                   </div>
                   <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
                     <span class="font-sans italic">Cupom ({{ appliedCoupon.code }})</span>
