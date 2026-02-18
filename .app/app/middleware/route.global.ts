@@ -7,6 +7,9 @@ export default defineNuxtRouteMiddleware((to) => {
   // Rotas que não precisam de autenticação
   const publicRoutes = ['/', '/auth/login', '/auth/register', '/regulamento']
   const isClientPublic = to.path.startsWith('/client') && to.query.token
+  if (isClientPublic) {
+    to.meta.layout = 'app'
+  }
 
   // Redirecionamento para whitelabel (*.irpf26.com)
   if (requestURL.hostname.endsWith('irpf26.com')) {
