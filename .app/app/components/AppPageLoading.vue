@@ -12,7 +12,7 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="flex flex-col items-center justify-center p-8 transition-all duration-300" :style="{ minHeight }">
-    <video src="/img/loading.webm#t=3" autoplay loop muted playsinline class="size-48 mb-0" />
+    <video src="/img/loading.gif#t=3" autoplay loop muted playsinline class="size-48 mb-0" />
     <BaseParagraph v-if="message" size="sm" class="text-muted-500 font-medium animate-pulse">
       {{ message }}
     </BaseParagraph>
