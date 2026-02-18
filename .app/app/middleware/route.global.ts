@@ -2,10 +2,18 @@ import { API_CONFIG } from '~/utils/config'
 
 export default defineNuxtRouteMiddleware((to) => {
   const { token, user } = useAuth()
+  const requestURL = useRequestURL()
 
   // Rotas que não precisam de autenticação
   const publicRoutes = ['/', '/auth/login', '/auth/register', '/regulamento']
   const isClientPublic = to.path.startsWith('/client') && to.query.token
+
+  // Redirecionamento para whitelabel (*.irpf26.com)
+  if (requestURL.hostname.endsWith('irpf26.com')) {
+    if (to.path === '/' || to.path === '/auth/login') {
+      return navigateTo('/auth/client')
+    }
+  }
 
   if (publicRoutes.includes(to.path) || to.path.startsWith('/invite') || isClientPublic) {
     // Se logado e tentando ir pro login, redireciona pro dashboard
