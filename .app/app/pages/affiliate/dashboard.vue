@@ -159,10 +159,11 @@ const date = ref(new Date())
                   <div class="mt-auto">
                     <div
                       class="bg-white/10 border border-white/20 rounded-lg px-4 py-2 flex items-center justify-between">
-                      <span class="text-white font-mono font-bold tracking-wider">{{ stats?.couponCode || 'GERANDO...'
+                      <span class="text-white font-mono font-bold tracking-wider">{{
+                        'https://app.gestorirpf.com.br/auth/register?r=' + stats?.couponCode || 'GERANDO...'
                         }}</span>
                       <BaseButton size="sm" variant="ghost" color="white" class="!h-8"
-                        @click="copyToClipboard(stats?.couponCode || '')">
+                        @click="copyToClipboard('https://app.gestorirpf.com.br/auth/register?r=' + stats?.couponCode)">
                         <Icon name="solar:copy-bold-duotone" class="size-4" />
                       </BaseButton>
                     </div>

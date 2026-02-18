@@ -88,6 +88,7 @@ const checkPaymentInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isCheckingPayment = ref(false)
 
 const router = useRouter()
+const route = useRoute()
 const toaster = useNuiToasts()
 const config = useRuntimeConfig()
 const { useCustomFetch } = useApi()
@@ -258,6 +259,12 @@ function nextStep() {
   if (step.value === 1) {
     saveFormData()
   }
+
+  // Auto-apply coupon when moving to payment step if it was set via query
+  if (step.value === 2 && couponCode.value && !appliedCoupon.value && !isFreeFlow.value) {
+    applyCoupon()
+  }
+
   if (step.value < totalSteps) {
     step.value++
   }
@@ -654,6 +661,11 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 onMounted(async () => {
   fetchPlans()
   window.addEventListener('beforeunload', handleBeforeUnload)
+
+  // Check for affiliate coupon in query
+  if (route.query.r) {
+    couponCode.value = route.query.r as string
+  }
 
   // Se já estiver logado (ex: refresh na página de PIX), verificar status
   if (token.value) {
