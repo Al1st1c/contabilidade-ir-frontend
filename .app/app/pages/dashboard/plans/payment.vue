@@ -27,15 +27,71 @@ const customConfig = ref({
   tax_declarations_yearly: 50,
 })
 
+// Plano Metadata & Regras
+const PLAN_RULES = {
+  free: {
+    slug: 'free',
+    name: 'Gratuito',
+    irLimit: 6,
+    basePrice: 0,
+    maxIr: 6,
+    nextPlan: 'basic'
+  },
+  basic: {
+    slug: 'basic',
+    name: 'Básico',
+    irLimit: 30,
+    basePrice: 4900,
+    maxIr: 80,
+    nextPlan: 'pro'
+  },
+  pro: {
+    slug: 'pro',
+    name: 'Profissional',
+    irLimit: 150,
+    basePrice: 24900,
+    maxIr: 250,
+    nextPlan: 'enterprise'
+  },
+  enterprise: {
+    slug: 'enterprise',
+    name: 'Empresa',
+    irLimit: 350,
+    basePrice: 85000,
+    maxIr: Infinity,
+    nextPlan: null
+  }
+}
+
+function getPlanByIr(ir: number) {
+  if (ir <= 6) return PLAN_RULES.free
+  if (ir <= 80) return PLAN_RULES.basic
+  if (ir <= 250) return PLAN_RULES.pro
+  return PLAN_RULES.enterprise
+}
+
 function calculateCustomPrice() {
-  // Se for o plano Empresa, o valor é fixo em R$ 850,00
-  if (customRadio.value === 'enterprise') {
-    return 85000
+  const irCount = customConfig.value.tax_declarations_yearly
+  const basePlan = getPlanByIr(irCount)
+
+  // Se for Empresa, preço fixo
+  if (basePlan.slug === 'enterprise' || customRadio.value === 'enterprise') {
+    return {
+      total: 85000,
+      blocked: false,
+      suggestion: null
+    }
   }
 
-  let total = 4900 // Preço base em centavos (R$ 49,00)
+  // Preço base do plano determinado pelas IRs
+  let total = basePlan.basePrice
 
-  // R$ 6,00 por usuário extra (acima de 1)
+  // R$ 8,00 por IR extra acima do baseline do plano
+  if (irCount > basePlan.irLimit) {
+    total += (irCount - basePlan.irLimit) * 800
+  }
+
+  // R$ 6,00 por usuário extra (acima de 1 usuário base para qualquer custom)
   if (customConfig.value.employees > 1) {
     total += (customConfig.value.employees - 1) * 600
   }
@@ -50,12 +106,28 @@ function calculateCustomPrice() {
     total += (customConfig.value.storage_gb - 5) * 250
   }
 
-  // R$ 8,00 por IR extra (acima de 50 IRs)
-  if (customConfig.value.tax_declarations_yearly > 50) {
-    total += (customConfig.value.tax_declarations_yearly - 50) * 800
+  // Prevenir Arbitragem: Preço não pode ser menor que o do próximo plano
+  let suggestion = null
+  if (basePlan.nextPlan) {
+    const nextPlan = PLAN_RULES[basePlan.nextPlan as keyof typeof PLAN_RULES]
+
+    // Se o preço calculado por extras já passou do preço do próximo plano, sugerimos upgrade
+    if (total >= nextPlan.basePrice) {
+      suggestion = `Fazer upgrade para o plano ${nextPlan.name} sai mais barato e libera mais recursos.`
+    }
+
+    // Regra de Arbitragem: O preço nunca pode ficar menor que o valor do plano imediatamente superior
+    // (Aplica-se se a configuração atual já atingiu recursos de um plano superior)
+    if (total < nextPlan.basePrice && irCount >= nextPlan.irLimit) {
+      total = nextPlan.basePrice
+    }
   }
 
-  return total
+  return {
+    total,
+    blocked: false,
+    suggestion
+  }
 }
 
 function convertToCustom() {
@@ -66,32 +138,29 @@ function convertToCustom() {
 function toggleUserCustomizer() {
   showUserCustomizer.value = !showUserCustomizer.value
   if (showUserCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
-    customConfig.value.employees = selectedPlan.value.limits?.employees || 1
+    customConfig.value.employees = (selectedPlan.value.limits as any)?.employees || 1
   }
 }
 
 function toggleResourceCustomizer() {
   showResourceCustomizer.value = !showResourceCustomizer.value
   if (showResourceCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
-    customConfig.value.sms_monthly = selectedPlan.value.limits?.sms_monthly || 100
-    customConfig.value.storage_gb = (selectedPlan.value.limits?.storage_mb || 1024) / 1024
-    customConfig.value.tax_declarations_yearly = selectedPlan.value.limits?.tax_declarations_yearly || 50
+    customConfig.value.sms_monthly = (selectedPlan.value.limits as any)?.sms_monthly || 100
+    customConfig.value.storage_gb = ((selectedPlan.value.limits as any)?.storage_mb || 1024) / 1024
+    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.tax_declarations_yearly || 30
   }
 }
 
 // Mapeamento de planos reais para os slots do layout
-// No seed temos: basic, pro, enterprise, free
 const selectedPlan = computed(() => {
-  // Se o plano selecionado existe na lista vinda da API, use ele
-  const apiPlan = plans.value.find(p => p.slug === customRadio.value)
-
   // Se for o plano personalizado (custom)
   if (customRadio.value === 'custom') {
-    const monthlyPrice = calculateCustomPrice()
+    const { total: monthlyPrice, suggestion } = calculateCustomPrice()
     return {
       slug: 'custom',
       name: 'Personalizado',
       description: 'Configuração sob medida para seu escritório.',
+      suggestion,
       pricing: {
         monthly: monthlyPrice,
         quarterly: Math.round(monthlyPrice * 3 * 0.95), // 5% OFF
@@ -108,9 +177,13 @@ const selectedPlan = computed(() => {
     }
   }
 
+  // Se o plano selecionado existe na lista vinda da API
+  const apiPlan = plans.value.find(p => p.slug === customRadio.value)
+
   if (!apiPlan)
     return null
 
+  // Aplicar regra de trava de upgrade visual para planos fixos se houver customização de IRs prévia
   const baseMonthly = apiPlan.pricing.monthly
 
   return {
@@ -130,7 +203,6 @@ const planColor = computed(() => {
       return 'text-success-500'
     case 'basic':
       return 'text-yellow-400'
-    case 'professional':
     case 'pro':
       return 'text-indigo-500'
     case 'enterprise':
@@ -212,7 +284,7 @@ const currentCyclePrice = computed(() => {
 const rawCyclePrice = computed(() => {
   if (!selectedPlan.value || customRadio.value === 'custom') {
     // Para personalizados, o subtotal bruto é o mensal * meses
-    const base = calculateCustomPrice()
+    const { total: base } = calculateCustomPrice()
     switch (billingCycles.value) {
       case 'monthly': return base
       case 'quarterly': return base * 3
@@ -307,8 +379,10 @@ async function handlePayment() {
         storage_mb: customConfig.value.storage_gb * 1024,
         sms_monthly: customConfig.value.sms_monthly,
         employees: customConfig.value.employees,
+        tax_declarations_yearly: customConfig.value.tax_declarations_yearly,
       }
-      params.customPrice = calculateCustomPrice()
+      const { total } = calculateCustomPrice()
+      params.customPrice = total
     }
 
     const result = await subscribe(params)
@@ -769,6 +843,15 @@ const featureMap: Record<string, string> = {
                   </div>
                 </div>
 
+                <!-- Sugestão de Upgrade -->
+                <div v-if="(selectedPlan as any)?.suggestion"
+                  class="mb-6 p-4 bg-primary-500/10 border border-primary-500/20 rounded-xl flex gap-3 animate-in fade-in slide-in-from-top-2 shadow-sm">
+                  <Icon name="solar:star-fall-bold-duotone" class="size-6 text-primary-500 shrink-0" />
+                  <BaseText size="xs" weight="medium" class="text-primary-800 dark:text-primary-300 leading-tight">
+                    {{ (selectedPlan as any).suggestion }}
+                  </BaseText>
+                </div>
+
                 <!-- Itens do Plano -->
                 <div class="space-y-4 mb-8">
                   <div class="flex justify-between items-start">
@@ -795,7 +878,7 @@ const featureMap: Record<string, string> = {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.employees
-                      }}</span>
+                        }}</span>
                     </div>
                     <div class="flex items-center justify-between text-muted-500">
                       <span class="flex items-center gap-2">
@@ -821,7 +904,7 @@ const featureMap: Record<string, string> = {
                       </span>
                       <span class="font-medium text-muted-800 dark:text-white">{{
                         selectedPlan?.limits?.sms_monthly || 0
-                      }}
+                        }}
                         /mês</span>
                     </div>
                   </div>
@@ -861,7 +944,7 @@ const featureMap: Record<string, string> = {
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
                       formatCurrency(rawCyclePrice)
-                    }}</span>
+                      }}</span>
                   </div>
                   <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
                     <span class="font-sans italic">Desconto {{ currentCycleLabel }} ({{
