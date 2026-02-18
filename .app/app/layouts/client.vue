@@ -94,7 +94,7 @@ const menuItems = [
 
     <!-- Bottom Navigation -->
     <nav
-      class="fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-muted-900 border-t border-muted-200 dark:border-muted-800 px-2 py-1 safe-area-pb">
+      class="fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-muted-900 border-t border-muted-200 dark:border-muted-800 px-2 py-2 pb-[env(safe-area-inset-bottom,20px)]">
       <div class="flex items-center justify-around max-w-lg mx-auto">
         <NuxtLink v-for="item in menuItems" :key="item.to" v-slot="{ isActive }" :to="withToken(item.to)"
           class="flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 min-w-[64px]"
