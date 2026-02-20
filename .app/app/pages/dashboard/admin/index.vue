@@ -236,7 +236,7 @@ const plansChart = computed(() => {
       </div>
 
       <!-- Admin Quick Links -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <NuxtLink to="/dashboard/admin/users" class="group">
           <BaseCard class="p-6 border-dashed border-2 hover:border-primary-500 hover:bg-primary-500/5 transition-all">
             <div class="flex flex-col items-center gap-3 text-center">
@@ -247,6 +247,20 @@ const plansChart = computed(() => {
               <div>
                 <BaseHeading as="h3" size="sm">Gerir Usuários</BaseHeading>
                 <BaseText size="xs" class="text-muted-500">Acessos e permissões</BaseText>
+              </div>
+            </div>
+          </BaseCard>
+        </NuxtLink>
+        <NuxtLink to="/dashboard/admin/affiliates" class="group">
+          <BaseCard class="p-6 border-dashed border-2 hover:border-primary-500 hover:bg-primary-500/5 transition-all">
+            <div class="flex flex-col items-center gap-3 text-center">
+              <div
+                class="size-14 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Icon name="solar:medal-star-bold-duotone" class="size-8" />
+              </div>
+              <div>
+                <BaseHeading as="h3" size="sm">Afiliados</BaseHeading>
+                <BaseText size="xs" class="text-muted-500">Gestão e comissões</BaseText>
               </div>
             </div>
           </BaseCard>
