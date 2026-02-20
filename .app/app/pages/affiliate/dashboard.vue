@@ -44,22 +44,43 @@ async function fetchData() {
     stats.value = { ...statsRes.data, ...profileRes.data }
     referrals.value = referRes.data
 
-    // If we have stats, update PIX initial values
-    if (statsRes.data?.pixKey) {
+    // If we have profile data, update PIX initial values
+    if (profileRes.data?.pixKey) {
       resetForm({
         values: {
-          pixKeyType: statsRes.data.pixKeyType || 'CPF',
-          pixKey: statsRes.data.pixKey,
+          pixKeyType: profileRes.data.pixKeyType || 'CPF',
+          pixKey: profileRes.data.pixKey,
         }
       })
     }
   } catch (err) {
     console.error(err)
-    toaster.add({ title: 'Erro ao carregar dados', color: 'danger' })
+    toaster.add({ title: 'Erro ao carregar dados', icon: 'solar:danger-circle-bold' })
   } finally {
     isLoading.value = false
   }
 }
+
+const pixTypeLabels: Record<string, string> = {
+  CPF: 'CPF',
+  EMAIL: 'E-mail',
+  PHONE: 'Telefone',
+  RANDOM: 'Chave Aleatória',
+  CNPJ: 'CNPJ',
+}
+
+const formattedPixType = computed(() => {
+  const type = stats.value?.pixKeyType
+  return pixTypeLabels[type as keyof typeof pixTypeLabels] || type || 'Não configurada'
+})
+
+const pixOptions = [
+  { value: 'CPF', label: 'CPF', icon: 'solar:user-id-bold-duotone' },
+  { value: 'EMAIL', label: 'E-mail', icon: 'solar:letter-bold-duotone' },
+  { value: 'PHONE', label: 'Telefone', icon: 'solar:phone-bold-duotone' },
+  { value: 'RANDOM', label: 'Aleatória', icon: 'solar:key-bold-duotone' },
+  { value: 'CNPJ', label: 'CNPJ', icon: 'solar:shop-bold-duotone' },
+]
 
 // Update PIX
 const onPixSubmit = handlePixSubmit(async (values) => {
@@ -379,7 +400,7 @@ const date = ref(new Date())
 
             <div v-if="stats?.pixKey"
               class="mb-6 p-3 rounded-lg bg-white dark:bg-muted-800 border border-muted-200 dark:border-muted-700">
-              <span class="text-[10px] uppercase font-bold text-muted-400 block mb-1">Chave Atual ({{ stats.pixKeyType
+              <span class="text-[10px] uppercase font-bold text-muted-400 block mb-1">Chave Atual ({{ formattedPixType
                 }})</span>
               <p class="text-sm font-mono font-medium truncate text-muted-800 dark:text-muted-100">{{ stats.pixKey }}
               </p>
@@ -457,14 +478,19 @@ const date = ref(new Date())
                   <BaseParagraph size="xs" weight="medium" class="text-muted-700 dark:text-muted-300">
                     Tipo de Chave
                   </BaseParagraph>
-                  <Field v-slot="{ field, handleChange }" name="pixKeyType">
-                    <BaseListbox :model-value="field.value" @update:model-value="handleChange" :items="[
-                      { label: 'CPF', value: 'CPF' },
-                      { label: 'E-mail', value: 'EMAIL' },
-                      { label: 'Telefone', value: 'PHONE' },
-                      { label: 'Chave Aleatória', value: 'RANDOM' },
-                      { label: 'CNPJ', value: 'CNPJ' }
-                    ]" />
+                  <Field v-slot="{ field }" name="pixKeyType">
+                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      <button v-for="opt in pixOptions" :key="opt.value" type="button"
+                        class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 gap-2"
+                        :class="[
+                          field.value === opt.value
+                            ? 'border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                            : 'border-muted-200 dark:border-muted-800 hover:border-muted-300 dark:hover:border-muted-700 bg-white dark:bg-muted-950 text-muted-500'
+                        ]" @click="field.value = opt.value">
+                        <Icon :name="opt.icon" class="size-6" />
+                        <span class="text-[10px] font-bold uppercase tracking-tight">{{ opt.label }}</span>
+                      </button>
+                    </div>
                   </Field>
                 </div>
 

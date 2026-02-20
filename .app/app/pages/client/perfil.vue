@@ -94,6 +94,29 @@ async function savePixKey() {
   }
 }
 
+async function handleRevealGovPassword() {
+  if (!isGovVisible.value && editedGovPassword.value === '********') {
+    if (!profile.value?.id)
+      return
+
+    try {
+      const { data } = await useCustomFetch<any>(`/clients/${profile.value.id}/reveal-password`)
+      if (data.success) {
+        editedGovPassword.value = data.data.govPassword || ''
+      }
+    }
+    catch (error: any) {
+      console.error('Erro ao revelar senha:', error)
+      add({
+        title: 'Erro',
+        description: error.data?.message || 'Não foi possível revelar a senha.',
+        icon: 'solar:danger-circle-bold-duotone',
+      })
+    }
+  }
+  isGovVisible.value = !isGovVisible.value
+}
+
 async function saveGovPassword() {
   if (!profile.value?.id)
     return
@@ -355,7 +378,7 @@ function handleLogout() {
                       {{ profile.govPassword ? (isGovVisible ? profile.govPassword : '••••••••') : 'Não informada' }}
                     </span>
                     <button v-if="profile.govPassword" class="text-muted-400 hover:text-primary-500"
-                      @click="isGovVisible = !isGovVisible">
+                      @click="handleRevealGovPassword">
                       <Icon :name="isGovVisible ? 'solar:eye-closed-linear' : 'solar:eye-linear'" class="size-4" />
                     </button>
                   </div>

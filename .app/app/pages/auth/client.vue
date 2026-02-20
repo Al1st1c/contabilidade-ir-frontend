@@ -27,9 +27,7 @@ const isLoading = ref(false)
 
 const { add } = useNuiToasts()
 
-// Acessar os cookies diretamente para evitar erros de read-only do composable useAuth
-const token = useCookie(API_CONFIG.TOKEN.COOKIE_NAME)
-const user = useCookie(API_CONFIG.TOKEN.USER_COOKIE_NAME)
+const { token, user } = useAuth()
 
 const authMessage = computed(() => {
   return step.value === 'cpf'
@@ -107,7 +105,7 @@ async function verifyOtp() {
       return
     }
 
-    // Salvar nos cookies seguindo o padrão do useAuth
+    // Salvar no estado e cookies usando useAuth
     token.value = result.access_token
     user.value = {
       ...result.user,
@@ -120,7 +118,10 @@ async function verifyOtp() {
       icon: 'solar:check-circle-bold-duotone',
     })
 
-    navigateTo('/client')
+    // Pequeno delay para garantir que os cookies e o estado foram processados
+    setTimeout(() => {
+      navigateTo('/client')
+    }, 100)
   }
   catch (error: any) {
     add({

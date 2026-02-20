@@ -443,6 +443,29 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
 }
 
 // ─── Save / Delete ────────────────────────────────────────────────────────────
+// ─── Password Reveal ──────────────────────────────────────────────────────────
+async function handleRevealPassword() {
+  if (!showGovPassword.value && form.value.govPassword === '********') {
+    try {
+      const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/reveal-password`)
+      if (data.success) {
+        form.value.govPassword = data.data.govPassword || data.data.clientGovPassword || ''
+        // Update lastSavedForm to avoid immediate save of the revealed password
+        lastSavedForm.value.govPassword = form.value.govPassword
+      }
+    }
+    catch (error: any) {
+      console.error('Erro ao revelar senha:', error)
+      toaster.add({
+        title: 'Erro',
+        description: error.data?.message || 'Não foi possível revelar a senha.',
+        icon: 'solar:danger-circle-bold-duotone',
+      })
+    }
+  }
+  showGovPassword.value = !showGovPassword.value
+}
+
 async function save() {
   isSaving.value = true
   try {
@@ -1636,7 +1659,7 @@ onMounted(() => {
                     size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
                   <button type="button"
                     class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
-                    @click="showGovPassword = !showGovPassword">
+                    @click="handleRevealPassword">
                     <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
                       class="size-4" />
                   </button>

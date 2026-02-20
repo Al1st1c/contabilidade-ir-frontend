@@ -40,6 +40,46 @@ const form = ref({
   govPassword: '',
 })
 
+const isFetchingCep = ref(false)
+
+// Watch ZIP Code for automatic address fetching
+watch(() => form.value.zipCode, async (newVal) => {
+  const cep = newVal.replace(/\D/g, '')
+  if (cep.length === 8) {
+    try {
+      isFetchingCep.value = true
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await response.json()
+
+      if (!data.erro) {
+        form.value.address = data.logradouro || ''
+        form.value.neighborhood = data.bairro || ''
+        form.value.city = data.localidade || ''
+        form.value.state = data.uf || ''
+
+        toaster.add({
+          title: 'Endereço encontrado',
+          description: 'Os campos foram preenchidos automaticamente.',
+          icon: 'solar:check-circle-bold',
+        })
+
+        // Automagically focus the number field if possible
+        // (Accessing DOM directly in Vue is discouraged but sometimes useful for simple focus)
+        setTimeout(() => {
+          const numberInput = document.querySelector('input[placeholder="123"]') as HTMLInputElement
+          if (numberInput) numberInput.focus()
+        }, 300)
+      }
+    }
+    catch (error) {
+      console.error('Erro ao buscar CEP:', error)
+    }
+    finally {
+      isFetchingCep.value = false
+    }
+  }
+})
+
 // Initialize form from client data
 watch(() => props.client, (newVal) => {
   if (newVal) {
@@ -377,7 +417,8 @@ async function skipOnboarding() {
                       CEP
                     </BaseText>
                     <BaseInput v-model="form.zipCode" v-maska="'#####-###'" placeholder="00000-000"
-                      icon="solar:letter-bold-duotone" rounded="lg" size="sm" class="!bg-muted-50 dark:!bg-muted-950" />
+                      icon="solar:letter-bold-duotone" rounded="lg" size="sm" :loading="isFetchingCep"
+                      class="!bg-muted-50 dark:!bg-muted-950" />
                   </div>
 
                   <div class="col-span-12 md:col-span-8">

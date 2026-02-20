@@ -8,7 +8,7 @@ export default defineNuxtRouteMiddleware((to) => {
   const publicRoutes = ['/', '/auth/login', '/auth/register', '/regulamento']
   const isClientPublic = to.path.startsWith('/client') && to.query.token
   if (isClientPublic) {
-    to.meta.layout = 'app'
+    to.meta.layout = 'client'
   }
 
   // Redirecionamento para whitelabel (*.irpf26.com)
