@@ -69,6 +69,9 @@ const emailTotal = computed(() => {
   return plan + prepaid
 })
 
+// IR Credits display
+const irAvailable = computed(() => (currentSubscription.value as any)?.irPrepaidCredits || 0)
+
 onMounted(() => {
   if (!isAffiliateOnly.value) {
     fetchNotificationCount()
@@ -107,6 +110,12 @@ function openSubscription() {
         <Icon name="solar:letter-bold-duotone" class="size-3.5 text-info-400" />
         <span class="text-muted-500 dark:text-muted-400">EMAIL</span>
         <span class="text-muted-800 dark:text-muted-100">{{ emailUsed }}/{{ emailTotal }}</span>
+      </NuxtLink>
+      <NuxtLink to="/dashboard/ir-credits"
+        class="flex items-center gap-1 px-2 py-1 rounded-full bg-success-100 dark:bg-success-900/30 hover:bg-success-200 dark:hover:bg-success-800/40 transition-colors cursor-pointer">
+        <Icon name="solar:document-bold-duotone" class="size-3.5 text-success-500" />
+        <span class="text-success-600 dark:text-success-400">IR</span>
+        <span class="text-success-700 dark:text-success-300 font-bold">{{ irAvailable }}</span>
       </NuxtLink>
     </div>
 

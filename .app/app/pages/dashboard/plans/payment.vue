@@ -9,8 +9,21 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const toaster = useNuiToasts()
+const { user } = useAuth()
 const { plans, currentSubscription, loading: plansLoading, fetchPlans, fetchMySubscription, subscribe, validateCoupon, getPaymentStatus } = useSubscription()
 const { track } = usePixel()
+
+// Owner guard — only account owner can manage subscription
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
+onBeforeMount(() => {
+  if (user.value && !isOwner.value) {
+    router.replace('/dashboard')
+  }
+})
 
 // Integração de estado com o layout original
 const customRadio = ref((route.query.plan as string) || 'enterprise')
@@ -32,41 +45,53 @@ const PLAN_RULES = {
   free: {
     slug: 'free',
     name: 'Gratuito',
+    description: 'Ideal para experimentar as funcionalidades básicas da plataforma.',
     irLimit: 6,
     basePrice: 0,
-    maxIr: 6,
-    nextPlan: 'basic'
+    maxIr: 9,
+    nextPlan: 'basic',
+    hasWhitelabel: false,
+    hasTeamManagement: false
   },
   basic: {
     slug: 'basic',
-    name: 'Básico',
-    irLimit: 30,
-    basePrice: 4900,
-    maxIr: 80,
-    nextPlan: 'pro'
+    name: 'Start',
+    description: 'Plano base para contadores autônomos e pequenos escritórios.',
+    irLimit: 10,
+    basePrice: 2990,
+    maxIr: 12,
+    nextPlan: 'pro',
+    hasWhitelabel: false,
+    hasTeamManagement: false
   },
   pro: {
     slug: 'pro',
     name: 'Profissional',
-    irLimit: 150,
-    basePrice: 24900,
-    maxIr: 250,
-    nextPlan: 'enterprise'
+    description: 'Ideal para escritórios em crescimento que precisam de marca própria.',
+    irLimit: 20,
+    basePrice: 4990,
+    maxIr: 24,
+    nextPlan: 'enterprise',
+    hasWhitelabel: true,
+    hasTeamManagement: true
   },
   enterprise: {
     slug: 'enterprise',
-    name: 'Empresa',
-    irLimit: 350,
-    basePrice: 85000,
+    name: 'Escritório',
+    description: 'Solução completa para escritórios contábeis com grande volume.',
+    irLimit: 30,
+    basePrice: 8990,
     maxIr: Infinity,
-    nextPlan: null
+    nextPlan: null,
+    hasWhitelabel: true,
+    hasTeamManagement: true
   }
 }
 
 function getPlanByIr(ir: number) {
-  if (ir <= 6) return PLAN_RULES.free
-  if (ir <= 80) return PLAN_RULES.basic
-  if (ir <= 250) return PLAN_RULES.pro
+  if (ir <= PLAN_RULES.free.maxIr) return PLAN_RULES.free
+  if (ir <= PLAN_RULES.basic.maxIr) return PLAN_RULES.basic
+  if (ir <= PLAN_RULES.pro.maxIr) return PLAN_RULES.pro
   return PLAN_RULES.enterprise
 }
 
@@ -74,10 +99,10 @@ function calculateCustomPrice() {
   const irCount = customConfig.value.tax_declarations_yearly
   const basePlan = getPlanByIr(irCount)
 
-  // Se for Empresa, preço fixo
+  // Se for Escritório, preço fixo
   if (basePlan.slug === 'enterprise' || customRadio.value === 'enterprise') {
     return {
-      total: 85000,
+      total: 8990,
       blocked: false,
       suggestion: null
     }
@@ -91,19 +116,23 @@ function calculateCustomPrice() {
     total += (irCount - basePlan.irLimit) * 800
   }
 
-  // R$ 6,00 por usuário extra (acima de 1 usuário base para qualquer custom)
-  if (customConfig.value.employees > 1) {
-    total += (customConfig.value.employees - 1) * 600
+  // R$ 6,00 por usuário extra (acimo dos limites do plano)
+  const employeeLimit = basePlan.slug === 'pro' ? 3 : 1
+  if (customConfig.value.employees > employeeLimit) {
+    total += (customConfig.value.employees - employeeLimit) * 600
   }
 
-  // R$ 0,12 por SMS extra (acima de 100 inclusos)
-  if (customConfig.value.sms_monthly > 100) {
-    total += (customConfig.value.sms_monthly - 100) * 12
+  // R$ 0,12 por SMS extra (acima de 50 SMS do Profissional ou 10 do Start)
+  const smsLimit = basePlan.slug === 'pro' ? 50 : 10
+  if (customConfig.value.sms_monthly > smsLimit) {
+    total += (customConfig.value.sms_monthly - smsLimit) * 12
   }
 
-  // R$ 2,50 por GB extra (acima de 5GB)
-  if (customConfig.value.storage_gb > 5) {
-    total += (customConfig.value.storage_gb - 5) * 250
+  // R$ 25,00 por GB extra (acima do baseline do plano)
+  // free: 250MB (0.25GB), basic: 5GB, pro: 20GB
+  const storageLimitGb = basePlan.slug === 'pro' ? 20 : (basePlan.slug === 'basic' ? 5 : 0.25)
+  if (customConfig.value.storage_gb > storageLimitGb) {
+    total += (customConfig.value.storage_gb - storageLimitGb) * 2500
   }
 
   // Prevenir Arbitragem: Preço não pode ser menor que o do próximo plano
@@ -112,14 +141,14 @@ function calculateCustomPrice() {
     const nextPlan = PLAN_RULES[basePlan.nextPlan as keyof typeof PLAN_RULES]
 
     // Se o preço calculado por extras já passou do preço do próximo plano, sugerimos upgrade
-    if (total >= nextPlan.basePrice) {
-      suggestion = `Fazer upgrade para o plano ${nextPlan.name} sai mais barato e libera mais recursos.`
-    }
+    // if (total >= nextPlan.basePrice) {
+    //   suggestion = `Fazer upgrade para o plano ${nextPlan.name} sai mais barato e libera mais recursos.`
+    // }
 
-    // Regra de Arbitragem: O preço nunca pode ficar menor que o valor do plano imediatamente superior
-    // (Aplica-se se a configuração atual já atingiu recursos de um plano superior)
+    // Regra de Arbitragem
     if (total < nextPlan.basePrice && irCount >= nextPlan.irLimit) {
-      total = nextPlan.basePrice
+      // Se ele configurou mais IRs do que o plano atual permite entrar no "range" do próximo, o preço sobe
+      // total = nextPlan.basePrice // Opcional: forçar preço do próximo? Sugestão já resolve.
     }
   }
 
@@ -147,7 +176,7 @@ function toggleResourceCustomizer() {
   if (showResourceCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
     customConfig.value.sms_monthly = (selectedPlan.value.limits as any)?.sms_monthly || 100
     customConfig.value.storage_gb = ((selectedPlan.value.limits as any)?.storage_mb || 1024) / 1024
-    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.tax_declarations_yearly || 30
+    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.ir_bonus_credits || 30
   }
 }
 
@@ -171,9 +200,13 @@ const selectedPlan = computed(() => {
         employees: customConfig.value.employees,
         storage_mb: customConfig.value.storage_gb * 1024,
         sms_monthly: customConfig.value.sms_monthly,
-        tax_declarations_yearly: customConfig.value.tax_declarations_yearly,
+        ir_bonus_credits: customConfig.value.tax_declarations_yearly,
+        hasWhitelabel: true,
+        hasReports: false,
+        hasApi: true,
+        hasTeamManagement: true,
       },
-      features: ['DRIVE', 'KANBAN', 'REPORTS', 'TEAM_MANAGEMENT'],
+      features: ['DRIVE', 'KANBAN', 'TEAM_MANAGEMENT'],
     }
   }
 
@@ -186,14 +219,23 @@ const selectedPlan = computed(() => {
   // Aplicar regra de trava de upgrade visual para planos fixos se houver customização de IRs prévia
   const baseMonthly = apiPlan.pricing.monthly
 
+  const rules = (PLAN_RULES as any)[apiPlan.slug] || {}
+
   return {
     ...apiPlan,
+    name: rules.name || apiPlan.name,
+    description: rules.description || apiPlan.description,
     pricing: {
       monthly: baseMonthly,
       quarterly: Math.round(baseMonthly * 3 * 0.95), // 5% OFF
       semiannual: Math.round(baseMonthly * 6 * 0.92), // 8% OFF
       annual: apiPlan.pricing.annual || Math.round(baseMonthly * 12 * 0.90), // 10% OFF
     },
+    limits: {
+      ...apiPlan.limits,
+      hasWhitelabel: rules.hasWhitelabel ?? (apiPlan.limits as any).hasWhitelabel,
+      hasTeamManagement: rules.hasTeamManagement ?? (apiPlan.limits as any).hasTeamManagement,
+    }
   }
 })
 
@@ -253,7 +295,7 @@ onMounted(async () => {
     customConfig.value.employees = selectedPlan.value.limits?.employees || 1
     customConfig.value.sms_monthly = selectedPlan.value.limits?.sms_monthly || 100
     customConfig.value.storage_gb = (selectedPlan.value.limits?.storage_mb || 1024) / 1024
-    customConfig.value.tax_declarations_yearly = selectedPlan.value.limits?.tax_declarations_yearly || 50
+    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.ir_bonus_credits || 50
   }
 
   isInitialLoading.value = false
@@ -528,7 +570,7 @@ const featureMap: Record<string, string> = {
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
-                  Básico
+                  Start
                 </BaseText>
               </div>
             </TairoRadioCard>
@@ -554,7 +596,7 @@ const featureMap: Record<string, string> = {
               </template>
               <div class="p-2 text-center">
                 <BaseText size="xs" weight="bold">
-                  Empresa
+                  Escritório
                 </BaseText>
               </div>
             </TairoRadioCard>
@@ -583,58 +625,75 @@ const featureMap: Record<string, string> = {
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-y-3 gap-x-8 pt-6 border-t border-muted-100 dark:border-muted-800">
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
+            <div
+              class="grid grid-cols-2 gap-y-3 gap-x-8 pt-6 border-t border-muted-100 dark:border-muted-800 font-sans">
+              <!-- Espaço Drive -->
+              <div class="flex items-center gap-2"
+                :class="selectedPlan?.limits?.storage_mb ? planColor : 'text-rose-500'">
+                <Icon
+                  :name="selectedPlan?.limits?.storage_mb ? 'solar:check-circle-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                  class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
+                  :class="{ 'line-through opacity-50': !selectedPlan?.limits?.storage_mb }">
                   {{ (selectedPlan?.limits?.storage_mb || 0) >= 1024 ? `${Math.round((selectedPlan?.limits?.storage_mb
-                    ||
-                    0)
-                    / 1024)
-                    }GB` : `${selectedPlan?.limits?.storage_mb || 0}MB` }} de Drive
+                    || 0) /
+                    1024)}GB` : `${selectedPlan?.limits?.storage_mb || 0}MB` }} de Drive
                 </BaseText>
               </div>
+
+              <!-- Usuários -->
+              <div class="flex items-center gap-2"
+                :class="selectedPlan?.limits?.employees ? planColor : 'text-rose-500'">
+                <Icon
+                  :name="selectedPlan?.limits?.employees ? 'solar:check-circle-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                  class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
+                  :class="{ 'line-through opacity-50': !selectedPlan?.limits?.employees }">
+                  {{ selectedPlan?.limits?.employees || 0 }} Usuários inclusos
+                </BaseText>
+              </div>
+
+              <!-- Declarações IR -->
+              <div class="flex items-center gap-2"
+                :class="(selectedPlan?.limits as any)?.ir_bonus_credits ? planColor : 'text-rose-500'">
+                <Icon
+                  :name="(selectedPlan?.limits as any)?.ir_bonus_credits ? 'solar:check-circle-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                  class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
+                  :class="{ 'line-through opacity-50': !(selectedPlan?.limits as any)?.ir_bonus_credits }">
+                  {{ (selectedPlan?.limits as any)?.ir_bonus_credits || 0 }} IRs de bônus
+                </BaseText>
+              </div>
+
+              <!-- SMS Mensal -->
+              <div class="flex items-center gap-2"
+                :class="selectedPlan?.limits?.sms_monthly ? planColor : 'text-rose-500'">
+                <Icon
+                  :name="selectedPlan?.limits?.sms_monthly ? 'solar:check-circle-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                  class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
+                  :class="{ 'line-through opacity-50': !selectedPlan?.limits?.sms_monthly }">
+                  {{ selectedPlan?.limits?.sms_monthly || 0 }} SMS /mês
+                </BaseText>
+              </div>
+
+              <!-- Marca Própria -->
+              <div class="flex items-center gap-2"
+                :class="selectedPlan?.limits?.hasWhitelabel ? planColor : 'text-rose-500'">
+                <Icon
+                  :name="selectedPlan?.limits?.hasWhitelabel ? 'solar:check-circle-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                  class="size-4" />
+                <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
+                  :class="{ 'line-through opacity-50': !selectedPlan?.limits?.hasWhitelabel }">
+                  Personalização (White Label)
+                </BaseText>
+              </div>
+
+              <!-- Kanban (Gestão de Processos) - Sempre incluído conforme feedback -->
               <div class="flex items-center gap-2" :class="planColor">
                 <Icon name="solar:check-circle-bold-duotone" class="size-4" />
                 <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ selectedPlan?.limits?.employees || 0
-                  }} Usuários
-                  inclusos
-                </BaseText>
-              </div>
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ selectedPlan?.limits?.tax_declarations_yearly || 0 }} Declarações/ano
-                </BaseText>
-              </div>
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  {{ selectedPlan?.limits?.sms_monthly || 0
-                  }} SMS
-                  /mês
-                </BaseText>
-              </div>
-              <template v-for="feature in selectedPlan?.features" :key="feature">
-                <div v-if="featureMap[feature] && feature !== 'DRIVE' && feature !== 'SMS'"
-                  class="flex items-center gap-2" :class="planColor">
-                  <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                  <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                    {{ featureMap[feature] }}
-                  </BaseText>
-                </div>
-              </template>
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  Suporte prioritário
-                </BaseText>
-              </div>
-              <div class="flex items-center gap-2" :class="planColor">
-                <Icon name="solar:check-circle-bold-duotone" class="size-4" />
-                <BaseText size="xs" class="text-muted-500 dark:text-muted-400">
-                  Backups diários
+                  Gestão de Processos (Kanban)
                 </BaseText>
               </div>
             </div>
@@ -723,11 +782,11 @@ const featureMap: Record<string, string> = {
                 </BaseText>
                 <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS"
                   @update:model-value="convertToCustom" />
-                <BaseText size="xs" class="text-muted-500 mb-2">
+                <!-- <BaseText size="xs" class="text-muted-500 mb-2">
                   Declarações IR/ano
                 </BaseText>
                 <BaseInput v-model="customConfig.tax_declarations_yearly" type="number" step="10" min="1"
-                  label="Declarações IR/ano" @update:model-value="convertToCustom" />
+                  label="Declarações IR/ano" @update:model-value="convertToCustom" /> -->
               </div>
             </div>
           </BaseCard>
@@ -780,7 +839,7 @@ const featureMap: Record<string, string> = {
                             Mensal
                           </BaseText>
                         </TairoRadioCard>
-                        <TairoRadioCard value="quarterly"
+                        <!-- <TairoRadioCard value="quarterly"
                           class="p-2 text-center data-[state=checked]:ring-primary-500! relative overflow-hidden">
                           <div
                             class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[7px] font-bold text-white uppercase">
@@ -799,12 +858,12 @@ const featureMap: Record<string, string> = {
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Semestral
                           </BaseText>
-                        </TairoRadioCard>
+                        </TairoRadioCard> -->
                         <TairoRadioCard value="annual"
                           class="p-2 text-center data-[state=checked]:ring-primary-500! relative overflow-hidden">
                           <div
                             class="absolute -right-5 top-1 rotate-45 bg-success-500 px-5 py-0.5 text-[7px] font-bold text-white uppercase">
-                            10% OFF
+                            5% OFF
                           </div>
                           <BaseText size="xs" weight="bold" class="font-sans">
                             Anual
@@ -871,41 +930,80 @@ const featureMap: Record<string, string> = {
                   </div>
 
                   <div class="pt-4 border-t border-muted-100 dark:border-muted-800 space-y-3 font-sans text-xs">
-                    <div class="flex items-center justify-between text-muted-500">
+                    <!-- Usuários ativos -->
+                    <div class="flex items-center justify-between"
+                      :class="selectedPlan?.limits?.employees ? 'text-muted-500' : 'text-rose-500'">
                       <span class="flex items-center gap-2">
-                        <Icon name="solar:users-group-rounded-linear" class="size-4" />
+                        <Icon
+                          :name="selectedPlan?.limits?.employees ? 'solar:users-group-rounded-linear' : 'solar:close-circle-bold-duotone'"
+                          class="size-4" />
                         Usuários ativos
                       </span>
-                      <span class="font-medium text-muted-800 dark:text-white">{{
-                        selectedPlan?.limits?.employees
-                        }}</span>
+                      <span class="font-medium text-muted-800 dark:text-white"
+                        :class="{ 'line-through opacity-50': !selectedPlan?.limits?.employees }">
+                        {{ selectedPlan?.limits?.employees || 0 }}
+                      </span>
                     </div>
-                    <div class="flex items-center justify-between text-muted-500">
+
+                    <!-- Armazenamento Drive -->
+                    <div class="flex items-center justify-between"
+                      :class="selectedPlan?.limits?.storage_mb ? 'text-muted-500' : 'text-rose-500'">
                       <span class="flex items-center gap-2">
-                        <Icon name="solar:database-linear" class="size-4" />
+                        <Icon
+                          :name="selectedPlan?.limits?.storage_mb ? 'solar:database-linear' : 'solar:close-circle-bold-duotone'"
+                          class="size-4" />
                         Armazenamento Drive
                       </span>
-                      <span class="font-medium text-muted-800 dark:text-white">{{
-                        Math.round((selectedPlan?.limits?.storage_mb || 0) / 1024) }} GB</span>
+                      <span class="font-medium text-muted-800 dark:text-white"
+                        :class="{ 'line-through opacity-50': !selectedPlan?.limits?.storage_mb }">
+                        {{ Math.round((selectedPlan?.limits?.storage_mb || 0) / 1024) }} GB
+                      </span>
                     </div>
-                    <div class="flex items-center justify-between text-muted-500">
+
+                    <!-- Franquia de IR -->
+                    <div class="flex items-center justify-between"
+                      :class="(selectedPlan?.limits as any)?.ir_bonus_credits ? 'text-muted-500' : 'text-rose-500'">
                       <span class="flex items-center gap-2">
-                        <Icon name="solar:document-bold-duotone" class="size-4" />
+                        <Icon
+                          :name="(selectedPlan?.limits as any)?.ir_bonus_credits ? 'solar:document-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                          class="size-4" />
                         Franquia de IR
                       </span>
-                      <span class="font-medium text-muted-800 dark:text-white">{{
-                        selectedPlan?.limits?.tax_declarations_yearly
-                        || 0 }} /ano</span>
+                      <span class="font-medium text-muted-800 dark:text-white"
+                        :class="{ 'line-through opacity-50': !(selectedPlan?.limits as any)?.ir_bonus_credits }">
+                        {{ (selectedPlan?.limits as any)?.ir_bonus_credits || 0 }} IRs bônus
+                      </span>
                     </div>
-                    <div class="flex items-center justify-between text-muted-500">
+
+                    <!-- Franquia de SMS -->
+                    <div class="flex items-center justify-between"
+                      :class="selectedPlan?.limits?.sms_monthly ? 'text-muted-500' : 'text-rose-500'">
                       <span class="flex items-center gap-2">
-                        <Icon name="solar:letter-bold-duotone" class="size-4" />
+                        <Icon
+                          :name="selectedPlan?.limits?.sms_monthly ? 'solar:letter-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                          class="size-4" />
                         Franquia de SMS
                       </span>
-                      <span class="font-medium text-muted-800 dark:text-white">{{
-                        selectedPlan?.limits?.sms_monthly || 0
-                        }}
-                        /mês</span>
+                      <span class="font-medium text-muted-800 dark:text-white"
+                        :class="{ 'line-through opacity-50': !selectedPlan?.limits?.sms_monthly }">
+                        {{ selectedPlan?.limits?.sms_monthly || 0 }} /mês
+                      </span>
+                    </div>
+
+                    <!-- Marca Própria -->
+                    <div class="flex items-center justify-between"
+                      :class="selectedPlan?.limits?.hasWhitelabel ? 'text-muted-500' : 'text-rose-500'">
+                      <span class="flex items-center gap-2">
+                        <Icon
+                          :name="selectedPlan?.limits?.hasWhitelabel ? 'solar:verified-check-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                          class="size-4" />
+                        Marca Própria (White Label)
+                      </span>
+                      <span class="font-medium text-muted-800 dark:text-white">
+                        <Icon v-if="selectedPlan?.limits?.hasWhitelabel" name="solar:check-read-linear"
+                          class="size-4 text-success-500" />
+                        <span v-else class="line-through opacity-50">Não incluso</span>
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -12,7 +12,11 @@ export interface PlanLimits {
   sms_monthly: number
   whatsapp_monthly: number
   employees: number
-  tax_declarations_yearly: number
+  ir_bonus_credits: number
+  hasWhitelabel: boolean
+  hasReports: boolean
+  hasApi: boolean
+  hasTeamManagement: boolean
 }
 
 export interface Plan {
@@ -41,9 +45,8 @@ export interface Subscription {
   cancelAtPeriodEnd: boolean
   canceledAt?: string
 
-  // Novos campos de limites explícitos
+  // Campos de limites
   employeesLimit: number
-  taxDeclarationsLimit: number
   smsMonthlyLimit: number
   emailsMonthlyLimit: number
   storageMbLimit: number
@@ -60,6 +63,10 @@ export interface Subscription {
   // Créditos pré-pagos
   smsPrepaidCredits: number
   emailPrepaidCredits: number
+
+  // Créditos de IR
+  irPrepaidCredits: number
+  irTotalPurchased: number
 }
 
 const plans = ref<Plan[]>([])
@@ -234,6 +241,35 @@ export function useSubscription() {
     }
   }
 
+  const getIrPricing = async () => {
+    try {
+      const { data } = await useCustomFetch<any>('/credits/ir/pricing')
+      return { success: true, data }
+    }
+    catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  }
+
+  const purchaseIrCredits = async (quantity: number, paymentMethod: 'PIX' | 'CREDIT_CARD' = 'PIX') => {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await useCustomFetch<any>('/credits/ir/purchase', {
+        method: 'POST',
+        body: { quantity, paymentMethod },
+      })
+      return { success: true, data }
+    }
+    catch (err: any) {
+      error.value = err.data?.message || err.message || 'Erro ao comprar créditos de IR'
+      return { success: false, error: error.value }
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
   const validateCoupon = async (code: string, amount?: number) => {
     loading.value = true
     error.value = null
@@ -270,6 +306,8 @@ export function useSubscription() {
     getPrepaidBalance,
     getPaymentHistory,
     purchaseCredits,
+    getIrPricing,
+    purchaseIrCredits,
     validateCoupon,
   }
 }

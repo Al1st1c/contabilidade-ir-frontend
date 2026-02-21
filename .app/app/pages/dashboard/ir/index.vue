@@ -18,6 +18,8 @@ useSeoMeta({
 
 // Composables
 const { useCustomFetch } = useApi()
+const { user } = useAuth()
+const { currentSubscription, fetchMySubscription } = useSubscription()
 
 // Types
 interface Task {
@@ -61,6 +63,18 @@ const isLoading = ref(true)
 const isMockMode = ref(false)
 const taxYearFilter = ref(new Date().getFullYear())
 const irEndDate = ref('2026-05-31T23:59:59')
+
+// Owner check
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
+// IR Usage / Limits
+const irUsed = computed(() => currentSubscription.value?.yearlyUsage?.tax_declarations || 0)
+// irPrepaidCredits já inclui o bônus do plano + créditos comprados — é o saldo total disponível
+const irTotal = computed(() => (currentSubscription.value as any)?.irPrepaidCredits || 0)
+const irUsagePercent = computed(() => irTotal.value > 0 ? Math.min(100, Math.round((irUsed.value / irTotal.value) * 100)) : 0)
 
 const isOverdue = computed(() => {
   return new Date() > new Date(irEndDate.value)
@@ -496,6 +510,7 @@ onMounted(async () => {
   await Promise.all([
     fetchKanban(),
     fetchTeam(),
+    fetchMySubscription(),
   ])
 })
 
@@ -773,6 +788,35 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
           <Icon name="lucide:filter-x" class="size-4 mr-1" />
           Limpar
         </BaseButton>
+
+        <!-- IR Usage Counter -->
+        <div v-if="currentSubscription"
+          class="flex items-center gap-3 border-l border-muted-200 dark:border-muted-800 pl-4 ml-auto">
+          <div class="flex items-center gap-2">
+            <Icon name="solar:document-text-bold-duotone" class="size-4" :class="[
+              irUsagePercent >= 90 ? 'text-rose-500' : irUsagePercent >= 70 ? 'text-amber-500' : 'text-primary-500'
+            ]" />
+            <div class="flex flex-col">
+              <span class="text-[10px] uppercase text-muted-400 tracking-widest leading-none">Declarações IR</span>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span class="text-sm font-semibold" :class="[
+                  irUsagePercent >= 90 ? 'text-rose-600 dark:text-rose-400' : irUsagePercent >= 70 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-800 dark:text-muted-200'
+                ]">{{ irUsed }}</span>
+                <span class="text-[10px] text-muted-400">/</span>
+                <span class="text-xs text-muted-500">{{ irTotal }}</span>
+                <div class="w-16 h-1.5 bg-muted-200 dark:bg-muted-700 rounded-full overflow-hidden ml-1">
+                  <div class="h-full rounded-full transition-all duration-500" :class="[
+                    irUsagePercent >= 90 ? 'bg-rose-500' : irUsagePercent >= 70 ? 'bg-amber-500' : 'bg-primary-500'
+                  ]" :style="{ width: `${irUsagePercent}%` }" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <NuxtLink v-if="isOwner && irUsagePercent >= 70" to="/dashboard/ir-credits"
+            class="text-[10px] text-primary-500 hover:text-primary-600 hover:underline whitespace-nowrap">
+            + Créditos
+          </NuxtLink>
+        </div>
 
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="flex items-center gap-3">

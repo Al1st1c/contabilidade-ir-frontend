@@ -153,17 +153,23 @@ function calculatePercentage(current: number | undefined, max: number | undefine
                   :model-value="calculatePercentage(currentSubscription.monthlyUsage?.employees, currentSubscription.employeesLimit)" />
               </div>
 
-              <!-- Declarations -->
+              <!-- Declarations (pré-pago) -->
               <div class="space-y-1">
                 <div class="flex justify-between text-xs">
-                  <span class="text-muted-500">Declarações de IR</span>
+                  <span class="text-muted-500">Declarações IR</span>
                   <span class="font-medium">
                     {{ currentSubscription.yearlyUsage?.tax_declarations || 0 }} / {{
-                      currentSubscription.taxDeclarationsLimit || 0 }}
+                      currentSubscription.irPrepaidCredits || 0 }} créditos
                   </span>
                 </div>
                 <BaseProgress size="xs" variant="primary"
-                  :model-value="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.taxDeclarationsLimit)" />
+                  :class="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.irPrepaidCredits) >= 90 ? '[&>div]:bg-amber-500' : ''"
+                  :model-value="calculatePercentage(currentSubscription.yearlyUsage?.tax_declarations, currentSubscription.irPrepaidCredits)" />
+                <p v-if="(currentSubscription.irPrepaidCredits || 0) - (currentSubscription.yearlyUsage?.tax_declarations || 0) <= 2"
+                  class="text-xs text-amber-500 mt-1">
+                  Créditos baixos. <NuxtLink to="/dashboard/credits" class="underline font-medium">Comprar mais.
+                  </NuxtLink>
+                </p>
               </div>
 
               <!-- SMS -->

@@ -13,7 +13,21 @@ useSeoMeta({
   ogDescription: 'Conheça nossos planos e escolha o ideal para o seu tamanho. Do contador autônomo ao grande escritório, temos a solução para sua gestão de IR.',
 })
 
+const router = useRouter()
+const { user } = useAuth()
 const { plans, currentSubscription, loading, error, fetchPlans, fetchMySubscription, selectFreePlan } = useSubscription()
+
+// Owner guard — only account owner can manage plans
+const isOwner = computed(() => {
+  const roleName = user.value?.role?.name?.toLowerCase()
+  return roleName === 'master' || user.value?.isAdmin
+})
+
+onBeforeMount(() => {
+  if (user.value && !isOwner.value) {
+    router.replace('/dashboard')
+  }
+})
 const pricingMode = ref('free') // Default to free now
 const isCustom = ref(false)
 
@@ -25,12 +39,18 @@ const customConfig = ref({
 
 const customPrice = computed(() => {
   if (pricingMode.value === 'enterprise') {
-    return 85000 // R$ 850,00 fixo
+    return 8990 // R$ 89,90
   }
 
-  const base = 4900 // R$ 49,00 base
-  const storageCost = customConfig.value.storage_gb * 250 // R$ 2,50 por GB
-  const smsCost = customConfig.value.sms_count * 12 // R$ 0,12 por SMS
+  // Preço base (Start)
+  let base = 2990 // R$ 29,90
+
+  // R$ 25,00 por GB extra (acima de 5GB do Start)
+  const storageCost = customConfig.value.storage_gb > 5 ? (customConfig.value.storage_gb - 5) * 2500 : 0
+
+  // R$ 0,12 por SMS extra (acima de 10 do Start)
+  const smsCost = customConfig.value.sms_count > 10 ? (customConfig.value.sms_count - 10) * 12 : 0
+
   return base + storageCost + smsCost
 })
 
@@ -96,11 +116,38 @@ async function handleConfirm() {
   }
 }
 
+const PLAN_FEATURES: Record<string, any> = {
+  free: {
+    hasWhitelabel: false,
+    hasTeamManagement: false
+  },
+  basic: {
+    hasWhitelabel: false,
+    hasTeamManagement: false
+  },
+  pro: {
+    hasWhitelabel: true,
+    hasTeamManagement: true
+  },
+  enterprise: {
+    hasWhitelabel: true,
+    hasTeamManagement: true
+  }
+}
+
 const filteredPlans = computed(() => {
   const targets = ['free', 'basic', 'pro']
   return plans.value
     .filter(p => targets.includes(p.slug))
     .sort((a, b) => targets.indexOf(a.slug) - targets.indexOf(b.slug))
+    .map(p => ({
+      ...p,
+      limits: {
+        ...p.limits,
+        hasWhitelabel: PLAN_FEATURES[p.slug]?.hasWhitelabel ?? (p.limits as any).hasWhitelabel,
+        hasTeamManagement: PLAN_FEATURES[p.slug]?.hasTeamManagement ?? (p.limits as any).hasTeamManagement,
+      }
+    }))
 })
 
 function getPlanIcon(slug: string) {
@@ -207,28 +254,67 @@ function getPlanPrice(plan: any) {
                         </BaseText>
                       </div>
 
-                      <ul class="w-full text-left space-y-3 mt-4 border-t border-muted-200 dark:border-muted-800 pt-6">
-                        <li v-if="plan.limits.tax_declarations_yearly" class="flex items-center gap-2 text-xs">
-                          <Icon name="solar:document-text-bold-duotone" class="size-4 text-primary-500" />
-                          <span class="text-muted-600 dark:text-muted-300">{{ plan.limits.tax_declarations_yearly }}
-                            Declarações /ano</span>
+                      <ul
+                        class="w-full text-left space-y-3 mt-4 border-t border-muted-200 dark:border-muted-800 pt-6 font-sans">
+                        <!-- Declarações IR -->
+                        <li class="flex items-center gap-2 text-xs">
+                          <Icon
+                            :name="plan.limits.ir_bonus_credits ? 'solar:document-text-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                            class="size-4"
+                            :class="plan.limits.ir_bonus_credits ? 'text-primary-500' : 'text-rose-500'" />
+                          <span
+                            :class="plan.limits.ir_bonus_credits ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
+                            {{ plan.limits.ir_bonus_credits || 0 }} Declarações inclusas
+                          </span>
                         </li>
-                        <li v-if="plan.limits.storage_mb" class="flex items-center gap-2 text-xs">
-                          <Icon name="solar:database-bold-duotone" class="size-4 text-primary-500" />
-                          <span v-if="plan.limits.storage_mb >= 1024" class="text-muted-600 dark:text-muted-300">{{
-                            Math.round(plan.limits.storage_mb / 1024) }}GB Space</span>
-                          <span v-else class="text-muted-600 dark:text-muted-300">{{ plan.limits.storage_mb }}MB
-                            Space</span>
+
+                        <!-- Espaço DRIVE -->
+                        <li class="flex items-center gap-2 text-xs">
+                          <Icon
+                            :name="plan.limits.storage_mb ? 'solar:database-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                            class="size-4" :class="plan.limits.storage_mb ? 'text-primary-500' : 'text-rose-500'" />
+                          <span
+                            :class="plan.limits.storage_mb ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
+                            <template v-if="plan.limits.storage_mb">
+                              {{ plan.limits.storage_mb >= 1024 ? Math.round(plan.limits.storage_mb / 1024) + 'GB' :
+                                plan.limits.storage_mb + 'MB' }} DRIVE
+                            </template>
+                            <template v-else>Espaço DRIVE</template>
+                          </span>
                         </li>
-                        <li v-if="plan.limits.sms_monthly" class="flex items-center gap-2 text-xs">
-                          <Icon name="solar:letter-bold-duotone" class="size-4 text-primary-500" />
-                          <span class="text-muted-600 dark:text-muted-300">{{ plan.limits.sms_monthly }} SMS /mês</span>
+
+                        <!-- SMS Mensal -->
+                        <li class="flex items-center gap-2 text-xs">
+                          <Icon
+                            :name="plan.limits.sms_monthly ? 'solar:letter-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                            class="size-4" :class="plan.limits.sms_monthly ? 'text-primary-500' : 'text-rose-500'" />
+                          <span
+                            :class="plan.limits.sms_monthly ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
+                            {{ plan.limits.sms_monthly || 0 }} SMS /mês
+                          </span>
                         </li>
-                        <li v-if="plan.limits.employees" class="flex items-center gap-2 text-xs">
-                          <Icon name="solar:users-group-rounded-bold-duotone" class="size-4 text-primary-500" />
-                          <span class="text-muted-600 dark:text-muted-300">{{ plan.limits.employees }} {{
-                            plan.limits.employees > 1
-                              ? 'Usuários' : 'Usuário' }}</span>
+
+                        <!-- Usuários -->
+                        <li class="flex items-center gap-2 text-xs">
+                          <Icon
+                            :name="plan.limits.employees ? 'solar:users-group-rounded-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                            class="size-4" :class="plan.limits.employees ? 'text-primary-500' : 'text-rose-500'" />
+                          <span
+                            :class="plan.limits.employees ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
+                            {{ plan.limits.employees || 0 }} {{ (plan.limits.employees || 0) > 1 ? 'Usuários' :
+                              'Usuário' }}
+                          </span>
+                        </li>
+
+                        <!-- Marca Própria -->
+                        <li class="flex items-center gap-2 text-xs">
+                          <Icon
+                            :name="plan.limits.hasWhitelabel ? 'solar:verified-check-bold-duotone' : 'solar:close-circle-bold-duotone'"
+                            class="size-4" :class="plan.limits.hasWhitelabel ? 'text-primary-500' : 'text-rose-500'" />
+                          <span
+                            :class="plan.limits.hasWhitelabel ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
+                            Personalização (White Label)
+                          </span>
                         </li>
                       </ul>
                     </div>

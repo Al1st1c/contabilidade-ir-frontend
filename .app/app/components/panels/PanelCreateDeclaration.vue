@@ -437,7 +437,7 @@ async function createDeclaration() {
       })
 
       if (linkResponse.data.success) {
-        generatedLink.value = `${window.location.origin}${linkResponse.data.data.url}`
+        generatedLink.value = linkResponse.data.data.url
 
         // Auto-copy to clipboard (silently ignore if blocked)
         try {
@@ -467,7 +467,7 @@ async function createDeclaration() {
     console.log(error)
     toaster.add({
       title: 'Erro',
-      description: error.data?.message || 'Erro ao criar declaração',
+      description: error?.message || 'Erro ao criar declaração',
       icon: 'ph:warning-circle-fill',
     })
   }
