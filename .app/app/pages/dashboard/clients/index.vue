@@ -65,6 +65,7 @@ const query = computed(() => {
 
 const data = ref<any>({ data: [], pagination: { total: 0 } })
 const isLoading = ref(true)
+const isImportModalOpen = ref(false)
 
 async function fetchClients() {
   isLoading.value = true
@@ -132,6 +133,10 @@ function formatCpf(cpf: string): string {
             class="w-full sm:w-auto shadow-lg shadow-primary-500/20">
             <Icon name="lucide:plus" class="size-4 mr-1" />
             <span>Cadastrar Cliente</span>
+          </BaseButton>
+          <BaseButton variant="muted" class="w-full sm:w-auto" @click="isImportModalOpen = true">
+            <Icon name="solar:import-bold-duotone" class="size-4 mr-1" />
+            <span>Importar</span>
           </BaseButton>
         </div>
       </div>
@@ -326,5 +331,7 @@ function formatCpf(cpf: string): string {
         </div>
       </div>
     </div>
+
+    <ClientImportModal :open="isImportModalOpen" @close="isImportModalOpen = false" @refresh="fetchClients" />
   </ClientOnly>
 </template>
