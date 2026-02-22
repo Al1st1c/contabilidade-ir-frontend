@@ -625,6 +625,16 @@ const featureMap: Record<string, string> = {
               </div>
             </div>
 
+            <!-- Minimalist IDPF Info Alert -->
+            <div
+              class="mb-6 p-3 bg-muted-100 dark:bg-muted-800/50 rounded-lg flex items-start gap-3 border border-muted-200 dark:border-muted-700">
+              <Icon name="solar:info-circle-bold-duotone" class="size-4 text-primary-500 mt-0.5 shrink-0" />
+              <BaseParagraph size="xs" class="text-muted-600 dark:text-muted-400 leading-tight">
+                <strong>Nota:</strong> Esta assinatura garante o acesso à plataforma e ferramentas.
+                As declarações de IRPF são cobradas separadamente por demanda (conforme volume utilizado).
+              </BaseParagraph>
+            </div>
+
             <div
               class="grid grid-cols-2 gap-y-3 gap-x-8 pt-6 border-t border-muted-100 dark:border-muted-800 font-sans">
               <!-- Espaço Drive -->
@@ -685,7 +695,7 @@ const featureMap: Record<string, string> = {
                   class="size-4" />
                 <BaseText size="xs" class="text-muted-500 dark:text-muted-400"
                   :class="{ 'line-through opacity-50': !selectedPlan?.limits?.hasWhitelabel }">
-                  Personalização (White Label)
+                  Sistema com marca própria (Whitelabel)
                 </BaseText>
               </div>
 
@@ -1069,9 +1079,12 @@ const featureMap: Record<string, string> = {
                       {{ formatCurrency(finalTotal) }}
                     </BaseText>
                   </div>
-                  <BaseParagraph size="xs" class="text-muted-400 text-right font-sans italic opacity-70">
+                  <BaseParagraph size="xs" class="text-muted-400 text-right font-sans italic opacity-70 mb-1">
                     {{ paymentMethod === 'CREDIT_CARD' ? 'Assinatura Recorrente' : 'Pagamento' }} via {{ paymentMethod
                       === 'CREDIT_CARD' ? 'Cartão (Stripe)' : paymentMethod }}
+                  </BaseParagraph>
+                  <BaseParagraph size="xs" class="text-muted-400 text-right font-sans text-[10px] opacity-60">
+                    *Exclui custos de declarações IRPF sob demanda
                   </BaseParagraph>
                 </div>
 

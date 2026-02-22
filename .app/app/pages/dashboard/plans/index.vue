@@ -184,8 +184,10 @@ function getPlanPrice(plan: any) {
         <BaseHeading tag="h2" size="2xl" weight="medium" class="mb-2 text-muted-900 dark:text-white">
           Escolha o Plano Ideal
         </BaseHeading>
-        <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-8">
-          Comece agora gratuitamente ou escolha um plano profissional para mais recursos.
+        <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-8 max-w-2xl mx-auto">
+          A assinatura garante seu acesso à plataforma, armazenamento em nuvem e ferramentas de gestão.
+          As declarações de IRPF são cobradas separadamente por demanda, permitindo que você pague apenas pelo que
+          utilizar.
         </BaseParagraph>
       </div>
 
@@ -237,7 +239,7 @@ function getPlanPrice(plan: any) {
                         :alt="plan.name">
 
                       <BaseHeading size="lg" weight="medium" class="text-muted-900 dark:text-white mb-2">
-                        {{ plan.name }}
+                        Plano {{ plan.name }}
                       </BaseHeading>
 
                       <BaseParagraph size="xs" lead="snug"
@@ -310,27 +312,136 @@ function getPlanPrice(plan: any) {
                         <li class="flex items-center gap-2 text-xs">
                           <Icon
                             :name="plan.limits.hasWhitelabel ? 'solar:verified-check-bold-duotone' : 'solar:close-circle-bold-duotone'"
-                            class="size-4" :class="plan.limits.hasWhitelabel ? 'text-primary-500' : 'text-rose-500'" />
+                            class="size-4" :class="plan.limits.hasWhitelabel ? 'text-green-500' : 'text-rose-500'" />
                           <span
                             :class="plan.limits.hasWhitelabel ? 'text-muted-600 dark:text-muted-300' : 'text-muted-400 line-through decoration-muted-300/50'">
-                            Personalização (White Label)
+                            Sua marca: Logo e cores personalizadas
                           </span>
                         </li>
                       </ul>
+
+                      <div
+                        class="mt-4 pt-4 border-t border-muted-200 dark:border-muted-800 text-[10px] text-muted-400 text-center italic">
+                        *Excedentes de IRPF cobrados separadamente
+                      </div>
                     </div>
                   </TairoRadioCard>
                 </BaseRadioGroup>
 
-                <div class="mx-auto flex flex-col items-center pt-4">
-                  <BaseButton rounded="lg" class="h-12 w-64 text-lg font-bold shadow-xl shadow-primary-500/20"
-                    variant="primary" @click="handleConfirm">
-                    {{ pricingMode === currentSubscription?.plan.slug ? 'Manter Plano Atual' : 'Migrar para este Plano'
-                    }}
+                <div class="mx-auto flex flex-col items-center pt-8">
+                  <BaseButton rounded="lg" variant="primary"
+                    class="h-12 w-80 text-lg font-bold shadow-xl shadow-primary-500/20" @click="handleConfirm">
+                    {{ pricingMode === currentSubscription?.plan.slug ? 'Manter Plano Atual' :
+                      'Confirmar Seleção do Plano' }}
                   </BaseButton>
                   <NuxtLink to="/dashboard/plans/payment?plan=custom"
                     class="text-muted-400 hover:text-primary-500 mt-6 text-sm font-medium underline-offset-4 transition-colors duration-300 hover:underline">
                     Precisa de limites maiores? Monte seu plano personalizado
                   </NuxtLink>
+                </div>
+
+                <!-- Section: IR Pricing -->
+                <div class="mt-20 max-w-5xl mx-auto">
+                  <BaseCard rounded="lg"
+                    class="p-6 md:p-10 border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950">
+                    <div class="grid gap-8 lg:grid-cols-12 items-center">
+                      <div class="lg:col-span-5">
+                        <div
+                          class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success-100 dark:bg-success-500/10 text-success-600 dark:text-success-400 text-[10px] font-bold uppercase mb-4">
+                          <Icon name="solar:cart-large-2-bold-duotone" class="size-4" />
+                          <span>Compra por Demanda</span>
+                        </div>
+                        <BaseHeading tag="h3" size="2xl" weight="medium" class="text-muted-900 dark:text-white mb-2">
+                          Declarações de IRPF
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400 leading-relaxed">
+                          Sua assinatura mantém toda a infraestrutura ativa. As declarações são adquiridas conforme a
+                          necessidade do seu escritório.
+                          <br><br>
+                          Quanto maior o volume de declarações, menor o custo unitário. Os créditos não expiram e podem
+                          ser
+                          usados durante toda a temporada.
+                        </BaseParagraph>
+                      </div>
+
+                      <div class="lg:col-span-7">
+                        <div class="overflow-x-auto">
+                          <table class="w-full text-left border-collapse">
+                            <thead>
+                              <tr
+                                class="border-b-2 border-muted-200 dark:border-muted-800 text-[11px] uppercase tracking-wider text-muted-400">
+                                <th class="py-3 px-4 font-semibold">Faixa de Volume</th>
+                                <th class="py-3 px-4 font-semibold text-right">Preço por IR</th>
+                              </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                              <tr class="border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  1 a 9 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 7,90</td>
+                              </tr>
+                              <tr
+                                class="bg-muted-50 dark:bg-muted-900/40 border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  10 a 24 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 6,90</td>
+                              </tr>
+                              <tr class="border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  25 a 49 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 5,90</td>
+                              </tr>
+                              <tr
+                                class="bg-muted-50 dark:bg-muted-900/40 border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  50 a 99 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 4,90</td>
+                              </tr>
+                              <tr class="border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  100 a 249 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 4,20</td>
+                              </tr>
+                              <tr
+                                class="bg-muted-50 dark:bg-muted-900/40 border-b border-muted-100 dark:border-muted-900 group">
+                                <td
+                                  class="py-3 px-4 text-muted-600 dark:text-muted-400 group-hover:text-muted-900 dark:group-hover:text-white transition-colors">
+                                  250 a 499 declarações</td>
+                                <td class="py-3 px-4 text-right font-medium text-muted-900 dark:text-white">R$ 3,79</td>
+                              </tr>
+                              <tr class="group">
+                                <td
+                                  class="py-3 px-4 font-semibold text-muted-900 dark:text-white group-hover:text-primary-500 transition-colors">
+                                  500+ declarações</td>
+                                <td class="py-3 px-4 text-right font-bold text-success-600 dark:text-success-400">R$
+                                  3,19</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </BaseCard>
+
+                  <div
+                    class="mt-8 flex flex-col md:flex-row items-center justify-between p-6 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 gap-4">
+                    <div class="text-center md:text-left">
+                      <BaseHeading tag="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-1">
+                        Operação em larga escala?
+                      </BaseHeading>
+                      <BaseParagraph size="xs" class="text-muted-500 dark:text-muted-400">
+                        Para mais de 500 declarações, temos condições especiais e onboarding dedicado.
+                      </BaseParagraph>
+                    </div>
+                    <BaseButton rounded="lg" variant="primary" href="https://wa.me/551132808396" target="_blank">
+                      Falar com Consultor
+                    </BaseButton>
+                  </div>
                 </div>
               </div>
             </div>
