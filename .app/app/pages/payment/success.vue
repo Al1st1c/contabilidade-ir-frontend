@@ -24,7 +24,14 @@ async function verifyPayment() {
       if (res.data?.status === 'PAID') {
         verificationStatus.value = 'SUCCESS'
         await fetchUser()
-        setTimeout(() => router.push('/dashboard'), 5000)
+        setTimeout(() => {
+          const pendingIr = localStorage.getItem('pendingIrPurchase')
+          if (pendingIr) {
+            router.push(`/dashboard/ir-credits?quantity=${pendingIr}`)
+          } else {
+            router.push('/dashboard')
+          }
+        }, 5000)
         return
       }
     } catch (e) {
@@ -39,7 +46,14 @@ async function verifyPayment() {
 
     if (sub?.status === 'ACTIVE') {
       verificationStatus.value = 'SUCCESS'
-      setTimeout(() => router.push('/dashboard'), 5000)
+      setTimeout(() => {
+        const pendingIr = localStorage.getItem('pendingIrPurchase')
+        if (pendingIr) {
+          router.push(`/dashboard/ir-credits?quantity=${pendingIr}`)
+        } else {
+          router.push('/dashboard')
+        }
+      }, 5000)
     } else {
       // Se ainda não está ativa, tenta novamente em alguns segundos (pode ser delay do webhook)
       verificationStatus.value = 'PENDING'

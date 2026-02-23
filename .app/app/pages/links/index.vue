@@ -18,7 +18,7 @@ const links = [
   },
   {
     title: 'Criar conta com 5% de desconto',
-    url: 'https://r.gestorirpf.com.br',
+    url: 'https://r.gestorirpf.com.br/cadastro',
     icon: 'solar:user-plus-bold-duotone',
     color: 'success'
   },
