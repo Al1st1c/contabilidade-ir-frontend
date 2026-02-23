@@ -32,9 +32,17 @@ const pricingTiers = ref<any[]>([])
 const balance = ref<any>(null)
 const pixResult = ref<any>(null)
 
+const route = useRoute()
+
 onMounted(async () => {
   if (!isOwner.value) return
   isLoading.value = true
+
+  if (route.query.quantity) {
+    quantity.value = parseInt(route.query.quantity as string) || 10
+    localStorage.removeItem('pendingIrPurchase')
+  }
+
   await Promise.all([fetchMySubscription(), loadPricing(), loadBalance()])
   isLoading.value = false
 })
