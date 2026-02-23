@@ -161,7 +161,7 @@ function getPlanIcon(slug: string) {
 
 function getPlanPrice(plan: any) {
   if (plan.slug === 'free')
-    return 'Grátis'
+    return 'R$ 0,00'
   return (plan.pricing.monthly / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 </script>
