@@ -463,7 +463,7 @@ const onSubmit = (async () => {
         planSlug: selectedPlan.value,
         billingPeriod: billingCycle.value,
         paymentMethod: !isPaymentRequired.value ? 'FREE' : paymentMethod.value,
-        couponCode: appliedCoupon.value?.code,
+        couponCode: appliedCoupon.value?.code || couponCode.value,
       },
     })
 
