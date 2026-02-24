@@ -151,6 +151,11 @@ export default defineNuxtConfig({
     },
   },
 
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
+  },
+
   vite: {
     css: {
       // LightningCSS is a rust based CSS minifier that is faster than the default CSS minifier.
