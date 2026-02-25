@@ -7,14 +7,50 @@ const props = defineProps<{
 }>()
 
 const { close } = usePanels()
-const { fetchMySubscription, currentSubscription, getPaymentHistory, getPaymentStatus, loading } = useSubscription()
+const { fetchMySubscription, currentSubscription, getPaymentHistory, getPaymentStatus, subscribe, loading } = useSubscription()
 const { fetchUser } = useAuth()
 const toaster = useNuiToasts()
 
 const payments = ref<any[]>([])
 const isLoadingPayments = ref(false)
+const isGeneratingPayment = ref(false)
 const selectedPayment = ref<any>(null)
 const isCheckingStatus = ref(false)
+
+async function generatePayment(method: 'PIX' | 'CREDIT_CARD' | 'BOLETO') {
+  if (!currentSubscription.value || isGeneratingPayment.value) return
+
+  isGeneratingPayment.value = true
+  isLoadingPayments.value = true
+
+  try {
+    const params: any = {
+      planSlug: currentSubscription.value.plan.slug,
+      billingPeriod: currentSubscription.value.billingPeriod,
+      paymentMethod: method,
+    }
+
+    const res = await subscribe(params)
+    if (res.success) {
+      await loadData()
+
+      if (method === 'CREDIT_CARD' && res.data?.paymentData?.checkoutUrl) {
+        window.open(res.data.paymentData.checkoutUrl, '_blank')
+      }
+    } else {
+      toaster.add({
+        title: 'Erro ao gerar pagamento',
+        description: res.error || 'Ocorreu um erro inesperado',
+        icon: 'ph:warning-circle-fill'
+      })
+    }
+  } catch (err) {
+    console.error('Erro ao gerar pagamento:', err)
+  } finally {
+    isGeneratingPayment.value = false
+    isLoadingPayments.value = false
+  }
+}
 
 // PIX Timer
 const pixTimeRemaining = ref(900) // 15 min default
@@ -147,6 +183,18 @@ const checkoutUrl = computed(() =>
   selectedPayment.value?.paymentData?.paymentLinkUrl
 )
 
+const totalAmount = computed(() => {
+  if (selectedPayment.value) return selectedPayment.value.amount
+
+  if (currentSubscription.value?.plan?.pricing) {
+    const period = currentSubscription.value.billingPeriod?.toLowerCase() || 'monthly'
+    const pricing = currentSubscription.value.plan.pricing as any
+    return pricing[period] || pricing['monthly'] || 0
+  }
+
+  return 0
+})
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount / 100)
 }
@@ -159,7 +207,7 @@ function formatCurrency(amount: number) {
     <!-- Loading Overlay interno -->
     <div v-if="isLoadingPayments"
       class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/90 dark:bg-muted-950/90 backdrop-blur-sm">
-      <AppPageLoading message="Gerando PIX..." />
+      <AppPageLoading :message="isGeneratingPayment ? 'Processando...' : 'Aguarde...'" />
     </div>
 
     <!-- Header Compacto -->
@@ -194,7 +242,7 @@ function formatCurrency(amount: number) {
               <div class="text-right">
                 <p class="text-[9px] uppercase tracking-wider text-muted-400 mb-0.5">Total</p>
                 <p class="text-xl font-bold text-muted-900 dark:text-white leading-none">
-                  {{ formatCurrency(selectedPayment?.amount || 0) }}
+                  {{ formatCurrency(totalAmount) }}
                 </p>
               </div>
               <div
@@ -224,7 +272,50 @@ function formatCurrency(amount: number) {
                 </div>
               </div>
               <span class="font-bold text-sm text-muted-900 dark:text-white shrink-0">{{ formatCurrency(p.amount)
-              }}</span>
+                }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Checkout Direto (Caso não haja pagamento mas a assinatura esteja pendente) -->
+        <div v-if="!selectedPayment && !pendingPayments.length && currentSubscription?.status === 'PENDING_PAYMENT'"
+          class="space-y-6 pt-2">
+          <div class="text-center bg-primary-500/5 border border-primary-500/10 rounded-2xl p-6">
+            <div class="size-14 rounded-full bg-primary-500/10 flex items-center justify-center mx-auto mb-4">
+              <Icon name="ph:wallet-fill" class="size-7 text-primary-500" />
+            </div>
+            <h4 class="text-base font-bold text-muted-800 dark:text-white mb-1">Finalizar Pagamento</h4>
+            <p class="text-xs text-muted-500 leading-relaxed max-w-[240px] mx-auto">Sua assinatura está aguardando o
+              pagamento. Escolha um método para liberar seu acesso.</p>
+          </div>
+
+          <div class="grid gap-3">
+            <button @click="generatePayment('PIX')"
+              class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-900 hover:border-emerald-500/50 hover:bg-emerald-50/5 dark:hover:bg-emerald-500/5 transition-all text-left group">
+              <div
+                class="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                <Icon name="ph:qr-code-bold" class="size-6 text-emerald-600" />
+              </div>
+              <div class="flex-1">
+                <p class="font-bold text-sm text-muted-800 dark:text-white leading-tight">Pagamento via Pix</p>
+                <p class="text-[10px] text-muted-500 mt-0.5">Liberação imediata com 5% de desconto</p>
+              </div>
+              <Icon name="ph:caret-right-bold"
+                class="size-4 text-muted-300 group-hover:text-emerald-500 transition-colors" />
+            </button>
+
+            <button @click="generatePayment('CREDIT_CARD')"
+              class="flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-900 hover:border-indigo-500/50 hover:bg-indigo-50/5 dark:hover:bg-indigo-500/5 transition-all text-left group">
+              <div
+                class="size-10 rounded-lg bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
+                <Icon name="ph:credit-card-bold" class="size-6 text-indigo-600" />
+              </div>
+              <div class="flex-1">
+                <p class="font-bold text-sm text-muted-800 dark:text-white leading-tight">Cartão de Crédito</p>
+                <p class="text-[10px] text-muted-500 mt-0.5">Parcele sua assinatura com segurança</p>
+              </div>
+              <Icon name="ph:caret-right-bold"
+                class="size-4 text-muted-300 group-hover:text-indigo-500 transition-colors" />
             </button>
           </div>
         </div>
@@ -373,7 +464,8 @@ function formatCurrency(amount: number) {
       </div>
 
       <!-- Estado Vazio (Sucesso) -->
-      <div v-else-if="!pendingPayments.length && !isLoadingPayments"
+      <div
+        v-else-if="!pendingPayments.length && currentSubscription?.status !== 'PENDING_PAYMENT' && !isLoadingPayments"
         class="h-full flex flex-col items-center justify-center text-center px-8 -mt-8">
 
         <div class="size-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center mb-4">
