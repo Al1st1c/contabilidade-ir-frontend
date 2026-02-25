@@ -829,7 +829,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
           <!-- Formulário Normal -->
           <template v-else>
             <!-- Steps Indicator -->
-            <div class="mb-6">
+            <div class="mb-4 sm:mb-6">
               <div class="flex items-center justify-between">
                 <div v-for="s in totalSteps" :key="s" class="flex items-center" :class="{ 'flex-1': s < totalSteps }">
                   <div class="flex size-8 items-center justify-center rounded-full font-medium transition-all" :class="{
@@ -933,10 +933,11 @@ watch([step, isFreeFlow, isSubmitting], () => {
 
             <!-- Step 2: Escolha do Plano -->
             <div v-else-if="step === 2">
-              <BaseHeading tag="h1" size="xl" weight="bold" class="text-muted-800 dark:text-white mb-2">
+              <BaseHeading tag="h1" size="xl" weight="bold"
+                class="text-muted-800 dark:text-white mb-2 sm:mb-2 text-lg sm:text-xl">
                 Escolha seu plano
               </BaseHeading>
-              <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-4">
+              <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-4 sm:mb-4 text-xs sm:text-sm">
                 Selecione o plano ideal para você
               </BaseParagraph>
 
@@ -961,19 +962,54 @@ watch([step, isFreeFlow, isSubmitting], () => {
                       </template>
 
                       <div class="p-3">
-                        <div class="flex items-start gap-4">
-                          <img :src="getPlanIcon(plan.slug)" class="size-12 object-contain" :alt="plan.name">
-                          <div class="flex-1 min-w-0">
-                            <BaseText weight="semibold" class="text-muted-800 dark:text-white block">
-                              {{ plan.name }}
-                            </BaseText>
-                            <BaseText size="xs" class="text-muted-500 block mt-1">
+                        <div class="flex items-start gap-3 sm:gap-4">
+                          <img :src="getPlanIcon(plan.slug)" class="size-10 sm:size-12 object-contain shrink-0 mt-0.5"
+                            :alt="plan.name">
+
+                          <div class="flex-1 min-w-0 pr-6 sm:pr-0 text-left">
+                            <div class="flex items-center justify-between sm:block text-left">
+                              <!-- Título -->
+                              <BaseText weight="semibold"
+                                class="text-muted-800 dark:text-white block text-sm sm:text-base">
+                                {{ plan.name }}
+                              </BaseText>
+
+                              <!-- Preço Mobile -->
+                              <div class="flex sm:hidden items-baseline gap-1 text-left">
+                                <BaseText weight="bold" class="text-primary-500 text-sm text-left">
+                                  {{ plan.pricing.monthly === 0 ? 'R$ 0,00' : formatCurrency(plan.pricing.monthly) }}
+                                </BaseText>
+                                <BaseText v-if="plan.pricing.monthly > 0" size="xs" class="text-muted-400 text-left">
+                                  /mês
+                                </BaseText>
+                              </div>
+                            </div>
+
+                            <!-- Descrição -->
+                            <BaseText size="xs"
+                              class="text-muted-500 block mt-1 leading-tight text-[11px] sm:text-xs text-left">
                               {{ plan.description }}
                             </BaseText>
+
+                            <!-- Micro Detalhes Mobile -->
+                            <div v-if="plan.limits"
+                              class="flex sm:hidden items-center justify-start gap-x-3 gap-y-1 mt-1.5 grayscale opacity-70 flex-wrap">
+                              <div class="flex items-center gap-1 text-[10px] text-muted-500 text-left">
+                                <Icon name="solar:users-group-rounded-linear" class="size-3 text-primary-500" />
+                                <span class="whitespace-nowrap">{{ plan.limits.employees || 1 }} usuário(s)</span>
+                              </div>
+                              <div v-if="plan.slug === 'enterprise' || plan.slug === 'pro'"
+                                class="flex items-center gap-1 text-[10px] text-muted-500 text-left">
+                                <Icon name="solar:verified-check-linear" class="size-3 text-primary-500" />
+                                <span class="whitespace-nowrap">Whitelabel incluso</span>
+                              </div>
+                            </div>
                           </div>
-                          <div class="text-right shrink-0">
+
+                          <!-- Preço Desktop (direita) -->
+                          <div class="hidden sm:block text-right shrink-0">
                             <BaseText weight="bold" class="text-primary-500">
-                              {{ plan.pricing.monthly === 0 ? 'Grátis' : formatCurrency(plan.pricing.monthly) }}
+                              {{ plan.pricing.monthly === 0 ? 'R$ 0,00' : formatCurrency(plan.pricing.monthly) }}
                             </BaseText>
                             <BaseText v-if="plan.pricing.monthly > 0" size="xs" class="text-muted-400">
                               /mês
@@ -981,24 +1017,17 @@ watch([step, isFreeFlow, isSubmitting], () => {
                           </div>
                         </div>
 
-                        <!-- Features do plano -->
+                        <!-- Features do plano (Oculto no Mobile) -->
                         <div v-if="plan.limits"
-                          class="mt-3 pt-3 border-t border-muted-100 dark:border-muted-800 grid grid-cols-2 gap-2">
+                          class="hidden sm:grid mt-3 pt-3 border-t border-muted-100 dark:border-muted-800 grid-cols-2 gap-2">
                           <div class="flex items-center gap-1.5 text-xs text-muted-500">
                             <Icon name="solar:users-group-rounded-linear" class="size-3.5 text-primary-500 shrink-0" />
                             <span>{{ plan.limits.employees || 1 }} usuário(s)</span>
                           </div>
-                          <div class="flex items-center gap-1.5 text-xs text-muted-500">
-                            <Icon name="solar:document-text-linear" class="size-3.5 text-primary-500 shrink-0" />
-                            <span>{{ plan.limits.tax_declarations_yearly || 0 }} IRs/ano</span>
-                          </div>
-                          <div class="flex items-center gap-1.5 text-xs text-muted-500">
-                            <Icon name="solar:database-linear" class="size-3.5 text-primary-500 shrink-0" />
-                            <span>{{ Math.round((plan.limits.storage_mb || 0) / 1024) }}GB drive</span>
-                          </div>
-                          <div class="flex items-center gap-1.5 text-xs text-muted-500">
-                            <Icon name="solar:letter-linear" class="size-3.5 text-primary-500 shrink-0" />
-                            <span>{{ plan.limits.sms_monthly || 0 }} SMS/mês</span>
+                          <div v-if="plan.slug === 'enterprise'"
+                            class="flex items-center gap-1.5 text-xs text-muted-500">
+                            <Icon name="solar:verified-check-linear" class="size-3.5 text-primary-500 shrink-0" />
+                            <span>White Label incluso</span>
                           </div>
                         </div>
                       </div>
@@ -1102,24 +1131,6 @@ watch([step, isFreeFlow, isSubmitting], () => {
                     </BaseText>
                   </TairoRadioCard>
 
-                  <TairoRadioCard value="QUARTERLY" class="p-4 data-[state=checked]:ring-primary-500!">
-                    <div class="flex justify-between items-start">
-                      <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Trimestral</BaseText>
-                    </div>
-                    <BaseText weight="bold" class="text-primary-500 text-xs">{{
-                      formatCurrency(currentPlan?.pricing?.quarterly ||
-                        monthlyPrice * 3) }}</BaseText>
-                  </TairoRadioCard>
-
-                  <TairoRadioCard value="SEMIANNUAL" class="p-4 data-[state=checked]:ring-primary-500!">
-                    <div class="flex justify-between items-start">
-                      <BaseText weight="semibold" class="text-muted-800 dark:text-white mr-1">Semestral</BaseText>
-                    </div>
-                    <BaseText weight="bold" class="text-primary-500 text-xs">{{
-                      formatCurrency(currentPlan?.pricing?.semiannual ||
-                        monthlyPrice * 6) }}</BaseText>
-                  </TairoRadioCard>
-
                   <TairoRadioCard value="ANNUAL"
                     class="p-4 data-[state=checked]:ring-primary-500! relative overflow-hidden">
                     <div
@@ -1176,7 +1187,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                       5% OFF
                     </div>
                     <div class="flex items-center gap-3">
-                      <img src="/img/custom/pix-logo.png" class="h-6 object-contain" alt="PIX">
+                      <img src="https://img.icons8.com/color/512/pix.png" class="h-6 object-contain" alt="PIX">
                       <div class="flex-1">
                         <BaseText weight="semibold" class="text-muted-800 dark:text-white block">PIX</BaseText>
                         <!-- <BaseText size="xs" class="text-success-500 mt-0.5">5% de desconto
@@ -1194,12 +1205,13 @@ watch([step, isFreeFlow, isSubmitting], () => {
                   <TairoRadioCard value="CREDIT_CARD" class="p-3 data-[state=checked]:ring-primary-500!">
                     <div class="flex items-center gap-3">
                       <div class="flex items-center gap-1">
-                        <Icon name="logos:stripe" class="h-5" />
+                        <img src="https://cdn-icons-png.flaticon.com/512/2695/2695969.png" class="h-6 object-contain"
+                          alt="PIX">
                       </div>
                       <div class="flex-1">
-                        <BaseText weight="semibold" class="text-muted-800 dark:text-white block">Cartão de Crédito
+                        <BaseText weight="semibold" class="text-muted-800 dark:text-white block">Cartão
                         </BaseText>
-                        <BaseText size="xs" class="text-muted-500 mt-0.5">Pagamento Seguro via Stripe</BaseText>
+                        <!-- <BaseText size="xs" class="text-muted-500 mt-0.5">Pagamento Seguro via Stripe</BaseText> -->
                       </div>
                       <BaseText weight="bold" class="text-muted-800 dark:text-white">{{ formatCurrency(cardPrice) }}
                       </BaseText>
@@ -1257,7 +1269,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                     {{ selectedPlan === 'free' ? 'Criar Conta Grátis' : 'Ativar Plano Agora' }}
                   </template>
                   <template v-else>
-                    {{ paymentMethod === 'PIX' ? 'Gerar PIX' : 'Ir para Pagamento Seguro' }}
+                    {{ paymentMethod === 'PIX' ? 'Gerar PIX' : 'Pagar Agora' }}
                   </template>
                 </BaseButton>
               </div>
