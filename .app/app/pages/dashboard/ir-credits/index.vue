@@ -210,7 +210,7 @@ function resetPurchase() {
               bônus.</span>
           </p>
         </div>
-        <BaseButton to="/dashboard/plans/payment?plan=basic" size="sm" variant="primary" shadow="primary" rounded="lg"
+        <BaseButton to="/dashboard/plans/?plan=basic" size="sm" variant="primary" shadow="primary" rounded="lg"
           class="h-9 px-5 text-xs font-bold uppercase tracking-wider shrink-0">
           <span>Ver Planos</span>
           <Icon name="lucide:arrow-right" class="ms-1.5 size-3" />

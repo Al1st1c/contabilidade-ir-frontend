@@ -29,6 +29,12 @@ const links = [
     color: 'green'
   },
   {
+    title: 'Nossos Preços e Simulador',
+    url: '/links/precos',
+    icon: 'solar:dollar-minimalistic-bold-duotone',
+    color: 'warning'
+  },
+  {
     title: 'Site',
     url: 'https://gestorirpf.com.br',
     icon: 'solar:earth-bold-duotone',

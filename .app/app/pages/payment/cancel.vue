@@ -24,7 +24,7 @@ definePageMeta({
       </BaseParagraph>
 
       <div class="space-y-3">
-        <BaseButton to="/dashboard/plans/payment" variant="primary" color="primary" class="w-full">
+        <BaseButton to="/dashboard/plans" variant="primary" color="primary" class="w-full">
           Tentar Novamente
         </BaseButton>
 

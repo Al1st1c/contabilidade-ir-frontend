@@ -689,7 +689,7 @@ onMounted(async () => {
             description: 'Redirecionando para finalizar o pagamento de sua assinatura.',
             icon: 'ph:info-fill'
           })
-          router.push('/dashboard/plans/payment')
+          router.push('/dashboard/plans')
         }
       } else if (sub?.status === 'ACTIVE') {
         router.push('/dashboard')
