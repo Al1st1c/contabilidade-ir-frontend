@@ -135,6 +135,15 @@ function copyToClipboard(text: string) {
   }
 }
 
+// Pagination
+const page = ref(1)
+const perPage = ref(5)
+const paginatedReferrals = computed(() => {
+  const start = (page.value - 1) * perPage.value
+  const end = start + perPage.value
+  return referrals.value.slice(start, end)
+})
+
 onMounted(() => {
   fetchData()
 })
@@ -318,10 +327,14 @@ const date = ref(new Date())
           <div class="col-span-12">
             <BaseCard rounded="md" class="p-6 shadow-sm border-muted-200 dark:border-muted-800">
               <div class="mb-6 flex items-center justify-between">
-                <BaseHeading as="h3" size="md" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
-                  <span>Indicações Recentes</span>
-                </BaseHeading>
-                <BaseTag size="sm" color="primary" variant="muted">{{ referrals.length }} Registros</BaseTag>
+                <div class="flex flex-col gap-1">
+                  <BaseHeading as="h3" size="md" weight="semibold" lead="tight" class="text-muted-900 dark:text-white">
+                    <span>Indicações Recentes</span>
+                  </BaseHeading>
+                  <BaseParagraph size="xs" class="text-muted-500">Histórico detalhado de cadastros</BaseParagraph>
+                </div>
+                <BaseTag size="sm" color="primary" variant="muted" class="font-bold">{{ referrals.length }} {{
+                  referrals.length === 1 ? 'Registro' : 'Registros' }}</BaseTag>
               </div>
 
               <div class="flex flex-col gap-4">
@@ -340,38 +353,59 @@ const date = ref(new Date())
                   <table class="w-full text-left">
                     <thead>
                       <tr
-                        class="text-muted-400 font-sans text-xs uppercase tracking-wider border-b border-muted-200 dark:border-muted-800">
-                        <th class="pb-4 font-semibold">Cliente</th>
-                        <th class="pb-4 font-semibold">Data</th>
-                        <th class="pb-4 font-semibold">Plano</th>
-                        <th class="pb-4 font-semibold text-right">Status</th>
+                        class="text-muted-400 font-sans text-[10px] uppercase tracking-wider border-b border-muted-200 dark:border-muted-800">
+                        <th class="pb-4 font-bold">Cliente</th>
+                        <th class="pb-4 font-bold">Data</th>
+                        <th class="pb-4 font-bold text-center">Plano</th>
+                        <th class="pb-4 font-bold text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-muted-100 dark:divide-muted-800">
-                      <tr v-for="ref in referrals" :key="ref.id"
-                        class="group hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors">
+                      <tr v-for="ref in paginatedReferrals" :key="ref.id"
+                        class="group hover:bg-muted-50/50 dark:hover:bg-muted-900/20 transition-all duration-300">
                         <td class="py-4">
                           <div class="flex items-center gap-3">
                             <BaseAvatar size="xs" :text="ref.user.charAt(0)"
-                              class="bg-primary-500/10 text-primary-500" />
-                            <span class="text-sm font-medium text-muted-800 dark:text-muted-100">{{ ref.user }}</span>
+                              class="bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/20" />
+                            <div class="flex flex-col gap-0.5">
+                              <span
+                                class="text-sm font-semibold text-muted-800 dark:text-muted-100 flex items-center gap-2">
+                                {{ ref.user }}
+                                <BaseTooltip v-if="ref.hasCommission" content="Gerou comissão">
+                                  <div
+                                    class="flex items-center justify-center size-5 rounded-full bg-success-500/10 text-success-500 animate-pulse">
+                                    <Icon name="solar:wad-of-money-bold-duotone" class="size-3.5" />
+                                  </div>
+                                </BaseTooltip>
+                              </span>
+                            </div>
                           </div>
                         </td>
-                        <td class="py-4 font-sans text-xs text-muted-500">
+                        <td class="py-4 font-sans text-[11px] text-muted-500 font-medium">
                           {{ new Date(ref.date).toLocaleDateString('pt-BR') }}
                         </td>
-                        <td class="py-4 text-xs font-semibold text-muted-700 dark:text-muted-300">
-                          {{ ref.plan }}
+                        <td class="py-4 text-center">
+                          <span
+                            class="text-[11px] font-bold uppercase tracking-tight text-muted-500 dark:text-muted-400 bg-muted-100 dark:bg-muted-800 px-2 py-0.5 rounded-md">
+                            {{ ref.plan }}
+                          </span>
                         </td>
                         <td class="py-4 text-right">
-                          <BaseTag :color="ref.subscriptionStatus === 'ACTIVE' ? 'success' : 'warning'" size="sm"
-                            variant="muted" class="font-bold">
+                          <BaseTag :color="ref.subscriptionStatus === 'ACTIVE' ? 'primary' : 'warning'" size="sm"
+                            variant="muted" class="font-bold !text-[10px] uppercase tracking-wide">
                             {{ ref.subscriptionStatus === 'ACTIVE' ? 'Ativo' : 'Pendente' }}
                           </BaseTag>
                         </td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+
+                <!-- Client-side Pagination -->
+                <div v-if="referrals.length > perPage"
+                  class="mt-6 flex justify-center border-t border-muted-100 dark:border-muted-800 pt-6">
+                  <BasePagination v-model:page="page" :items-per-page="perPage" :total="referrals.length"
+                    :sibling-count="1" rounded="full" size="sm" />
                 </div>
               </div>
             </BaseCard>
@@ -430,13 +464,11 @@ const date = ref(new Date())
             <ul class="space-y-3">
               <li class="flex gap-3">
                 <Icon name="solar:check-circle-bold" class="size-4 text-success-500 shrink-0" />
-                <span class="text-xs text-muted-600 dark:text-muted-400">Comissão de 10% sobre o valor da primeira
-                  assinatura.</span>
+                <span class="text-xs text-muted-600 dark:text-muted-400">Comissão de 10% sobre toda compra.</span>
               </li>
               <li class="flex gap-3">
                 <Icon name="solar:check-circle-bold" class="size-4 text-success-500 shrink-0" />
-                <span class="text-xs text-muted-600 dark:text-muted-400">Pagamento somente para indicações via
-                  PIX.</span>
+                <span class="text-xs text-muted-600 dark:text-muted-400">Comissão recorrente.</span>
               </li>
               <li class="flex gap-3">
                 <Icon name="solar:check-circle-bold" class="size-4 text-success-500 shrink-0" />

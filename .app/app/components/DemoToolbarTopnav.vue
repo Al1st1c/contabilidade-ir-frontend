@@ -88,6 +88,38 @@ function openNotifications() {
 function openSubscription() {
   open(PanelsPanelSubscription, {})
 }
+
+// Affiliate Join Logic
+const router = useRouter()
+const isJoining = ref(false)
+
+async function handleAffiliateAccess() {
+  if (user.value?.affiliateProfile) {
+    router.push('/affiliate/dashboard')
+    return
+  }
+
+  isJoining.value = true
+  try {
+    await useCustomFetch('/affiliate/join', {
+      method: 'POST'
+    })
+
+    // Refresh user session to get the new affiliateProfile in JWT
+    // Then navigate
+    window.location.href = '/affiliate/dashboard'
+
+  } catch (err: any) {
+    const errorMsg = err.data?.message || err.message || ''
+    if (errorMsg.includes('já possui perfil de afiliado')) {
+      window.location.href = '/affiliate/dashboard'
+    } else {
+      console.error('Error joining affiliate program:', err)
+    }
+  } finally {
+    isJoining.value = false
+  }
+}
 </script>
 
 <template>
@@ -168,6 +200,30 @@ function openSubscription() {
                 {{ user?.name || 'Administrador' }}
               </p>
             </div>
+
+            <!-- Affiliate Access -->
+            <DropdownMenuItem as="div" class="mb-1">
+              <button type="button"
+                class="group/item flex w-full items-center gap-3 rounded-md p-2 text-sm transition-colors duration-300 hover:bg-muted-100 dark:hover:bg-muted-800 outline-none text-muted-600 dark:text-muted-400"
+                @click="handleAffiliateAccess" :disabled="isJoining">
+                <div
+                  class="flex size-7 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30 group-hover/item:bg-primary-500/20">
+                  <Icon v-if="isJoining" name="svg-spinners:ring-resize" class="size-4 text-primary-500" />
+                  <Icon v-else name="solar:star-fall-bold-duotone"
+                    class="size-4 text-primary-500 group-hover/item:text-primary-600" />
+                </div>
+                <div class="text-start">
+                  <h6 class="text-xs font-semibold text-muted-800 dark:text-white leading-none">
+                    {{ user?.affiliateProfile ? 'Painel de Afiliado' : 'Seja um Parceiro' }}
+                  </h6>
+                  <p class="text-[10px] text-muted-400 mt-0.5">
+                    {{ user?.affiliateProfile ? 'Suas comissões' : 'Indique e ganhe' }}
+                  </p>
+                </div>
+              </button>
+            </DropdownMenuItem>
+
+            <div class="my-1 border-t border-muted-100 dark:border-muted-800" />
 
             <DropdownMenuItem as="div">
               <button type="button"
