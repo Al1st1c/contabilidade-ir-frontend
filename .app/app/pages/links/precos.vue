@@ -29,8 +29,8 @@ const availablePlans = [
     price: 29.90,
     priceFormatted: 'R$ 29,90',
     description: 'Contador Autônomo',
-    bonusIr: 5,
-    features: ['5 declarações de bônus', '1 Usuário', '5GB Drive', 'Relatórios Básicos'],
+    bonusIr: 3,
+    features: ['3 declarações de bônus', '1 Usuário', '5GB Drive', 'Relatórios Básicos'],
     color: 'primary',
   },
   {
@@ -40,8 +40,8 @@ const availablePlans = [
     price: 49.90,
     priceFormatted: 'R$ 49,90',
     description: 'Escritórios em crescimento',
-    bonusIr: 10,
-    features: ['10 declarações de bônus', '3 Usuários', '20GB Drive', 'Whitelabel'],
+    bonusIr: 4,
+    features: ['4 declarações de bônus', '3 Usuários', '20GB Drive', 'Whitelabel'],
     color: 'indigo',
   },
   {
@@ -51,8 +51,8 @@ const availablePlans = [
     price: 89.90,
     priceFormatted: 'R$ 89,90',
     description: 'Escritórios',
-    bonusIr: 10,
-    features: ['10 declarações de bônus', '10 Usuários', '49GB Drive', 'Whitelabel'],
+    bonusIr: 5,
+    features: ['5 declarações de bônus', '10 Usuários', '49GB Drive', 'Whitelabel'],
     color: 'indigo',
   }
 ]
@@ -144,7 +144,7 @@ function adjustQuantity(delta: number) {
               <BaseTag :color="plan.color === 'success' ? 'success' : (plan.color === 'indigo' ? 'info' : 'primary')"
                 rounded="full" size="sm" class="mb-2">{{ plan.name }}</BaseTag>
               <BaseHeading as="h3" size="xl" weight="bold" class="text-muted-900 dark:text-white">{{ plan.priceFormatted
-                }}<span class="text-sm font-normal text-muted-400">/mês</span></BaseHeading>
+              }}<span class="text-sm font-normal text-muted-400">/mês</span></BaseHeading>
               <p class="text-xs text-muted-500 dark:text-muted-400 mt-1">{{ plan.description }}</p>
             </div>
 

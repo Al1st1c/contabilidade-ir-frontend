@@ -48,7 +48,7 @@ const PLAN_RULES = {
     description: 'Ideal para experimentar as funcionalidades básicas da plataforma.',
     irLimit: 6,
     basePrice: 0,
-    maxIr: 9,
+    maxIr: 6,
     nextPlan: 'basic',
     hasWhitelabel: false,
     hasTeamManagement: false
@@ -57,9 +57,9 @@ const PLAN_RULES = {
     slug: 'basic',
     name: 'Start',
     description: 'Plano base para contadores autônomos e pequenos escritórios.',
-    irLimit: 10,
+    irLimit: 3,
     basePrice: 2990,
-    maxIr: 12,
+    maxIr: 3,
     nextPlan: 'pro',
     hasWhitelabel: false,
     hasTeamManagement: false
@@ -68,9 +68,9 @@ const PLAN_RULES = {
     slug: 'pro',
     name: 'Profissional',
     description: 'Ideal para escritórios em crescimento que precisam de marca própria.',
-    irLimit: 20,
+    irLimit: 4,
     basePrice: 4990,
-    maxIr: 24,
+    maxIr: 4,
     nextPlan: 'enterprise',
     hasWhitelabel: true,
     hasTeamManagement: true
@@ -79,7 +79,7 @@ const PLAN_RULES = {
     slug: 'enterprise',
     name: 'Escritório',
     description: 'Solução completa para escritórios contábeis com grande volume.',
-    irLimit: 30,
+    irLimit: 5,
     basePrice: 8990,
     maxIr: Infinity,
     nextPlan: null,
@@ -1062,7 +1062,7 @@ const featureMap: Record<string, string> = {
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
                       formatCurrency(rawCyclePrice)
-                      }}</span>
+                    }}</span>
                   </div>
                   <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
                     <span class="font-sans italic">Desconto {{ currentCycleLabel }} ({{
