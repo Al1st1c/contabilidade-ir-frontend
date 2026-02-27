@@ -31,6 +31,7 @@ interface User {
     canViewDrive: boolean
     canManageChecklist: boolean
     canManageKanban: boolean
+    canViewSensitiveData: boolean
   }
   tenant?: {
     id: string
@@ -183,6 +184,7 @@ export function useAuth() {
         canViewDrive: rawUser.role.canViewDrive,
         canManageChecklist: rawUser.role.canManageChecklist,
         canManageKanban: rawUser.role.canManageKanban,
+        canViewSensitiveData: rawUser.role.canViewSensitiveData,
       } : undefined,
       tenantId: rawUser.tenantId,
       affiliateProfile: rawUser.affiliateProfile,

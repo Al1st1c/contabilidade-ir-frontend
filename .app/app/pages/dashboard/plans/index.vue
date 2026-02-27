@@ -49,6 +49,9 @@ const PLAN_RULES = {
     irLimit: 6,
     basePrice: 0,
     maxIr: 6,
+    storageLimit: 1,
+    smsLimit: 10,
+    employeeLimit: 1,
     nextPlan: 'basic',
     hasWhitelabel: false,
     hasTeamManagement: false
@@ -60,6 +63,9 @@ const PLAN_RULES = {
     irLimit: 3,
     basePrice: 2990,
     maxIr: 3,
+    storageLimit: 10,
+    smsLimit: 10,
+    employeeLimit: 1,
     nextPlan: 'pro',
     hasWhitelabel: false,
     hasTeamManagement: false
@@ -71,6 +77,9 @@ const PLAN_RULES = {
     irLimit: 4,
     basePrice: 4990,
     maxIr: 4,
+    storageLimit: 50,
+    smsLimit: 50,
+    employeeLimit: 3,
     nextPlan: 'enterprise',
     hasWhitelabel: true,
     hasTeamManagement: true
@@ -82,6 +91,9 @@ const PLAN_RULES = {
     irLimit: 5,
     basePrice: 8990,
     maxIr: Infinity,
+    storageLimit: 200,
+    smsLimit: 200,
+    employeeLimit: 10,
     nextPlan: null,
     hasWhitelabel: true,
     hasTeamManagement: true
@@ -97,94 +109,67 @@ function getPlanByIr(ir: number) {
 
 function calculateCustomPrice() {
   const irCount = customConfig.value.tax_declarations_yearly
-  const basePlan = getPlanByIr(irCount)
 
-  // Se for Escritório, preço fixo
-  if (basePlan.slug === 'enterprise' || customRadio.value === 'enterprise') {
-    return {
-      total: 8990,
-      blocked: false,
-      suggestion: null
-    }
-  }
+  // O plano base é sempre o que está selecionado no Radio
+  let basePlan = (PLAN_RULES as any)[customRadio.value]
+  if (!basePlan) basePlan = PLAN_RULES.free
 
-  // Preço base do plano determinado pelas IRs
   let total = basePlan.basePrice
 
-  // R$ 8,00 por IR extra acima do baseline do plano
+  // 1. R$ 8,00 por IR extra
   if (irCount > basePlan.irLimit) {
     total += (irCount - basePlan.irLimit) * 800
   }
 
-  // R$ 6,00 por usuário extra (acimo dos limites do plano)
-  const employeeLimit = basePlan.slug === 'pro' ? 3 : 1
-  if (customConfig.value.employees > employeeLimit) {
-    total += (customConfig.value.employees - employeeLimit) * 600
+  // 2. R$ 6,00 por usuário extra
+  if (customConfig.value.employees > basePlan.employeeLimit) {
+    total += (customConfig.value.employees - basePlan.employeeLimit) * 600
   }
 
-  // R$ 0,12 por SMS extra (acima de 50 SMS do Profissional ou 10 do Start)
-  const smsLimit = basePlan.slug === 'pro' ? 50 : 10
-  if (customConfig.value.sms_monthly > smsLimit) {
-    total += (customConfig.value.sms_monthly - smsLimit) * 12
+  // 3. R$ 0,12 por SMS extra
+  if (customConfig.value.sms_monthly > basePlan.smsLimit) {
+    total += (customConfig.value.sms_monthly - basePlan.smsLimit) * 12
   }
 
-  // R$ 25,00 por GB extra (acima do baseline do plano)
-  // free: 250MB (0.25GB), basic: 5GB, pro: 20GB
-  const storageLimitGb = basePlan.slug === 'pro' ? 20 : (basePlan.slug === 'basic' ? 5 : 0.25)
-  if (customConfig.value.storage_gb > storageLimitGb) {
-    total += (customConfig.value.storage_gb - storageLimitGb) * 2500
-  }
-
-  // Prevenir Arbitragem: Preço não pode ser menor que o do próximo plano
-  let suggestion = null
-  if (basePlan.nextPlan) {
-    const nextPlan = PLAN_RULES[basePlan.nextPlan as keyof typeof PLAN_RULES]
-
-    // Se o preço calculado por extras já passou do preço do próximo plano, sugerimos upgrade
-    // if (total >= nextPlan.basePrice) {
-    //   suggestion = `Fazer upgrade para o plano ${nextPlan.name} sai mais barato e libera mais recursos.`
-    // }
-
-    // Regra de Arbitragem
-    if (total < nextPlan.basePrice && irCount >= nextPlan.irLimit) {
-      // Se ele configurou mais IRs do que o plano atual permite entrar no "range" do próximo, o preço sobe
-      // total = nextPlan.basePrice // Opcional: forçar preço do próximo? Sugestão já resolve.
-    }
+  // 4. R$ 5,00 por GB extra
+  if (customConfig.value.storage_gb > basePlan.storageLimit) {
+    total += (customConfig.value.storage_gb - basePlan.storageLimit) * 500
   }
 
   return {
     total,
     blocked: false,
-    suggestion
+    suggestion: null
   }
 }
 
-function convertToCustom() {
-  if (customRadio.value === 'enterprise') return
-  customRadio.value = 'custom'
-}
+// Sincroniza os Sliders/Config quando o plano muda
+watch(() => customRadio.value, (newVal) => {
+  const baseRules = (PLAN_RULES as any)[newVal]
+  if (baseRules && newVal !== 'custom') {
+    customConfig.value = {
+      employees: baseRules.employeeLimit,
+      sms_monthly: baseRules.smsLimit,
+      storage_gb: baseRules.storageLimit,
+      tax_declarations_yearly: baseRules.irLimit,
+    }
+  }
+}, { immediate: true })
 
 function toggleUserCustomizer() {
   showUserCustomizer.value = !showUserCustomizer.value
-  if (showUserCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
-    customConfig.value.employees = (selectedPlan.value.limits as any)?.employees || 1
-  }
 }
 
 function toggleResourceCustomizer() {
   showResourceCustomizer.value = !showResourceCustomizer.value
-  if (showResourceCustomizer.value && customRadio.value !== 'custom' && selectedPlan.value) {
-    customConfig.value.sms_monthly = (selectedPlan.value.limits as any)?.sms_monthly || 100
-    customConfig.value.storage_gb = ((selectedPlan.value.limits as any)?.storage_mb || 1024) / 1024
-    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.ir_bonus_credits || 30
-  }
 }
 
 // Mapeamento de planos reais para os slots do layout
 const selectedPlan = computed(() => {
-  // Se for o plano personalizado (custom)
+  const { total: monthlyPrice, suggestion } = calculateCustomPrice()
+
+  // Se for o plano personalizado (botão custom - se existir no futuro)
   if (customRadio.value === 'custom') {
-    const { total: monthlyPrice, suggestion } = calculateCustomPrice()
     return {
       slug: 'custom',
       name: 'Personalizado',
@@ -192,8 +177,6 @@ const selectedPlan = computed(() => {
       suggestion,
       pricing: {
         monthly: monthlyPrice,
-        quarterly: Math.round(monthlyPrice * 3 * 0.95), // 5% OFF
-        semiannual: Math.round(monthlyPrice * 6 * 0.92), // 8% OFF
         annual: Math.round(monthlyPrice * 12 * 0.90), // 10% OFF
       },
       limits: {
@@ -210,14 +193,9 @@ const selectedPlan = computed(() => {
     }
   }
 
-  // Se o plano selecionado existe na lista vinda da API
+  // Para planos fixos (basic, pro, enterprise)
   const apiPlan = plans.value.find(p => p.slug === customRadio.value)
-
-  if (!apiPlan)
-    return null
-
-  // Aplicar regra de trava de upgrade visual para planos fixos se houver customização de IRs prévia
-  const baseMonthly = apiPlan.pricing.monthly
+  if (!apiPlan) return null
 
   const rules = (PLAN_RULES as any)[apiPlan.slug] || {}
 
@@ -226,13 +204,15 @@ const selectedPlan = computed(() => {
     name: rules.name || apiPlan.name,
     description: rules.description || apiPlan.description,
     pricing: {
-      monthly: baseMonthly,
-      quarterly: Math.round(baseMonthly * 3 * 0.95), // 5% OFF
-      semiannual: Math.round(baseMonthly * 6 * 0.92), // 8% OFF
-      annual: apiPlan.pricing.annual || Math.round(baseMonthly * 12 * 0.90), // 10% OFF
+      monthly: monthlyPrice, // Preço calculado (base + extras)
+      annual: Math.round(monthlyPrice * 12 * 0.90), // 10% OFF sobre o total customizado
     },
     limits: {
       ...apiPlan.limits,
+      employees: customConfig.value.employees,
+      storage_mb: customConfig.value.storage_gb * 1024,
+      sms_monthly: customConfig.value.sms_monthly,
+      ir_bonus_credits: customConfig.value.tax_declarations_yearly,
       hasWhitelabel: rules.hasWhitelabel ?? (apiPlan.limits as any).hasWhitelabel,
       hasTeamManagement: rules.hasTeamManagement ?? (apiPlan.limits as any).hasTeamManagement,
     }
@@ -254,16 +234,31 @@ const planColor = computed(() => {
   }
   return 'text-primary-500'
 })
+const isCurrentPlanSelected = computed(() => {
+  if (!currentSubscription.value || !selectedPlan.value)
+    return false
+
+  const isSamePlan = currentSubscription.value.plan.slug === selectedPlan.value.slug
+  const isSameCycle = currentSubscription.value.billingPeriod === billingCycles.value.toUpperCase()
+
+  // Se for o mesmo plano e ciclo, só bloqueamos se o preço for o "base" (sem extras)
+  // Se o usuário adicionou extras, o preço será maior e ele deve poder pagar.
+  const { total } = calculateCustomPrice()
+  const baseRules = (PLAN_RULES as any)[selectedPlan.value.slug]
+  const isBasePrice = total === baseRules?.basePrice
+
+  return isSamePlan && isSameCycle && isBasePrice
+})
 
 // Dados de Pagamento
 const paymentMethod = ref<'PIX' | 'CREDIT_CARD' | 'BOLETO'>('CREDIT_CARD')
-const cardInfo = ref({
-  name: '',
-  number: '',
-  expiryYear: '',
-  expiryMonth: '',
-  cvc: '',
-})
+// const cardInfo = ref({
+//   name: '',
+//   number: '',
+//   expiryYear: '',
+//   expiryMonth: '',
+//   cvc: '',
+// })
 
 const isInitialLoading = ref(true)
 const isSubmitting = ref(false)
@@ -290,14 +285,6 @@ onMounted(async () => {
     billingCycles.value = (route.query.billing as string).toLowerCase()
   }
 
-  // Sincronizar limites iniciais a partir do plano selecionado
-  if (selectedPlan.value && customRadio.value !== 'custom') {
-    customConfig.value.employees = selectedPlan.value.limits?.employees || 1
-    customConfig.value.sms_monthly = selectedPlan.value.limits?.sms_monthly || 100
-    customConfig.value.storage_gb = (selectedPlan.value.limits?.storage_mb || 1024) / 1024
-    customConfig.value.tax_declarations_yearly = (selectedPlan.value.limits as any)?.ir_bonus_credits || 0
-  }
-
   isInitialLoading.value = false
   window.addEventListener('beforeunload', handleBeforeUnload)
 
@@ -316,8 +303,6 @@ const currentCyclePrice = computed(() => {
     return 0
   switch (billingCycles.value) {
     case 'monthly': return selectedPlan.value.pricing.monthly || 0
-    case 'quarterly': return selectedPlan.value.pricing.quarterly || 0
-    case 'semiannual': return selectedPlan.value.pricing.semiannual || 0
     case 'annual': return selectedPlan.value.pricing.annual || 0
   }
   return 0
@@ -329,8 +314,6 @@ const rawCyclePrice = computed(() => {
     const { total: base } = calculateCustomPrice()
     switch (billingCycles.value) {
       case 'monthly': return base
-      case 'quarterly': return base * 3
-      case 'semiannual': return base * 6
       case 'annual': return base * 12
     }
   }
@@ -342,8 +325,6 @@ const rawCyclePrice = computed(() => {
   const base = apiPlan.pricing.monthly
   switch (billingCycles.value) {
     case 'monthly': return base
-    case 'quarterly': return base * 3
-    case 'semiannual': return base * 6
     case 'annual': return base * 12
   }
   return 0
@@ -397,15 +378,13 @@ const finalTotal = computed(() => {
 const currentCycleLabel = computed(() => {
   switch (billingCycles.value) {
     case 'monthly': return 'mês'
-    case 'quarterly': return 'trimestre'
-    case 'semiannual': return 'semestre'
     case 'annual': return 'ano'
   }
   return 'mês'
 })
 
 async function handlePayment() {
-  if (isSubmitting.value)
+  if (isSubmitting.value || isCurrentPlanSelected.value)
     return
   isSubmitting.value = true
   try {
@@ -416,15 +395,19 @@ async function handlePayment() {
       couponCode: appliedCoupon.value?.code || undefined,
     }
 
-    if (customRadio.value === 'custom') {
+    const { total: calculatedMonthlyPrice } = calculateCustomPrice()
+    const baseRules = (PLAN_RULES as any)[customRadio.value]
+    const isCustomized = calculatedMonthlyPrice !== baseRules?.basePrice || customRadio.value === 'custom'
+
+    if (isCustomized) {
       params.customLimits = {
         storage_mb: customConfig.value.storage_gb * 1024,
         sms_monthly: customConfig.value.sms_monthly,
         employees: customConfig.value.employees,
         tax_declarations_yearly: customConfig.value.tax_declarations_yearly,
       }
-      const { total } = calculateCustomPrice()
-      params.customPrice = total
+      // O customPrice deve ser o valor do ciclo atual (mensal ou anual) personalizado
+      params.customPrice = currentCyclePrice.value
     }
 
     const result = await subscribe(params)
@@ -752,8 +735,7 @@ const featureMap: Record<string, string> = {
               <BaseText size="xs" class="text-muted-500 mb-2">
                 Quantidade de Usuários
               </BaseText>
-              <BaseInput v-model="customConfig.employees" type="number" min="1" label="Quantidade de Usuários"
-                @update:model-value="convertToCustom" />
+              <BaseInput v-model="customConfig.employees" type="number" min="1" label="Quantidade de Usuários" />
             </div>
           </BaseCard>
 
@@ -768,11 +750,10 @@ const featureMap: Record<string, string> = {
               <div class="flex gap-2">
 
                 <BaseTag rounded="full" color="muted" size="sm">
-                  {{ Math.round((selectedPlan?.limits?.storage_mb || 0)
-                    / 1024) }}GB
+                  {{ customConfig.storage_gb }}GB
                 </BaseTag>
                 <BaseTag rounded="full" color="muted" size="sm">
-                  {{ selectedPlan?.limits?.sms_monthly || 0 }} SMS
+                  {{ customConfig.sms_monthly }} SMS
                 </BaseTag>
               </div>
             </div>
@@ -795,13 +776,11 @@ const featureMap: Record<string, string> = {
                 <BaseText size="xs" class="text-muted-500 mb-2">
                   Espaço DRIVE (GB)
                 </BaseText>
-                <BaseInput v-model="customConfig.storage_gb" type="number" min="1" label="Espaço DRIVE (GB)"
-                  @update:model-value="convertToCustom" />
+                <BaseInput v-model="customConfig.storage_gb" type="number" min="1" label="Espaço DRIVE (GB)" />
                 <BaseText size="xs" class="text-muted-500 mb-2">
                   Qtd. SMS
                 </BaseText>
-                <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS"
-                  @update:model-value="convertToCustom" />
+                <BaseInput v-model="customConfig.sms_monthly" type="number" step="100" min="100" label="Qtd. SMS" />
                 <!-- <BaseText size="xs" class="text-muted-500 mb-2">
                   Declarações IR/ano
                 </BaseText>
@@ -1065,10 +1044,7 @@ const featureMap: Record<string, string> = {
                     }}</span>
                   </div>
                   <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
-                    <span class="font-sans italic">Desconto {{ currentCycleLabel }} ({{
-                      billingCycles === 'quarterly' ? '5%' :
-                        billingCycles === 'semiannual' ? '8%' : '10%'
-                    }})</span>
+                    <span class="font-sans italic">Desconto Anual (10% OFF)</span>
                     <span class="font-medium font-sans">- {{ formatCurrency(cycleDiscountAmount) }}</span>
                   </div>
                   <div v-if="appliedCoupon" class="flex justify-between text-sm text-primary-500">
@@ -1102,9 +1078,10 @@ const featureMap: Record<string, string> = {
                 <BaseButton
                   v-if="!paymentResult || (paymentMethod !== 'PIX' && paymentMethod !== 'BOLETO' && paymentResult.status !== 'PAID')"
                   type="submit" variant="primary" color="primary"
-                  class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans"
-                  :loading="isSubmitting">
-                  Finalizar Assinatura
+                  class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans disabled:opacity-60 disabled:cursor-not-allowed"
+                  :loading="isSubmitting" :disabled="isCurrentPlanSelected">
+                  <span v-if="isCurrentPlanSelected">Plano Atual Ativo</span>
+                  <span v-else>Finalizar Assinatura</span>
                 </BaseButton>
               </template>
 

@@ -96,6 +96,12 @@ export const permissionGroups = [
         description: 'Visualizar gráficos de faturamento e produtividade',
         explanation: 'Habilitado: Vê métricas de lucro e performance da equipe. Desabilitado: Dashboard fica oculto.'
       },
+      {
+        key: 'canViewSensitiveData',
+        label: 'Revelar Senha Gov.br',
+        description: 'Permite visualizar a senha criptografada do cliente',
+        explanation: 'Habilitado: Pode clicar no ícone do olho para ver a senha do Gov.br. Desabilitado: A senha permanece mascarada mesmo ao clicar.'
+      },
     ]
   },
   {

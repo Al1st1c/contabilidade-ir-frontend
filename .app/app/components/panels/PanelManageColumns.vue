@@ -18,6 +18,29 @@ const columns = ref<any[]>([])
 const isLoading = ref(true)
 const listContainer = ref<HTMLElement | null>(null)
 
+const sortableInstance = ref<any>(null)
+
+function initSortable() {
+  if (sortableInstance.value) {
+    sortableInstance.value.destroy()
+  }
+
+  if (listContainer.value) {
+    sortableInstance.value = Sortable.create(listContainer.value, {
+      handle: '.drag-handle',
+      animation: 150,
+      onEnd: (evt: any) => {
+        const { oldIndex, newIndex } = evt
+        if (typeof oldIndex === 'number' && typeof newIndex === 'number' && oldIndex !== newIndex) {
+          const item = columns.value.splice(oldIndex, 1)[0]
+          columns.value.splice(newIndex, 0, item)
+          onDragEnd()
+        }
+      },
+    })
+  }
+}
+
 // Fetch columns
 async function fetchColumns() {
   isLoading.value = true
@@ -28,31 +51,17 @@ async function fetchColumns() {
         ...col,
         clientStatus: col.clientStatus || 'NONE',
       }))
-
-      nextTick(() => {
-        if (listContainer.value) {
-          Sortable.create(listContainer.value, {
-            handle: '.drag-handle',
-            animation: 150,
-            onEnd: (evt) => {
-              const { oldIndex, newIndex } = evt
-              if (typeof oldIndex === 'number' && typeof newIndex === 'number' && oldIndex !== newIndex) {
-                const item = columns.value.splice(oldIndex, 1)[0]
-                columns.value.splice(newIndex, 0, item)
-                onDragEnd()
-              }
-            },
-          })
-        }
-      })
     }
   }
   catch (err) {
     console.error(err)
-    toast.add({ title: 'Erro', message: 'Erro ao buscar colunas', type: 'danger' })
+    toast.add({ title: 'Erro', description: 'Erro ao buscar colunas' })
   }
   finally {
     isLoading.value = false
+    nextTick(() => {
+      initSortable()
+    })
   }
 }
 
@@ -164,8 +173,7 @@ const statusOptions = [
 
 <template>
   <div
-    class="flex h-full flex-col bg-white dark:bg-muted-900 shadow-xl w-full sm:w-[500px] border-l border-muted-200 dark:border-muted-800"
-  >
+    class="flex h-full flex-col bg-white dark:bg-muted-900 shadow-xl w-full sm:w-[500px] border-l border-muted-200 dark:border-muted-800">
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 border-b border-muted-200 dark:border-muted-800">
       <BaseHeading as="h3" size="md" weight="medium">
@@ -195,26 +203,21 @@ const statusOptions = [
       </div>
 
       <div v-else ref="listContainer" class="space-y-3">
-        <div
-          v-for="element in columns" :key="element.id"
-          class="group flex flex-col gap-2 p-3 rounded-lg border border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50"
-        >
+        <div v-for="element in columns" :key="element.id"
+          class="group flex flex-col gap-2 p-3 rounded-lg border border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
           <div class="flex items-center gap-2">
-            <button class="drag-handle cursor-grab text-muted-400 hover:text-muted-600">
+            <div class="drag-handle cursor-grab text-muted-400 hover:text-muted-600">
               <Icon name="lucide:grip-vertical" class="size-4" />
-            </button>
+            </div>
 
             <!-- Name Edit -->
-            <input
-              v-model="element.name" class="flex-1 bg-transparent text-sm font-medium border-none focus:ring-0 p-0 text-muted-800 dark:text-muted-100 placeholder-muted-400"
-              @change="updateColumn(element)"
-            >
+            <input v-model="element.name"
+              class="flex-1 bg-transparent text-sm font-medium border-none focus:ring-0 p-0 text-muted-800 dark:text-muted-100 placeholder-muted-400"
+              @change="updateColumn(element)">
 
             <!-- Delete -->
-            <button
-              class="text-muted-400 hover:text-danger-500 transition-colors p-1" title="Excluir"
-              @click="deleteColumn(element.id)"
-            >
+            <button class="text-muted-400 hover:text-danger-500 transition-colors p-1" title="Excluir"
+              @click="deleteColumn(element.id)">
               <Icon name="lucide:trash-2" class="size-4" />
             </button>
           </div>
@@ -222,22 +225,17 @@ const statusOptions = [
           <!-- Details (Color) -->
           <div class="flex items-center gap-3 pl-6">
             <div class="flex items-center gap-1 flex-wrap max-w-[200px]">
-              <button
-                v-for="color in safeColors" :key="color.name"
-                class="size-4 rounded-full border transition-all"
+              <button v-for="color in safeColors" :key="color.name" class="size-4 rounded-full border transition-all"
                 :class="[
                   element.color === color.name ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
                   color.class,
-                ]" :title="color.label" @click="element.color = color.name; updateColumn(element)"
-              />
+                ]" :title="color.label" @click="element.color = color.name; updateColumn(element)" />
             </div>
 
             <!-- Client App Status -->
             <div class="flex-1">
-              <BaseSelect
-                v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
-                @update:model-value="updateColumn(element)"
-              >
+              <BaseSelect v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
+                @update:model-value="updateColumn(element)">
                 <BaseSelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </BaseSelectItem>

@@ -495,6 +495,7 @@ function initSortables() {
           const movedColumn = columns.value.splice(evt.oldIndex, 1)[0]
           if (movedColumn) {
             columns.value.splice(evt.newIndex, 0, movedColumn)
+            persistColumnOrder()
           }
         }
       },
@@ -503,6 +504,21 @@ function initSortables() {
 
   // 2. Inicializar Tarefas dentro das colunas
   initAllTaskSortables()
+}
+
+async function persistColumnOrder() {
+  const payload = {
+    columns: columns.value.map((c, index) => ({ id: c.id, order: index })),
+  }
+  try {
+    await useCustomFetch('/declarations/columns/reorder', {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+  catch (err) {
+    console.error('Erro ao salvar ordem das colunas:', err)
+  }
 }
 
 // Initialize sortable for columns after mount

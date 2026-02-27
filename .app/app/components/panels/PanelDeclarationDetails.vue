@@ -29,6 +29,7 @@ const showPreviewModal = ref(false)
 const previewItem = ref<any>(null)
 const signedPreviewUrl = ref('')
 const isPreviewLoading = ref(false)
+const isRevealingPassword = ref(false)
 const showGovPassword = ref(false)
 const showClientDetailsPanel = ref(false)
 const socket = ref<any>(null)
@@ -445,22 +446,46 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
 // ─── Save / Delete ────────────────────────────────────────────────────────────
 // ─── Password Reveal ──────────────────────────────────────────────────────────
 async function handleRevealPassword() {
+  if (isRevealingPassword.value)
+    return
+
   if (!showGovPassword.value && form.value.govPassword === '********') {
+    isRevealingPassword.value = true
+    // const revealToast = toaster.add({
+    //   title: 'Segurança',
+    //   description: 'Descriptografando senha e registrando auditoria...',
+    //   icon: 'solar:shield-keyhole-bold-duotone',
+    //   color: 'info',
+    // })
+
     try {
       const { data } = await useCustomFetch<any>(`/declarations/${props.declarationId}/reveal-password`)
       if (data.success) {
         form.value.govPassword = data.data.govPassword || data.data.clientGovPassword || ''
         // Update lastSavedForm to avoid immediate save of the revealed password
         lastSavedForm.value.govPassword = form.value.govPassword
+
+        // Remove o toast de carregamento e mostra sucesso (opcional, como o olho já abre)
+        // if (revealToast?.id) toaster.remove(revealToast.id)
       }
     }
     catch (error: any) {
       console.error('Erro ao revelar senha:', error)
+      // useCustomFetch já lança um Error com a mensagem correta
+      const msg = error.message || 'Não foi possível revelar a senha.'
+
+      // if (revealToast?.id) toaster.remove(revealToast.id)
+
       toaster.add({
-        title: 'Erro',
-        description: error.data?.message || 'Não foi possível revelar a senha.',
+        title: 'Acesso Negado',
+        description: msg,
         icon: 'solar:danger-circle-bold-duotone',
+        color: 'danger',
       })
+      return
+    }
+    finally {
+      isRevealingPassword.value = false
     }
   }
   showGovPassword.value = !showGovPassword.value
@@ -799,13 +824,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-          }}</span>
+            }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-          }}</span>
+            }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1084,7 +1109,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
                         'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                      }}</span>
+                        }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1113,7 +1138,7 @@ onMounted(() => {
                 </span>
                 <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
                   'approved').length
-                }}/{{ checklistItems.length }} aprovados</span>
+                  }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
@@ -1194,7 +1219,7 @@ onMounted(() => {
                         {{ item.attachment.fileName }}
                       </p>
                       <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
-                        }}KB</span>
+                      }}KB</span>
                     </div>
 
                     <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
@@ -1659,8 +1684,9 @@ onMounted(() => {
                     size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
                   <button type="button"
                     class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
-                    @click="handleRevealPassword">
-                    <Icon :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
+                    :disabled="isRevealingPassword" @click="handleRevealPassword">
+                    <Icon v-if="isRevealingPassword" name="svg-spinners:ring-resize" class="size-4" />
+                    <Icon v-else :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
                       class="size-4" />
                   </button>
                 </div>
