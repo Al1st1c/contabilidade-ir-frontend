@@ -72,8 +72,11 @@ const isOwner = computed(() => {
 
 // IR Usage / Limits
 const irUsed = computed(() => currentSubscription.value?.yearlyUsage?.tax_declarations || 0)
-// irPrepaidCredits já inclui o bônus do plano + créditos comprados — é o saldo total disponível
-const irTotal = computed(() => (currentSubscription.value as any)?.irPrepaidCredits || 0)
+// irTotal é a soma dos créditos pré-pagos (saldo restante) com os já usados (capacidade total alocada/comprada)
+const irTotal = computed(() => {
+  const prepaid = (currentSubscription.value as any)?.irPrepaidCredits || 0
+  return prepaid + irUsed.value
+})
 const irUsagePercent = computed(() => irTotal.value > 0 ? Math.min(100, Math.round((irUsed.value / irTotal.value) * 100)) : 0)
 
 const isOverdue = computed(() => {
@@ -643,6 +646,7 @@ function openManageColumns() {
   open(PanelsPanelManageColumns, {
     onSaved: () => {
       fetchKanban()
+      fetchMySubscription()
     },
   })
 }
@@ -651,6 +655,7 @@ function openCreateDeclaration() {
   open(PanelsPanelCreateDeclaration, {
     onSaved: () => {
       fetchKanban()
+      fetchMySubscription()
     },
   }, {
     clickOutside: false,
@@ -662,6 +667,7 @@ function openDeclarationDetails(declarationId: string) {
     declarationId,
     onSaved: () => {
       fetchKanban()
+      fetchMySubscription()
     },
   })
 }
