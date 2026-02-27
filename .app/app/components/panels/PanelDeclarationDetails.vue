@@ -45,14 +45,15 @@ const saveDebounced = useDebounceFn(() => {
 const lastSavedForm = ref<any>({})
 
 // ─── Active Tab ───────────────────────────────────────────────────────────────
-const activeTab = ref<'details' | 'checklist' | 'attachments' | 'official_documents' | 'communication'>('details')
+const activeTab = ref<'details' | 'checklist' | 'attachments' | 'official_documents' | 'communication' | 'management'>('details')
 
 const tabs = [
-  { key: 'details', label: 'Detalhes', icon: 'lucide:file-text' },
-  { key: 'checklist', label: 'Checklist', icon: 'lucide:check-square' },
-  { key: 'attachments', label: 'Anexos', icon: 'lucide:paperclip' },
-  { key: 'official_documents', label: 'Documentos Oficiais', icon: 'lucide:shield-check' },
-  { key: 'communication', label: 'Comunicação', icon: 'lucide:send' },
+  { key: 'details', label: 'Detalhes', icon: 'lucide:file-text', mobileOnly: false },
+  { key: 'checklist', label: 'Checklist', icon: 'lucide:check-square', mobileOnly: false },
+  { key: 'attachments', label: 'Anexos', icon: 'lucide:paperclip', mobileOnly: false },
+  { key: 'official_documents', label: 'Documentos Oficiais', icon: 'lucide:shield-check', mobileOnly: false },
+  { key: 'communication', label: 'Comunicação', icon: 'lucide:send', mobileOnly: false },
+  { key: 'management', label: 'Gestão', icon: 'lucide:settings', mobileOnly: true },
 ] as const
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -763,14 +764,16 @@ onMounted(() => {
 
 <template>
   <FocusScope
-    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-6xl shadow-2xl flex flex-col h-screen overflow-hidden">
+    class="border-muted-200 dark:border-muted-800 border-l bg-white dark:bg-muted-900 w-full max-w-6xl shadow-2xl flex flex-col h-screen overflow-hidden"
+  >
     <!-- ═══ HEADER ═══ -->
     <div class="border-muted-200 dark:border-muted-800 border-b bg-white dark:bg-muted-900 shrink-0 z-20">
       <!-- Row 1: key + título + close -->
       <div class="flex h-14 w-full items-center justify-between px-6">
         <div v-if="declaration" class="flex items-center gap-3 min-w-0">
           <span
-            class="inline-flex items-center gap-1.5 bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-300 text-xs font-mono font-semibold px-2.5 py-1 rounded-md shrink-0">
+            class="inline-flex items-center gap-1.5 bg-muted-100 dark:bg-muted-800 text-muted-600 dark:text-muted-300 text-xs font-mono font-semibold px-2.5 py-1 rounded-md shrink-0"
+          >
             <Icon name="lucide:hash" class="size-3" />
             {{ declaration.id.slice(0, 8).toUpperCase() }}
           </span>
@@ -778,8 +781,10 @@ onMounted(() => {
             <BaseHeading as="h3" size="sm" weight="semibold" class="text-muted-800 dark:text-muted-100 truncate">
               IR {{ declaration.taxYear }} — {{ declaration.client?.name }}
             </BaseHeading>
-            <BaseTag size="sm" variant="none"
-              :class="declaration.declarationType === 'complete' ? 'bg-primary-500 text-white' : 'bg-info-500 text-white'">
+            <BaseTag
+              size="sm" variant="none"
+              :class="declaration.declarationType === 'complete' ? 'bg-primary-500 text-white' : 'bg-info-500 text-white'"
+            >
               {{ declaration.declarationType === 'complete' ? 'Completa' : 'Simplificada' }}
             </BaseTag>
           </div>
@@ -792,9 +797,11 @@ onMounted(() => {
           <div v-if="isSaving" class="mr-1">
             <Icon name="svg-spinners:ring-resize" class="size-4 text-muted-400" />
           </div>
-          <button type="button"
+          <button
+            type="button"
             class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-muted-600 rounded-lg p-1.5 transition-colors"
-            @click="$emit('close')">
+            @click="$emit('close')"
+          >
             <Icon name="lucide:x" class="size-5" />
           </button>
         </div>
@@ -803,20 +810,27 @@ onMounted(() => {
       <!-- Row 2: status strip -->
       <div v-if="declaration" class="flex items-center gap-3 px-6 pb-2.5 text-xs text-muted-500 flex-wrap">
         <span
-          class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-muted-200 dark:border-muted-700 bg-muted-50 dark:bg-muted-800">
-          <span class="size-2 rounded-full"
-            :style="`background-color: var(--color-${selectedColumn?.color || 'gray'}-500, #9ca3af)`" />
+          class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-muted-200 dark:border-muted-700 bg-muted-50 dark:bg-muted-800"
+        >
+          <span
+            class="size-2 rounded-full"
+            :style="`background-color: var(--color-${selectedColumn?.color || 'gray'}-500, #9ca3af)`"
+          />
           <span class=" text-muted-700 dark:text-muted-200">{{ selectedColumn?.label || 'Sem status' }}</span>
         </span>
         <div class="flex items-center gap-1.5">
-          <Icon :name="selectedPriority?.icon || 'lucide:minus'" class="size-3.5"
-            :class="selectedPriority?.color || 'text-muted-400'" />
+          <Icon
+            :name="selectedPriority?.icon || 'lucide:minus'" class="size-3.5"
+            :class="selectedPriority?.color || 'text-muted-400'"
+          />
           <span>{{ selectedPriority?.label || '—' }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
-          <BaseAvatar v-if="assignedMember" :src="assignedMember.photo" :text="assignedMember.name?.charAt(0)"
-            size="xs" />
+          <BaseAvatar
+            v-if="assignedMember" :src="assignedMember.photo" :text="assignedMember.name?.charAt(0)"
+            size="xs"
+          />
           <Icon v-else name="lucide:user" class="size-3.5 text-muted-400" />
           <span>{{ assignedMember?.name || 'Sem responsável' }}</span>
         </div>
@@ -824,13 +838,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -838,32 +852,46 @@ onMounted(() => {
       </div>
 
       <!-- Row 3: Tabs -->
-      <div class="flex items-center gap-1 px-6 border-t border-muted-100 dark:border-muted-800">
-        <button v-for="tab in tabs" :key="tab.key" type="button"
-          class="relative flex items-center gap-2 px-3 py-2.5 text-xs transition-all"
-          :class="activeTab === tab.key ? 'text-primary-600 dark:text-primary-400' : 'text-muted-400 hover:text-muted-600 dark:hover:text-muted-300'"
-          @click="activeTab = tab.key">
+      <div
+        class="flex items-center gap-1 px-4 md:px-6 border-t border-muted-100 dark:border-muted-800 overflow-x-auto nui-slimscroll no-scrollbar"
+      >
+        <button
+          v-for="tab in tabs" :key="tab.key" type="button"
+          class="relative flex items-center gap-2 px-3 py-3 md:py-3.5 text-[10px] md:text-xs transition-all shrink-0"
+          :class="[
+            activeTab === tab.key ? 'text-primary-600 dark:text-primary-400 font-bold' : 'text-muted-400 hover:text-muted-600 dark:hover:text-muted-300',
+            tab.mobileOnly ? 'md:hidden' : '',
+          ]" @click="activeTab = tab.key"
+        >
           <Icon :name="tab.icon" class="size-3.5" />
           <span class="uppercase tracking-wider">{{ tab.label }}</span>
 
           <!-- Badge checklist -->
-          <span v-if="tab.key === 'checklist' && (pendingChecklistCount > 0 || uploadedChecklistCount > 0)"
+          <span
+            v-if="tab.key === 'checklist' && (pendingChecklistCount > 0 || uploadedChecklistCount > 0)"
             class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] "
-            :class="uploadedChecklistCount > 0 ? 'bg-warning-100 text-warning-700' : 'bg-muted-100 text-muted-500'">{{
-              uploadedChecklistCount > 0 ? uploadedChecklistCount : pendingChecklistCount }}</span>
+            :class="uploadedChecklistCount > 0 ? 'bg-warning-100 text-warning-700' : 'bg-muted-100 text-muted-500'"
+          >{{
+            uploadedChecklistCount > 0 ? uploadedChecklistCount : pendingChecklistCount }}</span>
 
           <!-- Badge anexos -->
-          <span v-if="tab.key === 'attachments' && filteredAttachments.length > 0"
-            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500">{{
-              filteredAttachments.length }}</span>
+          <span
+            v-if="tab.key === 'attachments' && filteredAttachments.length > 0"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500"
+          >{{
+            filteredAttachments.length }}</span>
 
           <!-- Badge documentos oficiais -->
-          <span v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
-            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500">{{
-              officialDocumentsCount }}</span>
+          <span
+            v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500"
+          >{{
+            officialDocumentsCount }}</span>
 
-          <span v-if="activeTab === tab.key"
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />
+          <span
+            v-if="activeTab === tab.key"
+            class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full"
+          />
         </button>
       </div>
     </div>
@@ -885,56 +913,79 @@ onMounted(() => {
           <div v-if="activeTab === 'details'" class="space-y-6 animate-fade-in">
             <!-- Cliente: card compacto no topo -->
             <div
-              class="flex items-center gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800">
-              <div
-                class="size-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
-                <Icon name="lucide:user" class="size-5 text-primary-500" />
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold text-muted-800 dark:text-muted-100">
-                  {{ declaration.client?.name }}
-                </p>
-                <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span class="text-xs text-muted-500">{{ declaration.client?.cpf }}</span>
-                  <span class="text-muted-300 dark:text-muted-700">·</span>
-                  <span class="text-xs text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
+              class="flex flex-col gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800"
+            >
+              <!-- Top Row: Identity -->
+              <div class="flex items-center gap-4">
+                <div
+                  class="size-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0"
+                >
+                  <Icon name="lucide:user" class="size-5 text-primary-500" />
                 </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-bold text-muted-800 dark:text-muted-100">
+                    {{ declaration.client?.name }}
+                  </p>
+                  <div class="flex items-center gap-3 mt-0.5 flex-wrap text-xs">
+                    <span class="text-muted-500">{{ declaration.client?.cpf }}</span>
+                    <span class="text-muted-300 dark:text-muted-700">·</span>
+                    <span class="text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
+                  </div>
+                </div>
+                <BaseButton
+                  size="sm" variant="muted" rounded="lg" class="shrink-0"
+                  @click="showClientDetailsPanel = true"
+                >
+                  <Icon name="lucide:id-card" class="size-4 mr-1.5" /> <span class="hidden sm:inline">Detalhes</span>
+                </BaseButton>
+              </div>
+
+              <!-- Divider for Mobile -->
+              <div class="h-px bg-muted-200 dark:bg-muted-800 sm:hidden" />
+
+              <!-- Bottom Row: Link & Tags -->
+              <div class="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
                 <!-- Link de Coleta -->
-                <div class="mt-2 flex flex-col gap-1">
+                <div class="flex flex-col gap-1.5 min-w-0">
                   <div class="flex items-center gap-2">
-                    <Icon name="lucide:link" class="size-3.5 text-muted-400" />
+                    <Icon name="lucide:link" class="size-3 text-muted-400" />
                     <BaseText size="xs" class="text-muted-500 uppercase font-bold">
                       Link de Coleta
                     </BaseText>
                   </div>
                   <div v-if="collectionLink" class="flex items-center gap-2">
-                    <span v-if="fullCollectionLink"
-                      class="text-xs text-muted-500 break-all bg-muted-50 dark:bg-muted-800 p-1 rounded border border-muted-200 dark:border-muted-700 select-all">
+                    <span
+                      v-if="fullCollectionLink"
+                      class="hidden lg:inline text-xs text-muted-500 break-all bg-muted-50 dark:bg-muted-800 p-1 rounded border border-muted-200 dark:border-muted-700 select-all"
+                    >
                       {{ fullCollectionLink }}
                     </span>
-                    <BaseButton size="sm" variant="none" class="px-2 py-1 bg-primary-500 text-white shrink-0"
-                      @click="copyLink">
+                    <BaseButton
+                      size="sm" variant="none"
+                      class="px-3 py-1.5 bg-primary-500 text-white shrink-0 flex items-center gap-2 w-full sm:w-auto justify-center"
+                      @click="copyLink"
+                    >
                       <Icon name="lucide:copy" class="size-3" />
+                      <span class="text-[10px] font-bold">Copiar Link</span>
                     </BaseButton>
                   </div>
-                  <div v-else class="ml-auto">
+                  <div v-else>
                     <BaseButton size="sm" variant="primary" :loading="isGeneratingLink" @click="generateLink">
                       <Icon name="lucide:link" class="size-3.5 mr-1.5" /> Gerar
                     </BaseButton>
                   </div>
                 </div>
+
+                <!-- Tags do cliente (Alinhadas à direita no desktop) -->
+                <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1 justify-end">
+                  <BaseTag
+                    v-for="tag in form.tags" :key="tag" size="sm" variant="none"
+                    class="text-[9px] bg-primary-500 text-white font-bold px-2 py-0.5 rounded-md"
+                  >
+                    {{ tag }}
+                  </BaseTag>
+                </div>
               </div>
-              <!-- Tags inline do cliente -->
-              <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1 shrink-0">
-                <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none"
-                  class="text-[10px] bg-primary-500 text-white">
-                  {{ tag }}
-                </BaseTag>
-              </div>
-              <BaseButton size="sm" variant="muted" rounded="lg" class="shrink-0"
-                @click="showClientDetailsPanel = true">
-                <Icon name="lucide:id-card" class="size-4 mr-1.5" /> Detalhes
-              </BaseButton>
             </div>
 
             <!-- Descrição: campo principal, grande e com destaque -->
@@ -946,15 +997,19 @@ onMounted(() => {
                     Descrição
                   </BaseText>
                 </div>
-                <BaseTag size="sm" variant="none"
-                  class="text-[9px] uppercase font-bold tracking-tight bg-muted-100 text-muted-700">
+                <BaseTag
+                  size="sm" variant="none"
+                  class="text-[9px] uppercase font-bold tracking-tight bg-muted-100 text-muted-700"
+                >
                   Público — cliente vê
                 </BaseTag>
               </div>
-              <BaseTextarea v-model="form.description" rounded="lg" rows="7"
+              <BaseTextarea
+                v-model="form.description" rounded="lg" rows="7"
                 placeholder="Adicione uma descrição detalhada, orientações ou instruções para o cliente..."
                 class="bg-muted-50 dark:bg-muted-900/40 border border-muted-200 dark:border-muted-800 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed transition-colors"
-                @blur="saveDebounced" />
+                @blur="saveDebounced"
+              />
             </div>
 
             <!-- Notas internas -->
@@ -967,34 +1022,46 @@ onMounted(() => {
                   </BaseText>
                 </div>
                 <div class="flex items-center gap-2">
-                  <BaseTag size="sm" variant="none"
-                    class="text-[9px] uppercase font-bold tracking-tight bg-primary-500 text-white leading-none px-2 py-1">
+                  <BaseTag
+                    size="sm" variant="none"
+                    class="text-[9px] uppercase font-bold tracking-tight bg-primary-500 text-white leading-none px-2 py-1"
+                  >
                     Privado — apenas equipe
                   </BaseTag>
                   <!-- Botão de Upload Interno -->
                   <button
                     class="p-1 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 transition-colors"
-                    title="Anexar imagem/arquivo interno" @click="triggerInternalUpload">
+                    title="Anexar imagem/arquivo interno" @click="triggerInternalUpload"
+                  >
                     <Icon name="solar:gallery-add-bold-duotone" class="size-4" />
                   </button>
-                  <input ref="internalFileInput" type="file" class="hidden" accept="image/*,application/pdf"
-                    @change="handleInternalFileUpload">
+                  <input
+                    ref="internalFileInput" type="file" class="hidden" accept="image/*,application/pdf"
+                    @change="handleInternalFileUpload"
+                  >
                 </div>
               </div>
-              <BaseTextarea v-model="form.internalNotes" rounded="lg" rows="4"
+              <BaseTextarea
+                v-model="form.internalNotes" rounded="lg" rows="4"
                 placeholder="Notas visíveis apenas para a sua equipe..."
                 class="bg-primary-50/40 dark:bg-primary-900/10 border border-primary-200/60 dark:border-primary-800/40 focus:border-primary-400 focus:ring-1 focus:ring-primary-500/20 text-sm leading-relaxed italic transition-colors p-4"
-                @blur="saveDebounced" />
+                @blur="saveDebounced"
+              />
 
               <!-- Listagem de Anexos Internos -->
               <div v-if="internalAttachments.length > 0" class="flex flex-wrap gap-2 mt-2">
-                <div v-for="att in internalAttachments" :key="att.id"
-                  class="group relative size-16 rounded-xl border border-primary-200 dark:border-primary-800 overflow-hidden bg-white dark:bg-muted-950 shadow-sm transition-all hover:shadow-md">
+                <div
+                  v-for="att in internalAttachments" :key="att.id"
+                  class="group relative size-16 rounded-xl border border-primary-200 dark:border-primary-800 overflow-hidden bg-white dark:bg-muted-950 shadow-sm transition-all hover:shadow-md"
+                >
                   <div
                     class="size-full flex flex-col items-center justify-center gap-1 bg-muted-50/50 dark:bg-muted-900/50 cursor-pointer group-hover:bg-primary-50/50"
-                    @click="openPreview({ attachment: att, title: 'Anexo Interno' })">
-                    <Icon v-if="att.mimeType.startsWith('image/')" name="solar:gallery-bold-duotone"
-                      class="size-6 text-primary-500" />
+                    @click="openPreview({ attachment: att, title: 'Anexo Interno' })"
+                  >
+                    <Icon
+                      v-if="att.mimeType.startsWith('image/')" name="solar:gallery-bold-duotone"
+                      class="size-6 text-primary-500"
+                    />
                     <Icon v-else name="solar:file-bold-duotone" class="size-6 text-primary-500" />
                     <span class="text-[8px] text-muted-400 uppercase font-bold px-1 truncate w-full text-center">{{
                       att.fileName.split('.').pop() }}</span>
@@ -1002,13 +1069,18 @@ onMounted(() => {
 
                   <!-- Overlay de ações -->
                   <div
-                    class="absolute inset-x-0 bottom-0 py-1.5 bg-primary-900/80 translate-y-full group-hover:translate-y-0 flex items-center justify-center gap-3 transition-transform">
-                    <button class="text-white hover:text-primary-200 transition-colors" title="Visualizar"
-                      @click.stop="openPreview({ attachment: att, title: 'Anexo Interno' })">
+                    class="absolute inset-x-0 bottom-0 py-1.5 bg-primary-900/80 translate-y-full group-hover:translate-y-0 flex items-center justify-center gap-3 transition-transform"
+                  >
+                    <button
+                      class="text-white hover:text-primary-200 transition-colors" title="Visualizar"
+                      @click.stop="openPreview({ attachment: att, title: 'Anexo Interno' })"
+                    >
                       <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                     </button>
-                    <button class="text-white hover:text-danger-200 transition-colors" title="Excluir"
-                      @click.stop="deleteOfficialDocument(att.id)">
+                    <button
+                      class="text-white hover:text-danger-200 transition-colors" title="Excluir"
+                      @click.stop="deleteOfficialDocument(att.id)"
+                    >
                       <Icon name="lucide:trash-2" class="size-3.5" />
                     </button>
                   </div>
@@ -1024,10 +1096,12 @@ onMounted(() => {
                   Motivo da Retificação
                 </BaseText>
               </div>
-              <BaseTextarea v-model="form.rectificationDescription" rounded="lg" rows="3"
+              <BaseTextarea
+                v-model="form.rectificationDescription" rounded="lg" rows="3"
                 placeholder="Descreva o que motivou a retificação..."
                 class="bg-danger-50/30 dark:bg-danger-900/10 border border-danger-200/60 dark:border-danger-800/40 text-sm leading-relaxed"
-                @blur="saveDebounced" />
+                @blur="saveDebounced"
+              />
             </div>
 
             <!-- Docs Oficiais: compacto, 2x2 grid -->
@@ -1039,22 +1113,30 @@ onMounted(() => {
                 </BaseText>
               </div>
               <div class="grid grid-cols-2 gap-2">
-                <div v-for="slot in officialDocumentSlots" :key="slot.category"
+                <div
+                  v-for="slot in officialDocumentSlots" :key="slot.category"
                   class="group relative flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-muted-950 transition-all"
                   :class="getSlotAttachment(slot.category)
                     ? 'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10'
-                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'">
-                  <div class="size-8 rounded-lg flex items-center justify-center shrink-0"
-                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'">
-                    <Icon :name="slot.icon" class="size-4"
-                      :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'" />
+                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'"
+                >
+                  <div
+                    class="size-8 rounded-lg flex items-center justify-center shrink-0"
+                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'"
+                  >
+                    <Icon
+                      :name="slot.icon" class="size-4"
+                      :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'"
+                    />
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-[10px] font-bold text-muted-600 dark:text-muted-300 uppercase tracking-tight">
                       {{ slot.label }}
                     </p>
-                    <p v-if="getSlotAttachment(slot.category)"
-                      class="text-[10px] text-success-600 font-semibold mt-0.5 truncate">
+                    <p
+                      v-if="getSlotAttachment(slot.category)"
+                      class="text-[10px] text-success-600 font-semibold mt-0.5 truncate"
+                    >
                       ✓ Enviado
                     </p>
                     <p v-else class="text-[10px] text-muted-400 mt-0.5">
@@ -1066,18 +1148,22 @@ onMounted(() => {
                     <template v-if="getSlotAttachment(slot.category)">
                       <button
                         class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-500 transition-all"
-                        @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })">
+                        @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })"
+                      >
                         <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                       </button>
                       <button
                         class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-danger-500 transition-all"
-                        @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)">
+                        @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)"
+                      >
                         <Icon name="lucide:trash-2" class="size-3.5" />
                       </button>
                     </template>
-                    <button v-else
+                    <button
+                      v-else
                       class="p-1.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm"
-                      @click="triggerOfficialUpload(slot.category)">
+                      @click="triggerOfficialUpload(slot.category)"
+                    >
                       <Icon name="lucide:upload" class="size-3.5" />
                     </button>
                   </div>
@@ -1096,20 +1182,23 @@ onMounted(() => {
                   entradas)</span>
               </div>
 
-              <div v-if="declaration.auditLogs?.length > 0"
-                class="relative pl-4 border-l-2 border-muted-200 dark:border-muted-800 ml-2 space-y-3 max-h-[260px] overflow-y-auto pr-1">
+              <div
+                v-if="declaration.auditLogs?.length > 0"
+                class="relative pl-4 border-l-2 border-muted-200 dark:border-muted-800 ml-2 space-y-3 max-h-[260px] overflow-y-auto pr-1"
+              >
                 <div v-for="log in declaration.auditLogs" :key="log.id" class="flex items-start gap-2.5">
                   <!-- dot no timeline -->
                   <div
-                    class="absolute -left-[5px] mt-1.5 size-2.5 rounded-full bg-muted-300 dark:bg-muted-600 border-2 border-white dark:border-muted-900 shrink-0" />
+                    class="absolute -left-[5px] mt-1.5 size-2.5 rounded-full bg-muted-300 dark:bg-muted-600 border-2 border-white dark:border-muted-900 shrink-0"
+                  />
 
                   <!-- conteúdo inline -->
                   <div class="flex-1 min-w-0">
                     <div class="flex items-baseline gap-2 flex-wrap">
-                      <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName ||
-                        'Sistema' }}</span>
+                      <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName
+                        || 'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1136,32 +1225,39 @@ onMounted(() => {
                 <span v-if="isSavingChecklist" class="animate-spin text-primary-500">
                   <Icon name="svg-spinners:ring-resize" class="size-4" />
                 </span>
-                <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status ===
-                  'approved').length
-                  }}/{{ checklistItems.length }} aprovados</span>
+                <span class="text-xs text-muted-400 font-semibold">{{ checklistItems.filter(i => i.status
+                  === 'approved').length
+                }}/{{ checklistItems.length }} aprovados</span>
               </div>
             </div>
 
             <!-- Input + botão -->
             <div class="flex gap-2">
-              <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante de renda..." size="sm"
-                rounded="lg" class="flex-1" @keyup.enter="addChecklistItem" />
-              <BaseButton size="sm" variant="primary" rounded="lg" :loading="isSavingChecklist"
-                @click="addChecklistItem">
+              <BaseInput
+                v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante de renda..." size="sm"
+                rounded="lg" class="flex-1" @keyup.enter="addChecklistItem"
+              />
+              <BaseButton
+                size="sm" variant="primary" rounded="lg" :loading="isSavingChecklist"
+                @click="addChecklistItem"
+              >
                 <Icon name="lucide:plus" class="size-4 mr-1" /> Adicionar
               </BaseButton>
             </div>
 
             <!-- Progress bar -->
             <div v-if="checklistItems.length > 0" class="w-full bg-muted-200 dark:bg-muted-800 rounded-full h-1.5">
-              <div class="h-1.5 rounded-full transition-all duration-500"
+              <div
+                class="h-1.5 rounded-full transition-all duration-500"
                 :class="checklistItems.filter(i => i.status === 'approved').length === checklistItems.length && checklistItems.length > 0 ? 'bg-success-500' : 'bg-primary-500'"
-                :style="`width: ${checklistItems.length > 0 ? (checklistItems.filter(i => i.status === 'approved').length / checklistItems.length) * 100 : 0}%`" />
+                :style="`width: ${checklistItems.length > 0 ? (checklistItems.filter(i => i.status === 'approved').length / checklistItems.length) * 100 : 0}%`"
+              />
             </div>
 
             <!-- Items -->
             <div class="space-y-2">
-              <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
+              <div
+                v-for="(item, idx) in checklistItems" :key="item.id || idx"
                 class="group flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-muted-950 transition-all"
                 :class="{
                   'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10': item.status === 'approved',
@@ -1169,15 +1265,18 @@ onMounted(() => {
                   'border-warning-200 dark:border-warning-800 bg-warning-50/40 dark:bg-warning-900/10': item.status === 'uploaded',
                   'border-info-200 dark:border-info-800 bg-info-50/40 dark:bg-info-900/10': item.status === 'not_owned',
                   'border-muted-200 dark:border-muted-800 hover:border-primary-300': item.status === 'pending',
-                }">
+                }"
+              >
                 <!-- Status icon -->
-                <div class="size-6 rounded-full flex items-center justify-center shrink-0" :class="{
-                  'bg-success-100 text-success-600': item.status === 'approved',
-                  'bg-danger-100 text-danger-600': item.status === 'rejected',
-                  'bg-warning-100 text-warning-600': item.status === 'uploaded',
-                  'bg-info-100 text-info-600': item.status === 'not_owned',
-                  'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
-                }">
+                <div
+                  class="size-6 rounded-full flex items-center justify-center shrink-0" :class="{
+                    'bg-success-100 text-success-600': item.status === 'approved',
+                    'bg-danger-100 text-danger-600': item.status === 'rejected',
+                    'bg-warning-100 text-warning-600': item.status === 'uploaded',
+                    'bg-info-100 text-info-600': item.status === 'not_owned',
+                    'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
+                  }"
+                >
                   <Icon :name="statusIcon(item.status)" class="size-3" />
                 </div>
                 <!-- Title & Observations -->
@@ -1186,35 +1285,46 @@ onMounted(() => {
                     <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
                       {{ item.title }}
                     </p>
-                    <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                      class="text-[10px] font-bold shrink-0 bg-danger-600 px-2">
+                    <BaseTag
+                      v-if="item.isRequired" size="sm" variant="none"
+                      class="text-[10px] font-bold shrink-0 bg-danger-600 px-2"
+                    >
                       Obrigatório
                     </BaseTag>
-                    <BaseTag v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)"
-                      variant="none" class="text-[10px] font-bold shrink-0 capitalize px-2">
+                    <BaseTag
+                      v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)"
+                      variant="none" class="text-[10px] font-bold shrink-0 capitalize px-2"
+                    >
                       {{ statusLabel(item.status) }}
                     </BaseTag>
                   </div>
 
                   <!-- Requirement Description (if any) -->
                   <div class="flex items-center gap-2 mt-1">
-                    <p v-if="item.description"
-                      class="text-[11px] text-muted-500 dark:text-muted-400 line-clamp-1 italic">
+                    <p
+                      v-if="item.description"
+                      class="text-[11px] text-muted-500 dark:text-muted-400 line-clamp-1 italic"
+                    >
                       {{ item.description }}
                     </p>
-                    <span v-if="item.createdAt"
-                      class="text-[9px] text-muted-400 font-medium ml-auto shrink-0 flex items-center gap-1">
+                    <span
+                      v-if="item.createdAt"
+                      class="text-[9px] text-muted-400 font-medium ml-auto shrink-0 flex items-center gap-1"
+                    >
                       <Icon name="lucide:calendar" class="size-3" />
                       {{ new Date(item.createdAt).toLocaleString('pt-BR') }}
                     </span>
                   </div>
 
                   <!-- File info and client note -->
-                  <div v-if="item.attachment || (item.status === 'not_owned' && item.comment)"
-                    class="mt-2 p-2 rounded-lg bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 shadow-inner">
+                  <div
+                    v-if="item.attachment || (item.status === 'not_owned' && item.comment)"
+                    class="mt-2 p-2 rounded-lg bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 shadow-inner"
+                  >
                     <div v-if="item.attachment" class="flex items-center justify-between gap-2 overflow-hidden">
                       <p
-                        class="text-[11px] font-bold text-muted-700 dark:text-muted-200 truncate flex items-center gap-1.5">
+                        class="text-[11px] font-bold text-muted-700 dark:text-muted-200 truncate flex items-center gap-1.5"
+                      >
                         <Icon name="solar:document-bold-duotone" class="size-3.5 text-primary-500" />
                         {{ item.attachment.fileName }}
                       </p>
@@ -1222,54 +1332,73 @@ onMounted(() => {
                       }}KB</span>
                     </div>
 
-                    <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
-                      class="mt-2 pt-2 border-t border-muted-200 dark:border-muted-800">
-                      <p class="text-[11px] text-primary-600 dark:text-primary-400 font-semibold flex items-start gap-1.5"
-                        :title="item.attachment?.description || item.comment">
+                    <div
+                      v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
+                      class="mt-2 pt-2 border-t border-muted-200 dark:border-muted-800"
+                    >
+                      <p
+                        class="text-[11px] text-primary-600 dark:text-primary-400 font-semibold flex items-start gap-1.5"
+                        :title="item.attachment?.description || item.comment"
+                      >
                         <Icon name="solar:notes-bold-duotone" class="size-3.5 mt-0.5 shrink-0" />
-                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment?.description ||
-                          item.comment
-                            }}"</span></span>
+                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment?.description
+                          || item.comment
+                        }}"</span></span>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 <!-- Arquivo enviado ou Justificativa: ações -->
-                <div v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'"
-                  class="flex items-center gap-2 shrink-0">
-                  <BaseButton v-if="item.attachment" variant="ghost" color="primary" size="icon-sm"
-                    @click="openPreview(item)">
+                <div
+                  v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'"
+                  class="flex items-center gap-2 shrink-0"
+                >
+                  <BaseButton
+                    v-if="item.attachment" variant="ghost" color="primary" size="icon-sm"
+                    @click="openPreview(item)"
+                  >
                     <Icon name="solar:eye-bold-duotone" class="size-3.5" />
                   </BaseButton>
-                  <BaseButton color="success" size="icon-sm" :loading="processingItems.has(item.id)"
-                    @click="updateItemStatus(item.id, 'approved')">
+                  <BaseButton
+                    color="success" size="icon-sm" :loading="processingItems.has(item.id)"
+                    @click="updateItemStatus(item.id, 'approved')"
+                  >
                     <Icon name="lucide:check" class="size-3.5" />
                   </BaseButton>
-                  <BaseButton color="danger" size="icon-sm" :loading="processingItems.has(item.id)"
-                    @click="updateItemStatus(item.id, 'rejected')">
+                  <BaseButton
+                    color="danger" size="icon-sm" :loading="processingItems.has(item.id)"
+                    @click="updateItemStatus(item.id, 'rejected')"
+                  >
                     <Icon name="lucide:x" class="size-3.5" />
                   </BaseButton>
                 </div>
 
                 <!-- Actions: required toggle + delete -->
-                <div v-if="item.status === 'pending' || item.status === 'rejected'"
-                  class="flex items-center gap-0.5 shrink-0">
-                  <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+                <div
+                  v-if="item.status === 'pending' || item.status === 'rejected'"
+                  class="flex items-center gap-0.5 shrink-0"
+                >
+                  <button
+                    class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
                     :class="item.isRequired ? 'text-danger-500' : 'text-muted-400 hover:text-primary-500'"
-                    @click="toggleItemRequired(idx)">
+                    @click="toggleItemRequired(idx)"
+                  >
                     <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle'" class="size-3.5" />
                   </button>
                   <button
                     class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-muted-400 hover:text-danger-500 transition-all"
-                    @click="removeChecklistItem(idx)">
+                    @click="removeChecklistItem(idx)"
+                  >
                     <Icon name="lucide:trash-2" class="size-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div v-if="checklistItems.length === 0"
-                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+              <div
+                v-if="checklistItems.length === 0"
+                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl"
+              >
                 <Icon name="lucide:clipboard-list" class="size-8 text-muted-200 mx-auto mb-2" />
                 <p class="text-xs text-muted-400">
                   Adicione itens ao checklist acima
@@ -1297,17 +1426,24 @@ onMounted(() => {
               </div>
 
               <div v-if="filteredAttachments.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <BaseCard v-for="att in filteredAttachments" :key="att.id" rounded="lg"
-                  class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-400 hover:shadow-sm transition-all cursor-pointer group bg-white dark:bg-muted-950">
+                <BaseCard
+                  v-for="att in filteredAttachments" :key="att.id" rounded="lg"
+                  class="p-3 border-muted-200 dark:border-muted-800 hover:border-primary-400 hover:shadow-sm transition-all cursor-pointer group bg-white dark:bg-muted-950"
+                >
                   <div class="flex items-start gap-3">
                     <div
-                      class="size-9 rounded-lg bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0 group-hover:bg-primary-100 group-hover:text-primary-500 transition-colors">
-                      <Icon name="lucide:file-text"
-                        class="size-4.5 text-muted-500 group-hover:text-primary-500 transition-colors" />
+                      class="size-9 rounded-lg bg-muted-100 dark:bg-muted-800 flex items-center justify-center shrink-0 group-hover:bg-primary-100 group-hover:text-primary-500 transition-colors"
+                    >
+                      <Icon
+                        name="lucide:file-text"
+                        class="size-4.5 text-muted-500 group-hover:text-primary-500 transition-colors"
+                      />
                     </div>
                     <div class="min-w-0 flex-1">
-                      <p class="text-xs font-semibold truncate text-muted-700 dark:text-muted-200"
-                        :title="att.fileName">
+                      <p
+                        class="text-xs font-semibold truncate text-muted-700 dark:text-muted-200"
+                        :title="att.fileName"
+                      >
                         {{ att.fileName }}
                       </p>
                       <div class="flex items-center justify-between mt-0.5">
@@ -1318,29 +1454,36 @@ onMounted(() => {
                           {{ new Date(att.createdAt).toLocaleString('pt-BR') }}
                         </span>
                       </div>
-                      <p v-if="att.description" class="text-[10px] text-primary-500 italic mt-1 line-clamp-2"
-                        :title="att.description">
+                      <p
+                        v-if="att.description" class="text-[10px] text-primary-500 italic mt-1 line-clamp-2"
+                        :title="att.description"
+                      >
                         "{{ att.description }}"
                       </p>
                     </div>
                   </div>
                   <div
-                    class="flex gap-1 mt-2.5 pt-2 border-t border-muted-100 dark:border-muted-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                    class="flex gap-1 mt-2.5 pt-2 border-t border-muted-100 dark:border-muted-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
                     <button
                       class="flex-1 flex items-center justify-center gap-1 text-[10px] text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded py-0.5 transition-colors"
-                      @click.stop="openPreview({ attachment: att, title: 'Anexo' })">
+                      @click.stop="openPreview({ attachment: att, title: 'Anexo' })"
+                    >
                       <Icon name="solar:eye-bold-duotone" class="size-3" /> Ver
                     </button>
                     <button
                       class="flex-1 flex items-center justify-center gap-1 text-[10px] text-muted-500 hover:bg-muted-100 dark:hover:bg-muted-800 rounded py-0.5 transition-colors"
-                      @click.stop="handleDownload(att)">
+                      @click.stop="handleDownload(att)"
+                    >
                       <Icon name="lucide:download" class="size-3" /> Baixar
                     </button>
                   </div>
                 </BaseCard>
               </div>
-              <div v-else
-                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
+              <div
+                v-else
+                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl"
+              >
                 <Icon name="lucide:paperclip" class="size-8 text-muted-200 mx-auto mb-2" />
                 <p class="text-xs text-muted-400">
                   Nenhum anexo. Clique "Adicionar" para enviar.
@@ -1360,15 +1503,21 @@ onMounted(() => {
                 </BaseText>
               </div>
               <div class="space-y-2">
-                <div v-for="slot in officialDocumentSlots" :key="slot.category"
+                <div
+                  v-for="slot in officialDocumentSlots" :key="slot.category"
                   class="group flex items-center gap-4 p-3.5 rounded-xl border bg-white dark:bg-muted-950 transition-all"
                   :class="getSlotAttachment(slot.category)
                     ? 'border-success-200 dark:border-success-800 bg-success-50/30 dark:bg-success-900/10'
-                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'">
-                  <div class="size-9 rounded-lg flex items-center justify-center shrink-0"
-                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'">
-                    <Icon :name="slot.icon" class="size-4.5"
-                      :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'" />
+                    : 'border-muted-200 dark:border-muted-800 hover:border-primary-300'"
+                >
+                  <div
+                    class="size-9 rounded-lg flex items-center justify-center shrink-0"
+                    :class="getSlotAttachment(slot.category) ? 'bg-success-100 dark:bg-success-900/30' : 'bg-muted-100 dark:bg-muted-800'"
+                  >
+                    <Icon
+                      :name="slot.icon" class="size-4.5"
+                      :class="getSlotAttachment(slot.category) ? 'text-success-500' : 'text-muted-400'"
+                    />
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-xs font-bold text-muted-700 dark:text-muted-200">
@@ -1378,8 +1527,10 @@ onMounted(() => {
                       {{ getSlotAttachment(slot.category)?.fileName || 'Aguardando envio' }}
                     </p>
                   </div>
-                  <BaseTag v-if="getSlotAttachment(slot.category)" size="sm" variant="none"
-                    class="text-[9px] shrink-0 bg-success-500 text-white">
+                  <BaseTag
+                    v-if="getSlotAttachment(slot.category)" size="sm" variant="none"
+                    class="text-[9px] shrink-0 bg-success-500 text-white"
+                  >
                     Enviado
                   </BaseTag>
                   <BaseTag v-else size="sm" variant="none" class="text-[9px] shrink-0 bg-muted-200 text-muted-700">
@@ -1387,23 +1538,31 @@ onMounted(() => {
                   </BaseTag>
                   <div class="flex gap-1 shrink-0">
                     <template v-if="getSlotAttachment(slot.category)">
-                      <BaseButton variant="ghost" color="primary" size="icon-sm"
-                        @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })">
+                      <BaseButton
+                        variant="ghost" color="primary" size="icon-sm"
+                        @click="openPreview({ attachment: getSlotAttachment(slot.category), title: slot.label })"
+                      >
                         <Icon name="solar:eye-bold-duotone" class="size-4" />
                       </BaseButton>
-                      <BaseButton variant="ghost" color="muted" size="icon-sm"
-                        @click="handleDownload(getSlotAttachment(slot.category))">
+                      <BaseButton
+                        variant="ghost" color="muted" size="icon-sm"
+                        @click="handleDownload(getSlotAttachment(slot.category))"
+                      >
                         <Icon name="lucide:download" class="size-4" />
                       </BaseButton>
-                      <BaseButton variant="ghost" color="danger" size="icon-sm"
+                      <BaseButton
+                        variant="ghost" color="danger" size="icon-sm"
                         class="opacity-0 group-hover:opacity-100 transition-all"
                         :loading="isDeletingOfficial === getSlotAttachment(slot.category).id"
-                        @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)">
+                        @click="deleteOfficialDocument(getSlotAttachment(slot.category).id)"
+                      >
                         <Icon name="lucide:trash-2" class="size-4" />
                       </BaseButton>
                     </template>
-                    <BaseButton v-else variant="primary" size="icon-sm" :loading="isUploading"
-                      @click="triggerOfficialUpload(slot.category)">
+                    <BaseButton
+                      v-else variant="primary" size="icon-sm" :loading="isUploading"
+                      @click="triggerOfficialUpload(slot.category)"
+                    >
                       <Icon name="lucide:upload" class="size-4" />
                     </BaseButton>
                   </div>
@@ -1436,14 +1595,18 @@ onMounted(() => {
 
               <!-- Templates grid 2x2 -->
               <div class="grid grid-cols-2 gap-2">
-                <button v-for="(tpl, idx) in smsTemplates" :key="tpl.id"
+                <button
+                  v-for="(tpl, idx) in smsTemplates" :key="tpl.id"
                   class="text-left p-3 rounded-xl border transition-all group" :class="selectedTemplateIndex === idx
                     ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500'
                     : 'border-muted-200 dark:border-muted-800 bg-white dark:bg-muted-950 hover:border-primary-400'"
-                  @click="handleSelectTemplate(idx)">
+                  @click="handleSelectTemplate(idx)"
+                >
                   <div class="flex items-center gap-2.5">
-                    <div class="size-8 rounded-lg flex items-center justify-center transition-colors"
-                      :class="selectedTemplateIndex === idx ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500 group-hover:bg-primary-100 group-hover:text-primary-500'">
+                    <div
+                      class="size-8 rounded-lg flex items-center justify-center transition-colors"
+                      :class="selectedTemplateIndex === idx ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500 group-hover:bg-primary-100 group-hover:text-primary-500'"
+                    >
                       <Icon :name="tpl.icon" class="size-4" />
                     </div>
                     <p class="text-xs font-bold text-muted-700 dark:text-muted-200">
@@ -1454,8 +1617,10 @@ onMounted(() => {
               </div>
 
               <!-- Preview + envio -->
-              <div v-if="selectedTemplateIndex !== null"
-                class="animate-fade-in p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
+              <div
+                v-if="selectedTemplateIndex !== null"
+                class="animate-fade-in p-4 rounded-xl bg-primary-500/5 border border-primary-500/20"
+              >
                 <p class="text-xs text-muted-600 dark:text-muted-300 italic leading-relaxed mb-3">
                   "{{ smsMessage }}"
                 </p>
@@ -1470,11 +1635,286 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- ════ SIDEBAR ════ -->
+          <!-- ━━━ TAB: GESTÃO (MOBILE ONLY) ━━━ -->
+          <div v-if="activeTab === 'management'" class="space-y-6 animate-fade-in md:hidden">
+            <div class="flex items-center gap-2 mb-2">
+              <Icon name="lucide:settings" class="size-4 text-muted-400" />
+              <BaseText size="xs" class="text-muted-500 uppercase font-bold">
+                Gestão da Declaração
+              </BaseText>
+            </div>
+
+            <!-- Management Content -->
+            <div class="space-y-5">
+              <!-- STATUS -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                  Status
+                </BaseText>
+                <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="saveDebounced">
+                  <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="size-2 rounded-full"
+                        :style="`background-color: var(--color-${opt.color || 'gray'}-500, #9ca3af)`"
+                      />
+                      <span class="text-sm font-medium">{{ opt.label }}</span>
+                    </div>
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
+
+              <div class="border-t border-muted-200 dark:border-muted-800" />
+
+              <!-- RESULTADO FINANCEIRO: destaque visual -->
+              <div class="space-y-2">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                  Resultado do IR
+                </BaseText>
+                <div class="flex items-center gap-2">
+                  <BaseSelect
+                    v-model="form.result" rounded="md" size="sm" class="flex-1"
+                    @update:model-value="saveDebounced"
+                  >
+                    <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
+                      <span class="text-sm font-medium">{{ opt.label }}</span>
+                    </BaseSelectItem>
+                  </BaseSelect>
+                </div>
+                <!-- Valor com destaque visual forte -->
+                <div v-if="form.result !== 'neutral'" class="flex items-center gap-2 mt-1">
+                  <div class="flex-1 relative">
+                    <BaseInput
+                      v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md"
+                      placeholder="0,00" class="text-sm font-bold pr-16" @blur="saveDebounced"
+                    />
+                    <span
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-400"
+                    >BRL</span>
+                  </div>
+                </div>
+                <!-- Valor formatado destaque -->
+                <div
+                  v-if="form.result !== 'neutral'" class="mt-1 px-3 py-1.5 rounded-lg"
+                  :class="form.result === 'restitution' ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800' : 'bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800'"
+                >
+                  <p
+                    class="text-[10px] font-bold uppercase "
+                    :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'"
+                  >
+                    {{ form.result === 'restitution' ? '↑ Restituição' : '↓ A Pagar' }}
+                  </p>
+                  <p
+                    class="text-lg font-bold"
+                    :class="form.result === 'restitution' ? 'text-success-700 dark:text-success-400' : 'text-danger-700 dark:text-danger-400'"
+                  >
+                    R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
+                  </p>
+                </div>
+
+                <!-- Multa Compensada Checkbox -->
+                <div
+                  v-if="form.result === 'tax_to_pay'"
+                  class="mt-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800"
+                >
+                  <div class="flex items-start gap-3">
+                    <BaseCheckbox v-model="form.isPenaltyOffset" color="warning" @change="saveDebounced" />
+                    <div class="space-y-1">
+                      <p class="text-xs font-bold text-orange-800 dark:text-orange-400">
+                        Multa Compensada
+                      </p>
+                      <p class="text-[10px] text-orange-700/70 dark:text-orange-400/60 leading-tight">
+                        Marque se o valor à restituir compensou o valor da multa. Isso indica que o cliente não precisa
+                        pagar o
+                        DARF.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border-t border-muted-200 dark:border-muted-800" />
+
+              <!-- RESPONSÁVEL + PRIORIDADE + PRAZO -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                    Responsável
+                  </BaseText>
+                  <TairoSelect v-model="form.assignedToId" rounded="md" size="sm" @update:model-value="saveDebounced">
+                    <template #icon>
+                      <BaseAvatar v-if="assignedMember?.photo" :src="assignedMember.photo" size="xxs" />
+                    </template>
+                    <TairoSelectItem
+                      value="unassigned" name="Sem responsável" text="Remover responsável"
+                      icon="ph:user-circle-minus"
+                    />
+                    <TairoSelectItem
+                      v-for="member in teamMembers" :key="member.id" :value="member.id"
+                      :media="member.photo" :name="member.name" :text="member.role?.name"
+                    />
+                  </TairoSelect>
+                </div>
+                <div class="space-y-1.5">
+                  <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                    Prazo
+                  </BaseText>
+                  <BaseInput v-model="form.dueDate" type="date" size="sm" rounded="md" @change="saveDebounced" />
+                </div>
+              </div>
+
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                  Prioridade
+                </BaseText>
+                <div class="flex gap-1.5">
+                  <button
+                    v-for="p in priorityOptions" :key="p.value" type="button"
+                    class="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center gap-1"
+                    :class="form.priority === p.value
+                      ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
+                      : 'border-muted-200 dark:border-muted-700 hover:border-muted-300 text-muted-500'"
+                    @click="form.priority = p.value; saveDebounced()"
+                  >
+                    <Icon :name="p.icon" class="size-3" :class="p.color" /> {{ p.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="border-t border-muted-200 dark:border-muted-800" />
+
+              <!-- TIPO DE DECLARAÇÃO -->
+              <div class="space-y-1.5">
+                <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                  Tipo de Declaração
+                </BaseText>
+                <div class="flex gap-1.5">
+                  <button
+                    v-for="opt in declarationTypeOptions" :key="opt.value"
+                    class="flex-1 text-xs p-2 rounded-lg border transition-all font-medium" :class="form.declarationType === opt.value
+                      ? 'border-primary-500 bg-primary-500/5 text-primary-600'
+                      : 'border-muted-200 dark:border-muted-700 text-muted-400 hover:border-muted-300'"
+                    @click="form.declarationType = opt.value; saveDebounced()"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="border-t border-muted-200 dark:border-muted-800" />
+
+              <!-- FINANCEIRO: honorários + pagamento -->
+              <div class="space-y-3">
+                <BaseText size="xs" class="text-muted-400 uppercase font-bold">
+                  Financeiro
+                </BaseText>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="space-y-1.5">
+                    <BaseText size="xs" class="text-muted-400 font-semibold">
+                      Honorários
+                    </BaseText>
+                    <BaseInput
+                      v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
+                      icon="lucide:dollar-sign" placeholder="0,00" @blur="saveDebounced"
+                    />
+                  </div>
+                  <div class="space-y-1.5">
+                    <BaseText size="xs" class="text-muted-400 font-semibold">
+                      Pagamento
+                    </BaseText>
+                    <BaseSelect v-model="form.paymentStatus" rounded="md" size="sm" @update:model-value="saveDebounced">
+                      <BaseSelectItem v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="size-2 rounded-full" :class="{
+                              'bg-success-500': opt.value === 'paid',
+                              'bg-warning-500': opt.value === 'partial' || opt.value === 'processing',
+                              'bg-danger-500': opt.value === 'pending',
+                            }"
+                          />
+                          <span class="text-xs font-medium">{{ opt.label }}</span>
+                        </div>
+                      </BaseSelectItem>
+                    </BaseSelect>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border-t border-muted-200 dark:border-muted-800" />
+
+              <!-- TAGS + GOV.BR -->
+              <div class="space-y-4">
+                <div class="space-y-1.5">
+                  <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                    Tags
+                  </BaseText>
+                  <div class="flex flex-wrap gap-1.5">
+                    <BaseTag
+                      v-for="tag in form.tags" :key="tag" size="sm" variant="none"
+                      class="group relative text-[10px] pr-5 bg-primary-500 text-white"
+                    >
+                      {{ tag }}
+                      <button
+                        class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all"
+                        @click="removeTag(tag)"
+                      >
+                        <Icon name="lucide:x" class="size-2.5" />
+                      </button>
+                    </BaseTag>
+                  </div>
+                  <div class="flex gap-1.5 mt-1">
+                    <BaseInput
+                      v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs"
+                      @keyup.enter="addTag"
+                    />
+                    <BaseButton size="sm" variant="muted" @click="addTag">
+                      <Icon name="lucide:plus" class="size-3.5" />
+                    </BaseButton>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <BaseText size="xs" class="text-muted-400 uppercase  font-bold">
+                    Senha GOV.br
+                  </BaseText>
+                  <div class="relative">
+                    <BaseInput
+                      id="gvpas-mob" v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'"
+                      size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs"
+                      @blur="saveDebounced"
+                    />
+                    <button
+                      type="button"
+                      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
+                      :disabled="isRevealingPassword" @click="handleRevealPassword"
+                    >
+                      <Icon v-if="isRevealingPassword" name="svg-spinners:ring-resize" class="size-4" />
+                      <Icon
+                        v-else :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
+                        class="size-4"
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- AÇÕES -->
+            <div class="pt-4 border-t border-muted-200 dark:border-muted-800">
+              <BaseButton
+                variant="muted" rounded="lg" size="sm"
+                class="w-full text-danger-500 hover:text-danger-600 hover:bg-danger-500/5 transition-colors"
+                :loading="isDeleting" @click="confirmDelete"
+              >
+                <Icon name="lucide:trash-2" class="size-3.5 mr-2" /> Excluir Declaração
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+        <!-- ════ SIDEBAR (DESKTOP ONLY) ════ -->
         <div
-          class="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/30 dark:bg-muted-950/20 overflow-y-auto nui-slimscroll h-full">
+          class="hidden md:block w-full md:w-[300px] border-t md:border-t-0 md:border-l border-muted-200 dark:border-muted-800 md:shrink-0 bg-muted-50/30 dark:bg-muted-950/20 overflow-y-auto nui-slimscroll h-full"
+        >
           <div class="p-5 space-y-5">
             <!-- STATUS -->
             <div class="space-y-1.5">
@@ -1484,8 +1924,10 @@ onMounted(() => {
               <BaseSelect v-model="form.status" rounded="md" size="sm" @update:model-value="saveDebounced">
                 <BaseSelectItem v-for="opt in kanbanColumns" :key="opt.value" :value="opt.value">
                   <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full"
-                      :style="`background-color: var(--color-${opt.color || 'gray'}-500, #9ca3af)`" />
+                    <span
+                      class="size-2 rounded-full"
+                      :style="`background-color: var(--color-${opt.color || 'gray'}-500, #9ca3af)`"
+                    />
                     <span class="text-sm font-medium">{{ opt.label }}</span>
                   </div>
                 </BaseSelectItem>
@@ -1500,8 +1942,10 @@ onMounted(() => {
                 Resultado do IR
               </BaseText>
               <div class="flex items-center gap-2">
-                <BaseSelect v-model="form.result" rounded="md" size="sm" class="flex-1"
-                  @update:model-value="saveDebounced">
+                <BaseSelect
+                  v-model="form.result" rounded="md" size="sm" class="flex-1"
+                  @update:model-value="saveDebounced"
+                >
                   <BaseSelectItem v-for="opt in resultOptions" :key="opt.value" :value="opt.value">
                     <span class="text-sm font-medium">{{ opt.label }}</span>
                   </BaseSelectItem>
@@ -1510,32 +1954,45 @@ onMounted(() => {
               <!-- Valor com destaque visual forte -->
               <div v-if="form.result !== 'neutral'" class="flex items-center gap-2 mt-1">
                 <div class="flex-1 relative">
-                  <BaseInput v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md"
-                    placeholder="0,00" class="text-sm font-bold pr-16" @blur="saveDebounced" />
+                  <BaseInput
+                    v-model="form.resultValue" type="number" step="0.01" size="sm" rounded="md"
+                    placeholder="0,00" class="text-sm font-bold pr-16" @blur="saveDebounced"
+                  />
                   <span
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-400">BRL</span>
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-400"
+                  >BRL</span>
                 </div>
               </div>
               <!-- Valor formatado destaque -->
-              <div v-if="form.result !== 'neutral'" class="mt-1 px-3 py-1.5 rounded-lg"
-                :class="form.result === 'restitution' ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800' : 'bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800'">
-                <p class="text-[10px] font-bold uppercase "
-                  :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'">
+              <div
+                v-if="form.result !== 'neutral'" class="mt-1 px-3 py-1.5 rounded-lg"
+                :class="form.result === 'restitution' ? 'bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800' : 'bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800'"
+              >
+                <p
+                  class="text-[10px] font-bold uppercase "
+                  :class="form.result === 'restitution' ? 'text-success-600' : 'text-danger-600'"
+                >
                   {{ form.result === 'restitution' ? '↑ Restituição' : '↓ A Pagar' }}
                 </p>
-                <p class="text-lg font-bold"
-                  :class="form.result === 'restitution' ? 'text-success-700 dark:text-success-400' : 'text-danger-700 dark:text-danger-400'">
+                <p
+                  class="text-lg font-bold"
+                  :class="form.result === 'restitution' ? 'text-success-700 dark:text-success-400' : 'text-danger-700 dark:text-danger-400'"
+                >
                   R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
                 </p>
               </div>
 
               <!-- Multa Compensada Checkbox -->
-              <div v-if="form.result === 'tax_to_pay'"
-                class="mt-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800">
+              <div
+                v-if="form.result === 'tax_to_pay'"
+                class="mt-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800"
+              >
                 <div class="flex items-start gap-3">
                   <BaseCheckbox v-model="form.isPenaltyOffset" color="warning" @change="saveDebounced" />
                   <div class="space-y-1">
-                    <p class="text-xs font-bold text-orange-800 dark:text-orange-400">Multa Compensada</p>
+                    <p class="text-xs font-bold text-orange-800 dark:text-orange-400">
+                      Multa Compensada
+                    </p>
                     <p class="text-[10px] text-orange-700/70 dark:text-orange-400/60 leading-tight">
                       Marque se o valor à restituir compensou o valor da multa. Isso indica que o cliente não precisa
                       pagar o
@@ -1559,10 +2016,14 @@ onMounted(() => {
                   <template #icon>
                     <BaseAvatar v-if="assignedMember?.photo" :src="assignedMember.photo" size="xxs" />
                   </template>
-                  <TairoSelectItem value="unassigned" name="Sem responsável" text="Remover responsável"
-                    icon="ph:user-circle-minus" />
-                  <TairoSelectItem v-for="member in teamMembers" :key="member.id" :value="member.id"
-                    :media="member.photo" :name="member.name" :text="member.role?.name" />
+                  <TairoSelectItem
+                    value="unassigned" name="Sem responsável" text="Remover responsável"
+                    icon="ph:user-circle-minus"
+                  />
+                  <TairoSelectItem
+                    v-for="member in teamMembers" :key="member.id" :value="member.id"
+                    :media="member.photo" :name="member.name" :text="member.role?.name"
+                  />
                 </TairoSelect>
               </div>
 
@@ -1572,12 +2033,14 @@ onMounted(() => {
                   Prioridade
                 </BaseText>
                 <div class="flex gap-1.5">
-                  <button v-for="p in priorityOptions" :key="p.value" type="button"
+                  <button
+                    v-for="p in priorityOptions" :key="p.value" type="button"
                     class="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center gap-1"
                     :class="form.priority === p.value
                       ? 'bg-white dark:bg-muted-800 border-primary-500 text-primary-600 shadow-sm'
                       : 'border-muted-200 dark:border-muted-700 hover:border-muted-300 text-muted-500'"
-                    @click="form.priority = p.value; saveDebounced()">
+                    @click="form.priority = p.value; saveDebounced()"
+                  >
                     <Icon :name="p.icon" class="size-3" :class="p.color" /> {{ p.label }}
                   </button>
                 </div>
@@ -1600,11 +2063,13 @@ onMounted(() => {
                 Tipo de Declaração
               </BaseText>
               <div class="flex gap-1.5">
-                <button v-for="opt in declarationTypeOptions" :key="opt.value"
+                <button
+                  v-for="opt in declarationTypeOptions" :key="opt.value"
                   class="flex-1 text-xs p-2 rounded-lg border transition-all font-medium" :class="form.declarationType === opt.value
                     ? 'border-primary-500 bg-primary-500/5 text-primary-600'
                     : 'border-muted-200 dark:border-muted-700 text-muted-400 hover:border-muted-300'"
-                  @click="form.declarationType = opt.value; saveDebounced()">
+                  @click="form.declarationType = opt.value; saveDebounced()"
+                >
                   {{ opt.label }}
                 </button>
               </div>
@@ -1622,8 +2087,10 @@ onMounted(() => {
                 <BaseText size="xs" class="text-muted-400 font-semibold">
                   Valor dos Honorários
                 </BaseText>
-                <BaseInput v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
-                  icon="lucide:dollar-sign" placeholder="0,00" @blur="saveDebounced" />
+                <BaseInput
+                  v-model="form.serviceValue" type="number" step="0.01" size="sm" rounded="md"
+                  icon="lucide:dollar-sign" placeholder="0,00" @blur="saveDebounced"
+                />
               </div>
               <!-- Pagamento -->
               <div class="space-y-1.5">
@@ -1633,11 +2100,13 @@ onMounted(() => {
                 <BaseSelect v-model="form.paymentStatus" rounded="md" size="sm" @update:model-value="saveDebounced">
                   <BaseSelectItem v-for="opt in paymentStatusOptions" :key="opt.value" :value="opt.value">
                     <div class="flex items-center gap-2">
-                      <div class="size-2 rounded-full" :class="{
-                        'bg-success-500': opt.value === 'paid',
-                        'bg-warning-500': opt.value === 'partial' || opt.value === 'processing',
-                        'bg-danger-500': opt.value === 'pending',
-                      }" />
+                      <div
+                        class="size-2 rounded-full" :class="{
+                          'bg-success-500': opt.value === 'paid',
+                          'bg-warning-500': opt.value === 'partial' || opt.value === 'processing',
+                          'bg-danger-500': opt.value === 'pending',
+                        }"
+                      />
                       <span class="text-xs font-medium">{{ opt.label }}</span>
                     </div>
                   </BaseSelectItem>
@@ -1655,19 +2124,24 @@ onMounted(() => {
                   Tags
                 </BaseText>
                 <div class="flex flex-wrap gap-1.5">
-                  <BaseTag v-for="tag in form.tags" :key="tag" size="sm" variant="none" :id="'tag-' + Math.random()"
-                    class="group relative text-[10px] pr-5 bg-primary-500 text-white">
+                  <BaseTag
+                    v-for="tag in form.tags" :id="`tag-${Math.random()}`" :key="tag" size="sm" variant="none"
+                    class="group relative text-[10px] pr-5 bg-primary-500 text-white"
+                  >
                     {{ tag }}
                     <button
                       class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 hover:text-danger-500 transition-all"
-                      @click="removeTag(tag)">
+                      @click="removeTag(tag)"
+                    >
                       <Icon name="lucide:x" class="size-2.5" />
                     </button>
                   </BaseTag>
                 </div>
                 <div class="flex gap-1.5 mt-1">
-                  <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs"
-                    @keyup.enter="addTag" />
+                  <BaseInput
+                    v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs"
+                    @keyup.enter="addTag"
+                  />
                   <BaseButton size="sm" variant="muted" @click="addTag">
                     <Icon name="lucide:plus" class="size-3.5" />
                   </BaseButton>
@@ -1680,14 +2154,20 @@ onMounted(() => {
                   Senha GOV.br
                 </BaseText>
                 <div class="relative">
-                  <BaseInput v-model="form.govPassword" id="gvpas" :type="showGovPassword ? 'text' : 'password'"
-                    size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
-                  <button type="button"
+                  <BaseInput
+                    id="gvpas" v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'"
+                    size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced"
+                  />
+                  <button
+                    type="button"
                     class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
-                    :disabled="isRevealingPassword" @click="handleRevealPassword">
+                    :disabled="isRevealingPassword" @click="handleRevealPassword"
+                  >
                     <Icon v-if="isRevealingPassword" name="svg-spinners:ring-resize" class="size-4" />
-                    <Icon v-else :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
-                      class="size-4" />
+                    <Icon
+                      v-else :name="showGovPassword ? 'solar:eye-bold-duotone' : 'solar:eye-closed-bold-duotone'"
+                      class="size-4"
+                    />
                   </button>
                 </div>
               </div>
@@ -1697,9 +2177,11 @@ onMounted(() => {
 
             <!-- AÇÕES -->
             <div class="space-y-2">
-              <BaseButton variant="muted" rounded="lg" size="sm"
+              <BaseButton
+                variant="muted" rounded="lg" size="sm"
                 class="w-full text-danger-500 hover:text-danger-600 hover:bg-danger-500/5 transition-colors"
-                :loading="isDeleting" @click="confirmDelete">
+                :loading="isDeleting" @click="confirmDelete"
+              >
                 <Icon name="lucide:trash-2" class="size-3.5 mr-2" /> Excluir Declaração
               </BaseButton>
             </div>
@@ -1707,13 +2189,13 @@ onMounted(() => {
         </div>
       </template>
     </div>
-
     <!-- ═══ MODAL: Checklist Upload ═══ -->
     <DialogRoot v-model:open="showChecklistModal">
       <DialogPortal>
         <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[100]" />
         <DialogContent
-          class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col">
+          class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col"
+        >
           <div class="flex w-full items-center justify-between p-6 border-b border-muted-200 dark:border-muted-800">
             <DialogTitle class="font-heading text-muted-900 text-lg font-medium dark:text-white">
               Vincular ao Checklist
@@ -1728,7 +2210,8 @@ onMounted(() => {
             </DialogDescription>
             <!-- File card -->
             <div
-              class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700 flex items-center gap-3">
+              class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700 flex items-center gap-3"
+            >
               <div class="size-12 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
                 <Icon name="solar:file-bold-duotone" class="size-7" />
               </div>
@@ -1746,32 +2229,41 @@ onMounted(() => {
               <BaseText size="xs" class="text-muted-400 uppercase tracking-wider font-bold">
                 Selecione o documento correspondente
               </BaseText>
-              <button v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
+              <button
+                v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
                 class="w-full text-left p-4 rounded-xl border transition-all"
                 :class="selectedChecklistItemId === item.id ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500' : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50'"
-                @click="selectedChecklistItemId = item.id">
+                @click="selectedChecklistItemId = item.id"
+              >
                 <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-full flex items-center justify-center transition-colors"
-                    :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
+                  <div
+                    class="size-8 rounded-full flex items-center justify-center transition-colors"
+                    :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'"
+                  >
                     <Icon name="solar:document-text-bold-duotone" class="size-4" />
                   </div>
                   <div class="flex-1">
                     <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
                       {{ item.title }}
                     </BaseText>
-                    <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                      class="mt-1 scale-90 origin-left bg-danger-500 text-white">
+                    <BaseTag
+                      v-if="item.isRequired" size="sm" variant="none"
+                      class="mt-1 scale-90 origin-left bg-danger-500 text-white"
+                    >
                       Obrigatório
                     </BaseTag>
                   </div>
-                  <Icon v-if="selectedChecklistItemId === item.id" name="solar:check-circle-bold"
-                    class="size-5 text-primary-500" />
+                  <Icon
+                    v-if="selectedChecklistItemId === item.id" name="solar:check-circle-bold"
+                    class="size-5 text-primary-500"
+                  />
                 </div>
               </button>
             </div>
           </div>
           <div
-            class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+            class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50"
+          >
             <BaseButton @click="cancelChecklistUpload">
               Cancelar
             </BaseButton>
@@ -1788,10 +2280,12 @@ onMounted(() => {
       <DialogPortal>
         <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[110]" />
         <DialogContent
-          class="fixed starting:opacity-0 starting:top-[45%] top-[50%] start-[50%] max-h-[95vh] w-[95vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-xl overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 shadow-2xl focus:outline-none z-[111] transition-discrete transition-all duration-300 ease-out flex flex-col">
+          class="fixed starting:opacity-0 starting:top-[45%] top-[50%] start-[50%] max-h-[95vh] w-[95vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-xl overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 shadow-2xl focus:outline-none z-[111] transition-discrete transition-all duration-300 ease-out flex flex-col"
+        >
           <!-- Header -->
           <div
-            class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50">
+            class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50"
+          >
             <div class="flex items-center gap-3">
               <div class="size-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
                 <Icon name="solar:file-bold-duotone" class="size-6" />
@@ -1811,7 +2305,8 @@ onMounted(() => {
           </div>
           <!-- Body -->
           <div
-            class="flex-1 overflow-auto bg-muted-100 dark:bg-muted-900 flex items-center justify-center p-4 min-h-[60vh]">
+            class="flex-1 overflow-auto bg-muted-100 dark:bg-muted-900 flex items-center justify-center p-4 min-h-[60vh]"
+          >
             <div v-if="isPreviewLoading" class="text-center py-20">
               <Icon name="svg-spinners:ring-resize" class="size-12 text-primary-500 mb-4 mx-auto" />
               <BaseParagraph size="sm" class="text-muted-500">
@@ -1819,13 +2314,18 @@ onMounted(() => {
               </BaseParagraph>
             </div>
             <template v-else-if="signedPreviewUrl">
-              <iframe v-if="previewItem?.attachment?.mimeType === 'application/pdf'" :src="signedPreviewUrl"
-                class="w-full h-full min-h-[75vh] rounded-lg border border-muted-200 dark:border-muted-800" />
-              <img v-else-if="previewItem?.attachment?.mimeType?.startsWith('image/')" :src="signedPreviewUrl"
-                class="max-w-full max-h-full object-contain rounded-lg shadow-lg" alt="Documento">
+              <iframe
+                v-if="previewItem?.attachment?.mimeType === 'application/pdf'" :src="signedPreviewUrl"
+                class="w-full h-full min-h-[75vh] rounded-lg border border-muted-200 dark:border-muted-800"
+              />
+              <img
+                v-else-if="previewItem?.attachment?.mimeType?.startsWith('image/')" :src="signedPreviewUrl"
+                class="max-w-full max-h-full object-contain rounded-lg shadow-lg" alt="Documento"
+              >
               <div v-else class="text-center p-12">
                 <div
-                  class="size-20 mx-auto mb-4 rounded-3xl bg-muted-200 dark:bg-muted-800 flex items-center justify-center">
+                  class="size-20 mx-auto mb-4 rounded-3xl bg-muted-200 dark:bg-muted-800 flex items-center justify-center"
+                >
                   <Icon name="solar:document-bold-duotone" class="size-10 text-muted-400" />
                 </div>
                 <BaseHeading as="h4" size="md" weight="medium" class="text-muted-900 dark:text-white mb-2">
@@ -1851,7 +2351,8 @@ onMounted(() => {
           </div>
           <!-- Footer -->
           <div
-            class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50">
+            class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50"
+          >
             <BaseButton color="danger" @click="updateItemStatus(previewItem.id, 'rejected'); showPreviewModal = false">
               <Icon name="lucide:x" class="size-4 mr-2" /> Rejeitar
             </BaseButton>
@@ -1872,6 +2373,7 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
+
     <!-- Confirm Delete Modal -->
     <Teleport to="body">
       <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center">
@@ -1882,7 +2384,8 @@ onMounted(() => {
         <div class="relative w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl dark:bg-muted-900 animate-scale-in">
           <div class="flex flex-col items-center gap-4 text-center">
             <div
-              class="flex size-12 items-center justify-center rounded-full bg-danger-100 text-danger-500 dark:bg-danger-900/30">
+              class="flex size-12 items-center justify-center rounded-full bg-danger-100 text-danger-500 dark:bg-danger-900/30"
+            >
               <Icon name="ph:trash-duotone" class="size-6" />
             </div>
 
