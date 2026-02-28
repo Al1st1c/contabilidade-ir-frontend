@@ -87,6 +87,13 @@ const pixInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const checkPaymentInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const isCheckingPayment = ref(false)
 
+// Upsell modal state
+const showUpsellModal = ref(false)
+const upsellTimer = ref(900) // 15 minutos em segundos
+const upsellTimerInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const upsellTimerStarted = ref(false)
+const upsellDismissed = ref(false) // só mostra 1 vez
+
 const router = useRouter()
 const route = useRoute()
 const toaster = useNuiToasts()
@@ -224,6 +231,18 @@ const canRedirectToDashboard = computed(() => {
   // Se for grátis, pode. Se for pago, só se showPixCheckout for false (ou seja, já passou pela ativação)
   // Mas a regra principal é: se showPixCheckout está aberto, não sai dali até pagar.
   return !showPixCheckout.value
+})
+
+const upsellTimerFormatted = computed(() => {
+  const mins = Math.floor(upsellTimer.value / 60)
+  const secs = upsellTimer.value % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+})
+
+const upsellTimerExpired = computed(() => upsellTimer.value <= 0)
+
+const upsellPlan = computed(() => {
+  return plans.value.find(p => p.slug === 'pro')
 })
 
 // ===========================================================================
@@ -446,7 +465,50 @@ function startPaymentPolling() {
   checkPaymentInterval.value = setInterval(checkPaymentStatus, 7000)
 }
 
+// Upsell timer functions
+function startUpsellTimer() {
+  if (upsellTimerStarted.value) return
+  upsellTimerStarted.value = true
+  upsellTimerInterval.value = setInterval(() => {
+    if (upsellTimer.value > 0) {
+      upsellTimer.value--
+    } else {
+      if (upsellTimerInterval.value) clearInterval(upsellTimerInterval.value)
+    }
+  }, 1000)
+}
+
+function acceptUpsell() {
+  showUpsellModal.value = false
+  selectedPlan.value = 'pro'
+  paymentMethod.value = 'PIX'
+  // Voltar para step 2 para o usuário ver o plano selecionado e seguir para pagamento
+  step.value = 2
+  toaster.add({
+    title: 'Plano Profissional selecionado!',
+    description: 'Continue para finalizar com bônus de +10 declarações.',
+    icon: 'ph:rocket-launch-fill',
+  })
+}
+
+function dismissUpsell() {
+  showUpsellModal.value = false
+  upsellDismissed.value = true
+  // Continuar com o submit normal (plano grátis)
+  doSubmit()
+}
+
 const onSubmit = (async () => {
+  // Interceptar: se plano é free, não foi dispensado e timer não expirou → mostrar upsell
+  if (selectedPlan.value === 'free' && !upsellDismissed.value && !upsellTimerExpired.value) {
+    startUpsellTimer()
+    showUpsellModal.value = true
+    return
+  }
+  doSubmit()
+})
+
+const doSubmit = (async () => {
   isSubmitting.value = true
 
   try {
@@ -703,6 +765,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (pixInterval.value) clearInterval(pixInterval.value)
   if (checkPaymentInterval.value) clearInterval(checkPaymentInterval.value)
+  if (upsellTimerInterval.value) clearInterval(upsellTimerInterval.value)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -996,8 +1059,10 @@ watch([step, isFreeFlow, isSubmitting], () => {
                               class="flex sm:hidden items-center justify-start gap-x-3 gap-y-1 mt-1.5 grayscale opacity-70 flex-wrap">
                               <div class="flex items-center gap-1 text-[10px] text-muted-500 text-left">
                                 <Icon name="solar:users-group-rounded-linear" class="size-3 text-primary-500" />
-                                <span class="whitespace-nowrap">{{ plan.limits.employees || 1 }} usuário(s)</span>
+                                <span class="whitespace-nowrap">{{ plan.limits.employees || 1 }} usuário(s) {{ plan
+                                  }}</span>
                               </div>
+
                               <div v-if="plan.slug === 'enterprise' || plan.slug === 'pro'"
                                 class="flex items-center gap-1 text-[10px] text-muted-500 text-left">
                                 <Icon name="solar:verified-check-linear" class="size-3 text-primary-500" />
@@ -1024,7 +1089,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                             <Icon name="solar:users-group-rounded-linear" class="size-3.5 text-primary-500 shrink-0" />
                             <span>{{ plan.limits.employees || 1 }} usuário(s)</span>
                           </div>
-                          <div v-if="plan.slug === 'enterprise'"
+                          <div v-if="plan.slug === 'enterprise' || plan.slug === 'pro'"
                             class="flex items-center gap-1.5 text-xs text-muted-500">
                             <Icon name="solar:verified-check-linear" class="size-3.5 text-primary-500 shrink-0" />
                             <span>White Label incluso</span>
@@ -1338,6 +1403,72 @@ watch([step, isFreeFlow, isSubmitting], () => {
 
           <DialogClose
             class="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
+            <Icon name="lucide:x" class="h-4 w-4 text-muted-400" />
+            <span class="sr-only">Close</span>
+          </DialogClose>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+
+    <!-- Modal de Upsell -->
+    <DialogRoot v-model:open="showUpsellModal">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-50 bg-muted-900/50 backdrop-blur-sm" />
+        <DialogContent
+          class="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-xl dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+
+          <DialogTitle as="h3" class="text-lg font-semibold text-muted-800 dark:text-muted-100 mb-2">
+            Antes de continuar...
+          </DialogTitle>
+          <DialogDescription class="text-sm text-muted-500 dark:text-muted-400 mb-4">
+            Assinando o <strong class="text-muted-700 dark:text-muted-200">{{ upsellPlan?.name || 'Profissional'
+              }}</strong>
+            agora você ganha:
+          </DialogDescription>
+
+          <!-- Vantagens -->
+          <div class="space-y-2.5 mb-4">
+            <div class="flex items-center gap-2.5">
+              <Icon name="ph:file-text-fill" class="size-4 text-primary-500 shrink-0" />
+              <BaseText size="sm" class="text-muted-700 dark:text-muted-200">+10 declarações de IR de bônus</BaseText>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <Icon name="ph:paint-brush-fill" class="size-4 text-primary-500 shrink-0" />
+              <BaseText size="sm" class="text-muted-700 dark:text-muted-200">App com a sua marca (White Label)
+              </BaseText>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <Icon name="ph:users-three-fill" class="size-4 text-primary-500 shrink-0" />
+              <BaseText size="sm" class="text-muted-700 dark:text-muted-200">Até 3 pessoas na equipe</BaseText>
+            </div>
+          </div>
+
+          <!-- Timer + preço na mesma linha -->
+          <div class="flex items-center justify-between mb-4 text-xs text-muted-400">
+            <div v-if="!upsellTimerExpired" class="flex items-center gap-1">
+              <Icon name="ph:clock-fill" class="size-3.5" />
+              <span>Expira em {{ upsellTimerFormatted }}</span>
+            </div>
+            <span v-else />
+            <span class="text-sm font-semibold text-primary-500">{{ upsellPlan ?
+              formatCurrency(upsellPlan.pricing.monthly)
+              : 'R$ 49,90' }}/mês</span>
+          </div>
+
+          <!-- Botões -->
+          <div class="space-y-2">
+            <BaseButton variant="primary" rounded="lg" class="w-full h-11" @click="acceptUpsell">
+              Assinar o {{ upsellPlan?.name || 'Profissional' }}
+            </BaseButton>
+            <button type="button"
+              class="w-full text-center text-xs text-muted-400 hover:text-muted-500 py-2 transition-colors"
+              @click="dismissUpsell">
+              Continuar com o grátis
+            </button>
+          </div>
+
+          <DialogClose
+            class="absolute right-3 top-3 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none">
             <Icon name="lucide:x" class="h-4 w-4 text-muted-400" />
             <span class="sr-only">Close</span>
           </DialogClose>
