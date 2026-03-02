@@ -63,8 +63,9 @@ const menuItems = [
       class="sticky top-0 z-30 bg-white/80 dark:bg-muted-900/80 backdrop-blur-md border-b border-muted-200 dark:border-muted-800 px-4 py-3">
       <div class="flex items-center justify-between max-w-lg mx-auto">
         <div class="flex items-center gap-3">
-          <img v-if="(branding?.logo || tenant?.logo)" :src="branding?.logo || tenant?.logo"
-            class="size-8 object-contain" alt="Logo">
+          <img v-if="(branding?.logo || tenant?.logo)" :src="branding?.logo || tenant?.logo" class="object-contain"
+            style="height: 39px; max-width: 120px; width: auto;" alt="Logo">
+
           <TairoLogo v-else class="size-8 text-primary-500" />
           <div class="flex flex-col">
             <BaseHeading as="h1" size="xs" weight="bold" class="text-muted-800 dark:text-muted-100 leading-none">
