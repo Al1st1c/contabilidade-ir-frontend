@@ -523,7 +523,7 @@ const onSubmit = handleSubmit(async (values) => {
                   <!-- Remember -->
                   <div class="mt-6 flex items-center justify-between">
                     <div class="text-xs leading-5">
-                      <NuxtLink to="https://wa.me/551132808396"
+                      <NuxtLink to="https://wa.me/5521979044284"
                         class="text-primary-600 hover:text-primary-500 font-sans font-medium underline-offset-4 transition duration-150 ease-in-out hover:underline">
                         Esqueci minha senha
                       </NuxtLink>

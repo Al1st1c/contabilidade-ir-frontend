@@ -6,7 +6,7 @@ const isVideoModalOpen = ref(false)
 const videoUrl = 'https://gestorx-files.s3.us-east-1.amazonaws.com/tutorial/tutorial-onboarding.mov'
 
 function openWhatsApp() {
-  window.open('https://wa.me/551132808396', '_blank')
+  window.open('https://wa.me/5521979044284', '_blank')
 }
 
 // Close on escape

@@ -105,7 +105,7 @@ async function goToPayment() {
               Já realizei o pagamento
             </BaseButton>
 
-            <BaseButton to="https://wa.me/551132808396" target="_blank" variant="muted" rounded="lg" size="md"
+            <BaseButton to="https://wa.me/5521979044284" target="_blank" variant="muted" rounded="lg" size="md"
               class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700">
               <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
               Falar com o suporte
@@ -146,7 +146,7 @@ async function goToPayment() {
               Verificar novamente
             </BaseButton>
 
-            <BaseButton to="https://wa.me/551132808396" target="_blank" variant="muted" rounded="lg" size="md"
+            <BaseButton to="https://wa.me/5521979044284" target="_blank" variant="muted" rounded="lg" size="md"
               class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700 text-xs">
               <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
               Falar com o suporte
