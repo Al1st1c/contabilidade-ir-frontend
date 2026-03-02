@@ -16,6 +16,8 @@ const isOwner = computed(() => {
   return roleName === 'master' || user.value?.isAdmin
 })
 
+const hasWhitelabel = computed(() => tenant.value?.allowWhitelabel === true)
+
 // State
 const isLoading = ref(true)
 const isSaving = ref(false)
@@ -160,9 +162,19 @@ onMounted(() => {
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
-                <BaseField label="Nome Fantasia">
-                  <TairoInput v-model="form.tradeName" :disabled="!isOwner" placeholder="Ex: Contábil Silva"
-                    icon="solar:shop-linear" />
+                <BaseField>
+                  <template #label>
+                    <div class="flex items-center gap-1.5">
+                      <span>Nome Fantasia</span>
+                      <span v-if="!hasWhitelabel" class="inline-flex items-center gap-1 text-xs text-amber-500"
+                        title="Disponível no plano Whitelabel">
+                        <Icon name="solar:lock-keyhole-linear" class="size-3.5" />
+                        <span class="text-[11px]">Whitelabel</span>
+                      </span>
+                    </div>
+                  </template>
+                  <TairoInput v-model="form.tradeName" :disabled="!isOwner || !hasWhitelabel"
+                    placeholder="Ex: Contábil Silva" icon="solar:shop-linear" />
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">

@@ -95,6 +95,19 @@ const subForm = ref<{
   canViewAllFilesDrive: false,
 })
 
+// --- Payment Confirmation ---
+const userPayments = ref<any[]>([])
+const loadingPayments = ref(false)
+const confirmingPaymentId = ref<string | null>(null)
+const showManualPayment = ref(false)
+const manualForm = ref({
+  planSlug: '',
+  billingPeriod: 'MONTHLY',
+  amount: 0,
+})
+const creatingManualPayment = ref(false)
+const addingCommissionUserId = ref<string | null>(null)
+
 async function fetchPlans() {
   const { data } = await useCustomFetch<any>('/admin/plans')
   plans.value = data
@@ -118,6 +131,7 @@ function openSubscriptionModal(user: any) {
   }
 
   if (plans.value.length === 0) fetchPlans()
+  fetchUserPayments(user.id)
   isModalOpen.value = true
 }
 
@@ -142,6 +156,99 @@ async function updateSubscription() {
       description: 'Não foi possível atualizar assinatura.',
       icon: 'ph:warning-circle-fill',
     })
+  }
+}
+
+async function fetchUserPayments(userId: string) {
+  loadingPayments.value = true
+  userPayments.value = []
+  showManualPayment.value = false
+  try {
+    const { data } = await useCustomFetch<any[]>(`/admin/users/${userId}/payments`)
+    userPayments.value = data as any[]
+  } catch (e) {
+    console.error('Erro ao buscar pagamentos:', e)
+  } finally {
+    loadingPayments.value = false
+  }
+}
+
+async function confirmExistingPayment(paymentId: string) {
+  confirmingPaymentId.value = paymentId
+  try {
+    const { data } = await useCustomFetch<any>(`/admin/users/${selectedUser.value.id}/confirm-payment`, {
+      method: 'POST',
+      body: { paymentId },
+    })
+    toaster.add({
+      title: 'Sucesso',
+      description: data.message || 'Pagamento confirmado!',
+      icon: 'ph:check-circle-fill',
+    })
+    fetchUserPayments(selectedUser.value.id)
+    fetchUsers()
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: error.message || 'Não foi possível confirmar pagamento.',
+      icon: 'ph:warning-circle-fill',
+    })
+  } finally {
+    confirmingPaymentId.value = null
+  }
+}
+
+async function createManualPayment() {
+  if (!manualForm.value.planSlug || !manualForm.value.amount) {
+    toaster.add({ title: 'Erro', description: 'Preencha plano e valor.', icon: 'ph:warning-circle-fill' })
+    return
+  }
+  creatingManualPayment.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/admin/users/${selectedUser.value.id}/confirm-payment`, {
+      method: 'POST',
+      body: manualForm.value,
+    })
+    toaster.add({
+      title: 'Sucesso',
+      description: data.message || 'Pagamento criado e plano ativado!',
+      icon: 'ph:check-circle-fill',
+    })
+    showManualPayment.value = false
+    fetchUserPayments(selectedUser.value.id)
+    fetchUsers()
+  } catch (error: any) {
+    toaster.add({
+      title: 'Erro',
+      description: error.message || 'Não foi possível criar pagamento.',
+      icon: 'ph:warning-circle-fill',
+    })
+  } finally {
+    creatingManualPayment.value = false
+  }
+}
+
+async function addManualCommission(userId: string) {
+  addingCommissionUserId.value = userId
+  try {
+    const { data } = await useCustomFetch<any>(`/admin/users/${userId}/add-commission`, {
+      method: 'POST',
+      body: { couponId: couponId.value },
+    })
+    toaster.add({
+      title: 'Sucesso',
+      description: data.message || 'Comissão adicionada!',
+      icon: 'ph:check-circle-fill',
+    })
+  } catch (error: any) {
+    const msg = error?.data?.message || error?.message || 'Erro ao adicionar comissão'
+    toaster.add({
+      title: 'Aviso',
+      description: msg,
+      icon: 'ph:warning-circle-fill',
+    })
+  } finally {
+    addingCommissionUserId.value = null
   }
 }
 
@@ -355,6 +462,11 @@ function getDeclarationStatusLabel(status: string) {
                 </td>
                 <td class="py-4 px-4 text-right" @click.stop>
                   <div class="flex justify-end gap-2">
+                    <BaseButton v-if="couponId" size="sm" variant="muted" rounded="md"
+                      :loading="addingCommissionUserId === user.id" @click="addManualCommission(user.id)"
+                      title="Adicionar Comissão">
+                      <Icon name="solar:dollar-minimalistic-bold-duotone" class="size-4 text-success-500" />
+                    </BaseButton>
                     <BaseButton size="sm" variant="muted" rounded="md" @click="openAnalytics(user.id)"
                       title="Ver Analítico">
                       <Icon name="solar:chart-square-bold-duotone" class="size-4 text-primary-500" />
@@ -447,6 +559,78 @@ function getDeclarationStatusLabel(status: string) {
           <div class="mt-10 flex justify-end gap-3">
             <BaseButton variant="muted" @click="isModalOpen = false">Cancelar</BaseButton>
             <BaseButton variant="primary" @click="updateSubscription">Salvar Alterações</BaseButton>
+          </div>
+
+          <!-- Pagamentos -->
+          <div class="mt-8 pt-6 border-t border-muted-200 dark:border-muted-800">
+            <div class="flex items-center justify-between mb-4">
+              <BaseHeading as="h4" size="sm" weight="semibold" class="text-muted-800 dark:text-white">
+                Pagamentos
+              </BaseHeading>
+              <BaseButton v-if="!showManualPayment" size="sm" variant="muted" rounded="md"
+                @click="showManualPayment = true">
+                <Icon name="lucide:plus" class="size-3 mr-1" />
+                Pagamento Manual
+              </BaseButton>
+            </div>
+
+            <!-- Manual Payment Form -->
+            <div v-if="showManualPayment"
+              class="mb-4 p-4 rounded-lg bg-muted-50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800 space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <BaseField label="Plano">
+                  <BaseSelect v-model="manualForm.planSlug" icon="ph:crown" rounded="md" size="sm">
+                    <BaseSelectItem v-for="plan in plans" :key="plan.id" :value="plan.slug">
+                      {{ plan.name }}
+                    </BaseSelectItem>
+                  </BaseSelect>
+                </BaseField>
+                <BaseField label="Período">
+                  <BaseSelect v-model="manualForm.billingPeriod" icon="ph:calendar" rounded="md" size="sm">
+                    <BaseSelectItem value="MONTHLY">Mensal</BaseSelectItem>
+                    <BaseSelectItem value="QUARTERLY">Trimestral</BaseSelectItem>
+                    <BaseSelectItem value="SEMIANNUAL">Semestral</BaseSelectItem>
+                    <BaseSelectItem value="ANNUAL">Anual</BaseSelectItem>
+                  </BaseSelect>
+                </BaseField>
+                <BaseField label="Valor (R$)">
+                  <BaseInput v-model="manualForm.amount" type="number" step="0.01" icon="ph:currency-circle-dollar"
+                    rounded="md" size="sm" />
+                </BaseField>
+              </div>
+              <div class="flex justify-end gap-2">
+                <BaseButton size="sm" variant="muted" @click="showManualPayment = false">Cancelar</BaseButton>
+                <BaseButton size="sm" variant="primary" :loading="creatingManualPayment" @click="createManualPayment">
+                  Criar e Ativar
+                </BaseButton>
+              </div>
+            </div>
+
+            <!-- Pending Payments -->
+            <div v-if="loadingPayments" class="text-sm text-muted-400 text-center py-3">Carregando...</div>
+            <div v-else-if="userPayments.filter(p => p.status === 'PENDING').length === 0 && !showManualPayment"
+              class="text-sm text-muted-400 text-center py-3">
+              Nenhum pagamento pendente
+            </div>
+            <div v-else class="space-y-2">
+              <div v-for="payment in userPayments.filter(p => p.status === 'PENDING')" :key="payment.id"
+                class="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
+                <div>
+                  <p class="text-sm font-medium text-muted-800 dark:text-white">
+                    {{ payment.description || payment.paymentType }}
+                  </p>
+                  <p class="text-xs text-muted-500">
+                    {{ formatCurrency(payment.amount / 100) }} · {{ formatDate(payment.createdAt) }}
+                    <span v-if="payment.subscription?.plan"> · {{ payment.subscription.plan.name }}</span>
+                  </p>
+                </div>
+                <BaseButton size="sm" variant="primary" rounded="md" :loading="confirmingPaymentId === payment.id"
+                  @click="confirmExistingPayment(payment.id)">
+                  <Icon name="ph:check" class="size-3.5 mr-1" />
+                  Confirmar
+                </BaseButton>
+              </div>
+            </div>
           </div>
         </BaseCard>
       </div>

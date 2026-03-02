@@ -127,8 +127,12 @@ const financialChart = computed(() => {
     height: 300,
     series: [
       {
-        name: 'Faturamento Bruto',
+        name: 'Assinaturas',
         data: stats.value.growthMetrics.revenue,
+      },
+      {
+        name: 'Pré-pago',
+        data: stats.value.growthMetrics.prepaidRevenue,
       },
       {
         name: 'Comissões',
@@ -144,15 +148,15 @@ const financialChart = computed(() => {
         toolbar: { show: false },
         stacked: false
       },
-      colors: ['var(--color-primary-500)', 'var(--color-orange-500)', 'var(--color-success-500)'],
+      colors: ['var(--color-primary-500)', 'var(--color-info-500)', 'var(--color-orange-500)', 'var(--color-success-500)'],
       xaxis: { categories: stats.value.growthMetrics.labels },
-      stroke: { curve: 'smooth', width: [2, 2, 3] },
+      stroke: { curve: 'smooth', width: [2, 2, 2, 3] },
       fill: {
         type: 'gradient',
         gradient: {
           shadeIntensity: 1,
-          opacityFrom: [0.4, 0.2, 0.6],
-          opacityTo: [0.1, 0.05, 0.2],
+          opacityFrom: [0.4, 0.3, 0.2, 0.6],
+          opacityTo: [0.1, 0.05, 0.05, 0.2],
         }
       },
       yaxis: {
@@ -219,7 +223,7 @@ const plansChart = computed(() => {
       </div>
 
       <!-- Stats Grid -->
-      <div v-if="stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 animate-fade-in">
+      <div v-if="stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 animate-fade-in">
         <BaseCard class="p-6 cursor-pointer hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors group"
           @click="filterUsersByRole('master')">
           <div class="flex items-center gap-4">
@@ -287,6 +291,23 @@ const plansChart = computed(() => {
         </BaseCard>
 
         <BaseCard class="p-6 cursor-pointer hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors group"
+          @click="router.push('/dashboard/admin/prepaid')">
+          <div class="flex items-center gap-4">
+            <div
+              class="size-12 rounded-xl bg-info-500/10 flex items-center justify-center group-hover:bg-info-500/20 transition-colors">
+              <Icon name="solar:tag-price-bold-duotone" class="size-6 text-info-500" />
+            </div>
+            <div>
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-widest font-bold">Faturamento Pré-pago
+              </BaseText>
+              <BaseHeading as="h3" size="lg">
+                {{ formatCurrency(stats.totalPrepaidRevenue) }}
+              </BaseHeading>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard class="p-6 cursor-pointer hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors group"
           @click="filterUsersByPartner">
           <div class="flex items-center gap-4">
             <div
@@ -321,7 +342,11 @@ const plansChart = computed(() => {
             <div class="flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider">
               <div class="flex items-center gap-1 text-primary-500">
                 <div class="size-2 rounded-full bg-current"></div>
-                <span>Bruto</span>
+                <span>Assinaturas</span>
+              </div>
+              <div class="flex items-center gap-1 text-info-500">
+                <div class="size-2 rounded-full bg-current"></div>
+                <span>Pré-pago</span>
               </div>
               <div class="flex items-center gap-1 text-orange-500">
                 <div class="size-2 rounded-full bg-current"></div>
