@@ -15,6 +15,7 @@ const clientId = route.params.id as string
 const client = ref<any>(null)
 const loading = ref(true)
 const saving = ref(false)
+const deleting = ref(false)
 const isLoadingCep = ref(false)
 
 const form = ref({
@@ -124,6 +125,37 @@ async function saveClient() {
   }
 }
 
+async function deleteClient() {
+  if (!confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.'))
+    return
+
+  deleting.value = true
+  try {
+    await useCustomFetch(`/clients/${clientId}`, {
+      method: 'DELETE',
+    })
+
+    toaster.add({
+      title: 'Sucesso',
+      description: 'Cliente excluído com sucesso!',
+      icon: 'ph:check-box-fill',
+    })
+
+    router.push('/dashboard/clients')
+  }
+  catch (error: any) {
+    console.error('Erro ao excluir cliente:', error)
+    toaster.add({
+      title: 'Erro',
+      description: error.data?.message || 'Erro ao excluir cliente.',
+      icon: 'ph:warning-circle-fill',
+    })
+  }
+  finally {
+    deleting.value = false
+  }
+}
+
 async function searchCep() {
   const cep = form.value.zipCode.replace(/\D/g, '')
   if (cep.length !== 8)
@@ -191,6 +223,14 @@ onMounted(fetchClient)
               <Icon name="lucide:arrow-left" class="size-4 mr-1" />
               <span>Voltar</span>
             </BaseButton>
+
+            <BaseButton v-if="client?.declarationsCount === 0" variant="muted" :loading="deleting"
+              class="w-full sm:w-auto justify-center rounded-lg text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-500/10"
+              @click="deleteClient">
+              <Icon name="lucide:trash-2" class="size-4 mr-1" />
+              <span>Excluir</span>
+            </BaseButton>
+
             <BaseButton variant="primary" :loading="saving"
               class="w-full sm:w-auto justify-center rounded-lg shadow-lg shadow-primary-500/20" @click="saveClient">
               <Icon name="lucide:save" class="size-4 mr-1" />
@@ -484,6 +524,26 @@ onMounted(fetchClient)
                 placeholder="Registre observações importantes ou orientações específicas para as próximas declarações..."
                 class="bg-muted-50/50 dark:bg-muted-950/20 focus:bg-white dark:focus:bg-muted-950 border-muted-200 dark:border-muted-800 transition-all rounded-xl p-4" />
             </BaseCard>
+
+            <!-- Bottom Actions -->
+            <div
+              class="flex items-center justify-end gap-3 p-6 bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 rounded-2xl shadow-sm">
+              <BaseButton variant="muted" to="/dashboard/clients" class="rounded-xl px-6">
+                Cancelar
+              </BaseButton>
+
+              <BaseButton v-if="client?.declarationsCount === 0" variant="muted" :loading="deleting"
+                class="rounded-xl px-6 text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-500/10"
+                @click="deleteClient">
+                <Icon name="lucide:trash-2" class="size-4 mr-2" />
+                Excluir Cliente
+              </BaseButton>
+
+              <BaseButton type="submit" variant="primary" :loading="saving" class="rounded-xl px-8 shadow-xl shadow-primary-500/20">
+                <Icon name="lucide:save" class="size-4 mr-2" />
+                Salvar Alterações
+              </BaseButton>
+            </div>
           </form>
         </div>
       </div>
