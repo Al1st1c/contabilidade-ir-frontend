@@ -117,7 +117,7 @@ async function saveSettings() {
   catch (error: any) {
     toaster.add({
       title: 'Erro',
-      description: error.data?.message || 'Erro ao salvar dados',
+      description: error.message || 'Erro ao salvar dados',
       icon: 'solar:danger-circle-linear',
     })
   }
