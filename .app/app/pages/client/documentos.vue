@@ -62,6 +62,9 @@ async function loadDocuments() {
               isRequired: item.isRequired,
               comment: item.comment,
               attachmentId: item.attachment?.id,
+              mimeType: item.attachment?.mimeType,
+              fileKey: item.attachment?.fileKey,
+              fileName: item.attachment?.fileName,
             }))
             collectionLink.value = decRes.data.collectionLinks?.find((l: any) => l.isActive)
           }
@@ -94,6 +97,9 @@ async function loadDocuments() {
           isRequired: item.isRequired,
           comment: item.comment,
           attachmentId: item.attachment?.id,
+          mimeType: item.attachment?.mimeType,
+          fileKey: item.attachment?.fileKey,
+          fileName: item.attachment?.fileName,
         }))
         collectionLink.value = { token: token.value }
       }
@@ -297,6 +303,18 @@ function getStatusLabel(status: string) {
     default: return 'Pendente'
   }
 }
+
+function canPreview(doc: any) {
+  if (!doc.attachmentId || !doc.mimeType) return false
+  const previewableTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  return previewableTypes.includes(doc.mimeType)
+}
+
+function viewDocument(doc: any) {
+  if (!doc.fileKey) return
+  const url = `https://d1fvzp82gc0zw6.cloudfront.net/${doc.fileKey}`
+  window.open(url, '_blank')
+}
 </script>
 
 <template>
@@ -346,6 +364,15 @@ function getStatusLabel(status: string) {
             <BaseParagraph size="xs" class="text-muted-500 line-clamp-2 leading-relaxed">
               {{ doc.description }}
             </BaseParagraph>
+
+            <!-- Filename Display -->
+            <div v-if="doc.fileName"
+              class="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted-100 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 w-fit">
+              <Icon name="solar:document-text-bold-duotone" class="size-3.5 text-primary-500" />
+              <span class="text-[10px] font-medium text-muted-600 dark:text-muted-400 truncate max-w-[200px]">
+                {{ doc.fileName }}
+              </span>
+            </div>
 
             <!-- Rejection Reason -->
             <div v-if="doc.status === 'rejected' && doc.comment"
@@ -411,6 +438,11 @@ function getStatusLabel(status: string) {
           </div>
 
           <div class="flex justify-end gap-2">
+            <BaseButton v-if="doc.attachmentId && canPreview(doc)" variant="muted" size="sm" rounded="lg"
+              class="h-8 w-8 p-0" @click="viewDocument(doc)">
+              <Icon name="solar:eye-linear" class="size-5" />
+            </BaseButton>
+
             <BaseButton v-if="doc.status === 'pending' || doc.status === 'rejected'" variant="muted" size="sm"
               rounded="lg" class="h-8 text-[11px] font-bold" :disabled="!!isUploading" @click="handleNotOwned(doc.id)">
               <Icon name="solar:info-circle-linear" class="size-3.5 mr-1" />
@@ -418,7 +450,8 @@ function getStatusLabel(status: string) {
             </BaseButton>
 
             <label class="relative cursor-pointer">
-              <input type="file" class="hidden" :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
+              <input type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
+                :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
               <div
                 class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
                 <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
@@ -463,8 +496,8 @@ function getStatusLabel(status: string) {
           <div class="pt-2">
             <label class="cursor-pointer"
               :class="{ 'opacity-50 pointer-events-none': !documentTitle.trim() || isUploading }">
-              <input type="file" class="hidden" :disabled="!!isUploading || !documentTitle.trim()"
-                @change="handleFileUpload($event, 'extra')">
+              <input type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
+                :disabled="!!isUploading || !documentTitle.trim()" @change="handleFileUpload($event, 'extra')">
               <div
                 class="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary-500/25 active:scale-95">
                 <Icon v-if="isUploading === 'extra'" name="line-md:loading-twotone-loop" class="size-4" />
