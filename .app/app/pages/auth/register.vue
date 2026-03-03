@@ -595,9 +595,11 @@ const doSubmit = (async () => {
 
     // Pagamento via PIX - mostrar checkout com dados da API
     if (paymentInfo.method === 'PIX' && paymentInfo.pix) {
-      pixCode.value = paymentInfo.pix.code
-      pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl
-      checkoutUrl.value = paymentInfo.checkoutUrl
+      console.log('🔍 PIX Info recebido:', JSON.stringify(paymentInfo.pix))
+      console.log('🔍 Checkout URL:', paymentInfo.checkoutUrl)
+      pixCode.value = paymentInfo.pix.code || ''
+      pixQrCodeUrl.value = paymentInfo.pix.qrCodeUrl || ''
+      checkoutUrl.value = paymentInfo.checkoutUrl || ''
       showPixCheckout.value = true
 
       // Iniciar timer com tempo de expiração da API
@@ -823,44 +825,74 @@ watch([step, isFreeFlow, isSubmitting], () => {
             </div>
 
             <BaseCard rounded="lg" class="p-6 text-center">
-              <img
-                :src="pixCode ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${pixCode}` : (pixQrCodeUrl || '/img/custom/pix-logo.png')"
-                alt="QR Code PIX"
-                class="mx-auto mb-4 rounded-lg border-4 border-muted-200 dark:border-muted-700 bg-white p-2" width="200"
-                height="200">
+              <!-- QR Code + Copia e Cola (only when pixCode exists) -->
+              <template v-if="pixCode">
+                <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${pixCode}`" alt="QR Code PIX"
+                  class="mx-auto mb-4 rounded-lg border-4 border-muted-200 dark:border-muted-700 bg-white p-2"
+                  width="200" height="200">
 
-              <div class="flex items-center justify-center gap-2 mb-4">
-                <Icon name="ph:timer-fill" class="size-5 text-warning-500" />
-                <BaseText weight="bold" class="text-warning-500">
-                  Expira em {{ formatPixTime(pixTimeRemaining) }}
-                </BaseText>
-              </div>
+                <div class="flex items-center justify-center gap-2 mb-4">
+                  <Icon name="ph:timer-fill" class="size-5 text-warning-500" />
+                  <BaseText weight="bold" class="text-warning-500">
+                    Expira em {{ formatPixTime(pixTimeRemaining) }}
+                  </BaseText>
+                </div>
 
-              <BaseProgress :value="(pixTimeRemaining / 900) * 100" size="xs" color="warning" class="mb-4" />
+                <BaseProgress :value="(pixTimeRemaining / 900) * 100" size="xs" color="warning" class="mb-4" />
 
-              <div class="space-y-2">
-                <BaseText size="xs" class="text-muted-500 uppercase tracking-wider">
-                  Código Copia e Cola
-                </BaseText>
-                <div class="flex gap-2">
-                  <BaseInput :model-value="pixCode" readonly rounded="lg"
-                    :classes="{ input: 'h-10 text-xs font-mono' }" />
-                  <BaseButton variant="primary" rounded="lg" class="h-10 px-4" @click="copyPixCode">
-                    <Icon name="ph:copy-fill" class="size-4" />
+                <div class="space-y-2">
+                  <BaseText size="xs" class="text-muted-500 uppercase tracking-wider">
+                    Código Copia e Cola
+                  </BaseText>
+                  <div class="flex gap-2">
+                    <BaseInput :model-value="pixCode" readonly rounded="lg"
+                      :classes="{ input: 'h-10 text-xs font-mono' }" />
+                    <BaseButton variant="primary" rounded="lg" class="h-10 px-4" @click="copyPixCode">
+                      <Icon name="ph:copy-fill" class="size-4" />
+                    </BaseButton>
+                  </div>
+                </div>
+
+                <div v-if="checkoutUrl" class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-700">
+                  <BaseParagraph size="xs" class="text-muted-500 mb-3">
+                    Ou se preferir, acesse o link de pagamento:
+                  </BaseParagraph>
+                  <BaseButton :to="checkoutUrl" target="_blank" variant="muted" color="primary" rounded="lg"
+                    class="w-full h-10">
+                    <Icon name="ph:link-bold" class="size-4 mr-2" />
+                    Abrir Link de Pagamento
                   </BaseButton>
                 </div>
-              </div>
+              </template>
 
-              <div v-if="checkoutUrl" class="mt-6 pt-6 border-t border-muted-200 dark:border-muted-700">
-                <BaseParagraph size="xs" class="text-muted-500 mb-3">
-                  Ou se preferir, acesse o link de pagamento:
-                </BaseParagraph>
-                <BaseButton :to="checkoutUrl" target="_blank" variant="muted" color="primary" rounded="lg"
-                  class="w-full h-10">
-                  <Icon name="ph:link-bold" class="size-4 mr-2" />
-                  Abrir Link de Pagamento
-                </BaseButton>
-              </div>
+              <!-- Fallback: Only checkout URL available (no brCode) -->
+              <template v-else-if="checkoutUrl">
+                <div class="py-4">
+                  <div
+                    class="inline-flex items-center justify-center size-16 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
+                    <Icon name="ph:link-bold" class="size-8 text-primary-500" />
+                  </div>
+                  <BaseHeading tag="h3" size="md" weight="semibold" class="text-muted-800 dark:text-white mb-2">
+                    Link de Pagamento
+                  </BaseHeading>
+                  <BaseParagraph size="sm" class="text-muted-500 mb-6">
+                    Clique no botão abaixo para completar o pagamento via PIX
+                  </BaseParagraph>
+                  <BaseButton :to="checkoutUrl" target="_blank" variant="primary" rounded="lg" class="w-full h-12">
+                    <Icon name="logos:pix" class="size-5 mr-2" />
+                    Pagar com PIX
+                  </BaseButton>
+                </div>
+              </template>
+
+              <!-- No PIX data at all -->
+              <template v-else>
+                <div class="py-4">
+                  <BaseParagraph size="sm" class="text-muted-500">
+                    Erro ao gerar o código PIX. Tente novamente ou escolha outra forma de pagamento.
+                  </BaseParagraph>
+                </div>
+              </template>
             </BaseCard>
 
             <BaseCard rounded="lg" class="p-4">
@@ -1059,8 +1091,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
                               class="flex sm:hidden items-center justify-start gap-x-3 gap-y-1 mt-1.5 grayscale opacity-70 flex-wrap">
                               <div class="flex items-center gap-1 text-[10px] text-muted-500 text-left">
                                 <Icon name="solar:users-group-rounded-linear" class="size-3 text-primary-500" />
-                                <span class="whitespace-nowrap">{{ plan.limits.employees || 1 }} usuário(s) {{ plan
-                                  }}</span>
+                                <span class="whitespace-nowrap">{{ plan.limits.employees || 1 }} usuário(s)</span>
                               </div>
 
                               <div v-if="plan.slug === 'enterprise' || plan.slug === 'pro'"
