@@ -1376,9 +1376,9 @@ const showNoDeclarationsAlert = computed(() => {
       <DialogRoot :open="isOnboardingOpen">
         <DialogPortal>
           <DialogOverlay class="bg-muted-900/60 fixed inset-0 z-[120] backdrop-blur-sm" />
-          <DialogContent class="fixed inset-0 z-[130] flex items-center justify-center p-4">
+          <DialogContent class="fixed inset-0 z-[130] flex items-center justify-center p-0 sm:p-4">
             <div
-              class="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl bg-white dark:bg-muted-950 shadow-2xl">
+              class="w-full h-full sm:max-w-4xl sm:h-auto sm:max-h-[90vh] overflow-hidden sm:rounded-3xl bg-white dark:bg-muted-950 shadow-2xl">
               <OnboardingWizard />
             </div>
           </DialogContent>

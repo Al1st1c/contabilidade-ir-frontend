@@ -1163,7 +1163,7 @@ onMounted(async () => {
                             class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Admin</span>
                         </div>
                         <span class="text-xs text-muted-500 mt-1 line-clamp-2">{{ role.description || 'Sem descrição'
-                          }}</span>
+                        }}</span>
                       </button>
                     </div>
 
@@ -1213,7 +1213,7 @@ onMounted(async () => {
                             <div>
                               <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ permission.label
-                                  }}</span>
+                                }}</span>
                                 <BaseTooltip :content="permission.explanation" position="top">
                                   <Icon name="ph:info" class="size-3.5 text-muted-400 cursor-help" />
                                 </BaseTooltip>
@@ -1632,7 +1632,7 @@ onMounted(async () => {
 
     <!-- Footer: Navigation -->
     <div v-if="!complete"
-      class="shrink-0 border-t border-muted-200 bg-white p-6 px-10 dark:border-muted-800 dark:bg-muted-950">
+      class="shrink-0 border-t border-muted-200 bg-white p-4 px-4 sm:p-6 sm:px-10 dark:border-muted-800 dark:bg-muted-950 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <BaseButton rounded="sm" class="w-full sm:w-32 h-12" :disabled="loading" @click.prevent="prevStep">
           <Icon name="lucide:chevron-left" class="me-2 size-4" />
