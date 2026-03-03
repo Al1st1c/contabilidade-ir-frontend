@@ -615,8 +615,8 @@ const podiumThird = computed(() => topPerformers.value.find(p => p.rank === 3))
 const pipelineTab = ref<'bar' | 'pie'>('bar')
 const activeAlertTab = ref('all')
 
-const irStartDate = ref('2026-03-01T08:00:00')
-const irEndDate = ref('2026-05-31T23:59:59')
+const irStartDate = ref('2026-03-16T00:00:00')
+const irEndDate = ref('2026-05-29T23:59:59')
 
 const isIrPeriodStarted = computed(() => {
   return new Date() >= new Date(irStartDate.value)

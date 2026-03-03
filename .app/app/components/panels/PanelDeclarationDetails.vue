@@ -603,10 +603,10 @@ function statusIcon(status: string) {
 }
 function statusTagClass(status: string) {
   const map: Record<string, string> = {
-    uploaded: 'bg-warning-500 text-white shadow-sm shadow-warning-500/20',
-    approved: 'bg-success-500 text-white shadow-sm shadow-success-500/20',
-    rejected: 'bg-danger-500 text-white shadow-sm shadow-danger-500/20',
-    not_owned: 'bg-info-500 text-white shadow-sm shadow-info-500/20',
+    uploaded: 'bg-orange-500 text-white shadow-sm shadow-warning-500/20',
+    approved: 'bg-green-500 text-white shadow-sm shadow-success-500/20',
+    rejected: 'bg-red-500 text-white shadow-sm shadow-danger-500/20',
+    not_owned: 'bg-blue-500 text-white shadow-sm shadow-blue-500/20',
   }
   return map[status] || ''
 }
@@ -1140,159 +1140,174 @@ onMounted(() => {
           </div>
 
           <!-- ━━━ TAB: CHECKLIST ━━━ -->
-          <div v-if="activeTab === 'checklist'" class="space-y-5 animate-fade-in">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <Icon name="lucide:check-square" class="size-4 text-muted-400" />
-                <BaseText size="xs" class="text-muted-500 uppercase  font-bold">
-                  Checklist
-                </BaseText>
+          <div v-if="activeTab === 'checklist'" class="space-y-4 animate-fade-in">
+            <!-- Barra de Progresso e Sumário -->
+            <div class="bg-muted-50 dark:bg-muted-950/40 rounded-xl p-4 border border-muted-200 dark:border-muted-800">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="size-6 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
+                    <Icon name="lucide:check-square" class="size-3.5" />
+                  </div>
+                  <div>
+                    <BaseText size="sm" class="text-muted-800 dark:text-muted-100 mr-2">
+                      Documentação</BaseText>
+                    <BaseText size="xs" class="text-muted-400 font-medium">{{checklistItems.filter(i => i.status ===
+                      'approved' || i.status === 'not_owned').length}}/{{ checklistItems.length }} aprovados</BaseText>
+                  </div>
+                </div>
+                <div v-if="isSavingChecklist" class="animate-spin text-primary-500">
+                  <Icon name="svg-spinners:ring-resize" class="size-5" />
+                </div>
               </div>
-              <div class="flex items-center gap-3">
-                <span v-if="isSavingChecklist" class="animate-spin text-primary-500">
-                  <Icon name="svg-spinners:ring-resize" class="size-4" />
-                </span>
-                <span class="text-xs text-muted-400 font-semibold">{{checklistItems.filter(i => i.status
-                  === 'approved').length
-                  }}/{{ checklistItems.length }} aprovados</span>
+              <div v-if="checklistItems.length > 0"
+                class="w-full bg-muted-200 dark:bg-muted-800 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full transition-all duration-700 ease-out" :class="[
+                  checklistItems.filter(i => i.status === 'approved').length === checklistItems.length && checklistItems.length > 0
+                    ? 'bg-success-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]'
+                    : 'bg-primary-500 shadow-[0_0_10px_rgba(var(--color-primary-500),0.3)]'
+                ]"
+                  :style="`width: ${checklistItems.length > 0 ? (checklistItems.filter(i => i.status === 'approved').length / checklistItems.length) * 100 : 0}%`" />
               </div>
             </div>
 
-            <!-- Input + botão -->
+            <!-- Adicionar Novo Item -->
             <div class="flex gap-2">
-              <BaseInput v-model="newChecklistTitle" placeholder="Ex: RG, CPF, Comprovante de renda..." size="sm"
-                rounded="lg" class="flex-1" @keyup.enter="addChecklistItem" />
+              <BaseInput v-model="newChecklistTitle"
+                placeholder="Solicitar novo documento (ex: Informe de Rendimentos Banco X)" size="sm" rounded="lg"
+                class="flex-1" @keyup.enter="addChecklistItem" />
               <BaseButton size="sm" variant="primary" rounded="lg" :loading="isSavingChecklist"
                 @click="addChecklistItem">
-                <Icon name="lucide:plus" class="size-4 mr-1" /> Adicionar
+                <Icon name="lucide:plus" class="size-4 mr-1.5" /> Adicionar
               </BaseButton>
             </div>
 
-            <!-- Progress bar -->
-            <div v-if="checklistItems.length > 0" class="w-full bg-muted-200 dark:bg-muted-800 rounded-full h-1.5">
-              <div class="h-1.5 rounded-full transition-all duration-500"
-                :class="checklistItems.filter(i => i.status === 'approved').length === checklistItems.length && checklistItems.length > 0 ? 'bg-success-500' : 'bg-primary-500'"
-                :style="`width: ${checklistItems.length > 0 ? (checklistItems.filter(i => i.status === 'approved').length / checklistItems.length) * 100 : 0}%`" />
-            </div>
-
-            <!-- Items -->
-            <div class="space-y-2">
-              <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
-                class="group flex items-center gap-3 p-3 rounded-xl border bg-white dark:bg-muted-950 transition-all"
-                :class="{
-                  'border-success-200 dark:border-success-800 bg-success-50/40 dark:bg-success-900/10': item.status === 'approved',
-                  'border-danger-200 dark:border-danger-800 bg-danger-50/40 dark:bg-danger-900/10': item.status === 'rejected',
-                  'border-warning-200 dark:border-warning-800 bg-warning-50/40 dark:bg-warning-900/10': item.status === 'uploaded',
-                  'border-info-200 dark:border-info-800 bg-info-50/40 dark:bg-info-900/10': item.status === 'not_owned',
-                  'border-muted-200 dark:border-muted-800 hover:border-primary-300': item.status === 'pending',
-                }">
-                <!-- Status icon -->
-                <div class="size-6 rounded-full flex items-center justify-center shrink-0" :class="{
-                  'bg-success-100 text-success-600': item.status === 'approved',
-                  'bg-danger-100 text-danger-600': item.status === 'rejected',
-                  'bg-warning-100 text-warning-600': item.status === 'uploaded',
-                  'bg-info-100 text-info-600': item.status === 'not_owned',
-                  'bg-muted-100 dark:bg-muted-800 text-muted-400': item.status === 'pending',
-                }">
-                  <Icon :name="statusIcon(item.status)" class="size-3" />
-                </div>
-                <!-- Title & Observations -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium text-muted-800 dark:text-muted-100 truncate">
+            <!-- Lista de Documentos -->
+            <div
+              class="bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-800 rounded-lg overflow-hidden">
+              <div class="divide-y divide-muted-100 dark:divide-muted-800">
+                <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
+                  class="group flex items-center gap-3 px-4 py-3 hover:bg-muted-50/50 dark:hover:bg-muted-900/20 transition-colors border-l-3"
+                  :class="[
+                    item.status === 'approved' ? 'border-success-500' :
+                      item.status === 'rejected' ? 'border-danger-500' :
+                        item.status === 'uploaded' ? 'border-warning-500' :
+                          item.status === 'not_owned' ? 'border-info-500' :
+                            'border-muted-200 dark:border-muted-700'
+                  ]">
+                  <!-- Bloco principal: título + badges + obs -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-muted-800 dark:text-muted-100 leading-snug">
                       {{ item.title }}
                     </p>
-                    <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                      class="text-[10px] font-bold shrink-0 bg-danger-600 px-2">
-                      Obrigatório
-                    </BaseTag>
-                    <BaseTag v-if="item.status !== 'pending'" size="sm" :class="statusTagClass(item.status)"
-                      variant="none" class="text-[10px] font-bold shrink-0 capitalize px-2">
-                      {{ statusLabel(item.status) }}
-                    </BaseTag>
-                  </div>
-
-                  <!-- Requirement Description (if any) -->
-                  <div class="flex items-center gap-2 mt-1">
-                    <p v-if="item.description"
-                      class="text-[11px] text-muted-500 dark:text-muted-400 line-clamp-1 italic">
-                      {{ item.description }}
-                    </p>
-                    <span v-if="item.createdAt"
-                      class="text-[9px] text-muted-400 font-medium ml-auto shrink-0 flex items-center gap-1">
-                      <Icon name="lucide:calendar" class="size-3" />
-                      {{ new Date(item.createdAt).toLocaleString('pt-BR') }}
-                    </span>
-                  </div>
-
-                  <!-- File info and client note -->
-                  <div v-if="item.attachment || (item.status === 'not_owned' && item.comment)"
-                    class="mt-2 p-2 rounded-lg bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 shadow-inner">
-                    <div v-if="item.attachment" class="flex items-center justify-between gap-2 overflow-hidden">
-                      <p
-                        class="text-[11px] font-bold text-muted-700 dark:text-muted-200 truncate flex items-center gap-1.5">
-                        <Icon name="solar:document-bold-duotone" class="size-3.5 text-primary-500" />
-                        {{ item.attachment.fileName }}
-                      </p>
-                      <span class="text-[9px] text-muted-400 font-mono">{{ (item.attachment.fileSize / 1024).toFixed(0)
-                        }}KB</span>
+                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <BaseTag v-if="item.isRequired && item.status === 'pending'" size="sm" variant="none"
+                        class="bg-red-100 text-red-500 text-[9px] px-1.5 h-4 leading-none font-bold uppercase">
+                        Obrigatório
+                      </BaseTag>
+                      <BaseTag v-if="item.status !== 'pending'" size="sm" variant="none"
+                        class="text-[9px] px-1.5 h-4 leading-none font-bold uppercase"
+                        :class="statusTagClass(item.status)">
+                        {{ statusLabel(item.status) }}
+                      </BaseTag>
                     </div>
-
                     <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
-                      class="mt-2 pt-2 border-t border-muted-200 dark:border-muted-800">
-                      <p class="text-[11px] text-primary-600 dark:text-primary-400 font-semibold flex items-start gap-1.5"
-                        :title="item.attachment?.description || item.comment">
-                        <Icon name="solar:notes-bold-duotone" class="size-3.5 mt-0.5 shrink-0" />
-                        <span>Obs do Cliente: <span class="font-normal italic">"{{ item.attachment?.description
-                          || item.comment
-                            }}"</span></span>
-                      </p>
+                      class="flex items-center gap-1 text-[10px] text-muted-400 italic mt-1">
+                      <Icon name="solar:notes-bold-duotone" class="size-3 shrink-0" />
+                      <span class="truncate">"{{ item.attachment?.description || item.comment }}"</span>
                     </div>
+                  </div>
+
+                  <!-- Arquivo: ícone compacto -->
+                  <div class="hidden md:flex items-center gap-1.5 shrink-0 w-20">
+                    <template v-if="item.attachment">
+                      <Icon name="lucide:file-text" class="size-4 text-muted-400 shrink-0" />
+                      <div class="min-w-0">
+                        <p class="text-[10px] font-bold text-muted-600 dark:text-muted-300 uppercase leading-none">
+                          .{{ item.attachment.fileName.split('.').pop() }}
+                        </p>
+                        <p class="text-[9px] text-muted-400 font-mono leading-none mt-0.5">
+                          {{ (item.attachment.fileSize / 1024).toFixed(0) }}KB
+                        </p>
+                      </div>
+                    </template>
+                    <span v-else class="text-[10px] text-muted-300">—</span>
+                  </div>
+
+                  <!-- Data -->
+                  <div class="hidden md:block shrink-0 w-14 text-center">
+                    <span v-if="item.attachment?.createdAt" class="text-[10px] text-muted-400 font-mono">
+                      {{ new Date(item.attachment.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month:
+                          '2-digit'
+                      }) }}
+                    </span>
+                    <span v-else class="text-[10px] text-muted-300">—</span>
+                  </div>
+
+                  <!-- Ações -->
+                  <div class="flex items-center gap-1 shrink-0">
+                    <!-- Enviado ou Não Possui: Visualizar + Aprovar + Rejeitar -->
+                    <template v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'">
+                      <BaseButton v-if="item.attachment" variant="ghost" size="icon-sm" rounded="md"
+                        class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                        @click="openPreview(item)">
+                        <Icon name="solar:eye-bold-duotone" class="size-4" />
+                      </BaseButton>
+                      <BaseButton color="success" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
+                        v-if="item.status !== 'not_owned'" @click="updateItemStatus(item.id, 'approved')">
+                        <Icon name="lucide:check" class="size-4" />
+                      </BaseButton>
+                      <BaseButton color="danger" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
+                        @click="updateItemStatus(item.id, 'rejected')">
+                        <Icon name="lucide:x" class="size-4" />
+                      </BaseButton>
+                    </template>
+
+                    <!-- Pendente ou Rejeitado: Obrigatório + Lixeira -->
+                    <template v-else-if="item.status === 'pending' || item.status === 'rejected'">
+                      <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                        :class="item.isRequired ? 'text-danger-500 hover:bg-danger-500/10' : 'text-muted-400 hover:bg-muted-100 hover:text-primary-500'"
+                        @click="toggleItemRequired(idx)">
+                        <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle-dashed'" class="size-4" />
+                      </BaseButton>
+                      <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                        class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10"
+                        @click="removeChecklistItem(idx)">
+                        <Icon name="lucide:trash-2" class="size-4" />
+                      </BaseButton>
+                    </template>
+
+                    <!-- Aprovado: Visualizar + Reverter -->
+                    <template v-else-if="item.status === 'approved'">
+                      <BaseButton v-if="item.attachment" variant="ghost" size="icon-sm" rounded="md"
+                        class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                        @click="openPreview(item)">
+                        <Icon name="solar:eye-bold-duotone" class="size-4" />
+                      </BaseButton>
+                      <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                        class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-warning-500 hover:bg-warning-500/10"
+                        title="Reverter Aprovação" @click="updateItemStatus(item.id, 'pending')">
+                        <Icon name="lucide:rotate-ccw" class="size-4" />
+                      </BaseButton>
+                    </template>
                   </div>
                 </div>
 
-                <!-- Arquivo enviado ou Justificativa: ações -->
-                <div v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'"
-                  class="flex items-center gap-2 shrink-0">
-                  <BaseButton v-if="item.attachment" variant="ghost" color="primary" size="icon-sm"
-                    @click="openPreview(item)">
-                    <Icon name="solar:eye-bold-duotone" class="size-3.5" />
-                  </BaseButton>
-                  <BaseButton color="success" size="icon-sm" :loading="processingItems.has(item.id)"
-                    @click="updateItemStatus(item.id, 'approved')">
-                    <Icon name="lucide:check" class="size-3.5" />
-                  </BaseButton>
-                  <BaseButton color="danger" size="icon-sm" :loading="processingItems.has(item.id)"
-                    @click="updateItemStatus(item.id, 'rejected')">
-                    <Icon name="lucide:x" class="size-3.5" />
-                  </BaseButton>
+                <!-- Empty State -->
+                <div v-if="checklistItems.length === 0" class="flex flex-col items-center justify-center py-16 px-4">
+                  <div
+                    class="size-14 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center mb-3">
+                    <Icon name="lucide:clipboard-list" class="size-7 text-muted-300" />
+                  </div>
+                  <p class="text-sm font-medium text-muted-500">Checklist vazio</p>
+                  <p class="text-xs text-muted-400 text-center max-w-[220px] mt-0.5">
+                    Nenhum documento solicitado. Use o campo acima para começar.
+                  </p>
                 </div>
-
-                <!-- Actions: required toggle + delete -->
-                <div v-if="item.status === 'pending' || item.status === 'rejected'"
-                  class="flex items-center gap-0.5 shrink-0">
-                  <button class="p-1.5 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
-                    :class="item.isRequired ? 'text-danger-500' : 'text-muted-400 hover:text-primary-500'"
-                    @click="toggleItemRequired(idx)">
-                    <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle'" class="size-3.5" />
-                  </button>
-                  <button
-                    class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 text-muted-400 hover:text-danger-500 transition-all"
-                    @click="removeChecklistItem(idx)">
-                    <Icon name="lucide:trash-2" class="size-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              <div v-if="checklistItems.length === 0"
-                class="text-center py-10 border-2 border-dashed border-muted-200 dark:border-muted-800 rounded-xl">
-                <Icon name="lucide:clipboard-list" class="size-8 text-muted-200 mx-auto mb-2" />
-                <p class="text-xs text-muted-400">
-                  Adicione itens ao checklist acima
-                </p>
               </div>
             </div>
           </div>
+
 
           <!-- ━━━ TAB: ANEXOS ━━━ -->
           <div v-if="activeTab === 'attachments'" class="space-y-6 animate-fade-in">
@@ -2011,7 +2026,7 @@ onMounted(() => {
                       {{ item.title }}
                     </BaseText>
                     <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                      class="mt-1 scale-90 origin-left bg-danger-500 text-white">
+                      class="mt-1 scale-100 origin-left bg-destructive-500 text-white">
                       Obrigatório
                     </BaseTag>
                   </div>

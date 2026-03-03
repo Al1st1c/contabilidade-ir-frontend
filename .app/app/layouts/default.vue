@@ -85,21 +85,8 @@ onMounted(() => {
                 </TairoMenuLink>
               </TairoMenuItem>
 
-              <TairoMenuItem>
-                <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
-                  <NuxtLink to="/dashboard/ir" active-class="!text-primary-500 font-semibold">
-                    Imposto de Renda
-                  </NuxtLink>
-                </TairoMenuLink>
-              </TairoMenuItem>
 
-              <TairoMenuItem v-if="user?.role?.canViewDrive">
-                <TairoMenuLink as-child :active="$route.path === '/dashboard/drive'">
-                  <NuxtLink to="/dashboard/drive" active-class="!text-primary-500 font-semibold">
-                    Drive
-                  </NuxtLink>
-                </TairoMenuLink>
-              </TairoMenuItem>
+
 
               <TairoMenuItem>
                 <TairoMenuTrigger
@@ -137,6 +124,33 @@ onMounted(() => {
                     </TairoMenuLink>
                   </TairoMenuListItems>
                 </TairoMenuContent>
+              </TairoMenuItem>
+
+
+
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path === '/dashboard/ir'">
+                  <NuxtLink to="/dashboard/ir" active-class="!text-primary-500 font-semibold">
+                    Imposto de Renda
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
+              <TairoMenuItem v-if="user?.role?.canViewDrive">
+                <TairoMenuLink as-child :active="$route.path === '/dashboard/drive'">
+                  <NuxtLink to="/dashboard/drive" active-class="!text-primary-500 font-semibold">
+                    Drive
+                  </NuxtLink>
+                </TairoMenuLink>
+              </TairoMenuItem>
+
+
+              <TairoMenuItem>
+                <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/marketing')">
+                  <NuxtLink to="/dashboard/marketing" active-class="!text-primary-500 font-semibold">
+                    Marketing
+                  </NuxtLink>
+                </TairoMenuLink>
               </TairoMenuItem>
 
               <TairoMenuItem>
@@ -267,14 +281,6 @@ onMounted(() => {
                 </TairoMenuContent>
               </TairoMenuItem>
 
-              <TairoMenuItem>
-                <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/marketing')">
-                  <NuxtLink to="/dashboard/marketing" active-class="!text-primary-500 font-semibold">
-                    Marketing
-                  </NuxtLink>
-                </TairoMenuLink>
-              </TairoMenuItem>
-
               <TairoMenuItem v-if="user?.isAdmin">
                 <TairoMenuLink as-child :active="$route.path.startsWith('/dashboard/admin')">
                   <NuxtLink to="/dashboard/admin" active-class="!text-primary-500 font-semibold">
@@ -282,6 +288,8 @@ onMounted(() => {
                   </NuxtLink>
                 </TairoMenuLink>
               </TairoMenuItem>
+
+
 
               <TairoMenuIndicator />
             </TairoMenuList>

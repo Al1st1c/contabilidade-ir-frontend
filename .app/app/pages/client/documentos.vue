@@ -20,6 +20,7 @@ const isUploading = ref<string | null>(null)
 const documentTitle = ref('') // Título para documento extra
 const notes = ref<Record<string, string>>({})
 const showNote = ref<Record<string, boolean>>({})
+const localFileNames = ref<Record<string, string>>({}) // Nome original do arquivo selecionado pelo usuário
 
 const banks = ['Itaú', 'Bradesco', 'Santander', 'Nubank', 'Banco do Brasil']
 const customBanks = ref<Record<string, string>>({})
@@ -129,15 +130,8 @@ async function handleNotOwned(itemId: string) {
   }
 
   const note = notes.value[itemId]
-  if (!note || !note.trim()) {
-    add({
-      title: 'Observação Obrigatória',
-      description: 'Por favor, explique por que você não possui este documento.',
-      icon: 'solar:info-circle-bold-duotone',
-    })
-    showNote.value[itemId] = true
-    return
-  }
+  // Se o cliente não escreveu nada, manda "Nao possuo." como padrão
+  const description = (note && note.trim()) ? note.trim() : 'Nao possuo.'
 
   isUploading.value = itemId
 
@@ -146,7 +140,7 @@ async function handleNotOwned(itemId: string) {
       method: 'POST',
       body: {
         checklistItemId: itemId,
-        description: note.trim(),
+        description,
       },
     })
 
@@ -190,6 +184,10 @@ async function handleFileUpload(event: Event, itemId: string) {
   }
 
   const file = target.files[0]
+  if (!file) return
+
+  // Guarda o nome original do arquivo (como veio do celular/computador do usuário)
+  localFileNames.value[itemId] = file.name
 
   // Validação para Informe de Rendimento
   const doc = documents.value.find(d => d.id === itemId)
@@ -366,11 +364,11 @@ function viewDocument(doc: any) {
             </BaseParagraph>
 
             <!-- Filename Display -->
-            <div v-if="doc.fileName"
+            <div v-if="localFileNames[doc.id] || doc.fileName"
               class="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted-100 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 w-fit">
               <Icon name="solar:document-text-bold-duotone" class="size-3.5 text-primary-500" />
               <span class="text-[10px] font-medium text-muted-600 dark:text-muted-400 truncate max-w-[200px]">
-                {{ doc.fileName }}
+                {{ localFileNames[doc.id] || doc.fileName }}
               </span>
             </div>
 
@@ -438,9 +436,9 @@ function viewDocument(doc: any) {
           </div>
 
           <div class="flex justify-end gap-2">
-            <BaseButton v-if="doc.attachmentId && canPreview(doc)" variant="muted" size="sm" rounded="lg"
-              class="h-8 w-8 p-0" @click="viewDocument(doc)">
-              <Icon name="solar:eye-linear" class="size-5" />
+            <BaseButton v-if="doc.attachmentId && canPreview(doc)" variant="muted" size="sm" rounded="lg" class="p-0"
+              @click="viewDocument(doc)">
+              <Icon name="solar:eye-linear" class="size-4" />
             </BaseButton>
 
             <BaseButton v-if="doc.status === 'pending' || doc.status === 'rejected'" variant="muted" size="sm"
