@@ -271,9 +271,11 @@ const plansChart = computed(() => {
           </div>
         </BaseCard>
 
-        <BaseCard class="p-6">
+        <BaseCard class="p-6 cursor-pointer hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors group"
+          @click="router.push('/dashboard/admin/financial')">
           <div class="flex items-center gap-4">
-            <div class="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+            <div
+              class="size-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
               <Icon name="solar:wallet-money-bold-duotone" class="size-6 text-amber-500" />
             </div>
             <div>
@@ -556,6 +558,20 @@ const plansChart = computed(() => {
               <div>
                 <BaseHeading as="h3" size="sm">Gerir Planos</BaseHeading>
                 <BaseText size="xs" class="text-muted-500">Preços e limites</BaseText>
+              </div>
+            </div>
+          </BaseCard>
+        </NuxtLink>
+        <NuxtLink to="/dashboard/admin/financial" class="group">
+          <BaseCard class="p-6 border-dashed border-2 hover:border-primary-500 hover:bg-primary-500/5 transition-all">
+            <div class="flex flex-col items-center gap-3 text-center">
+              <div
+                class="size-14 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Icon name="solar:wallet-money-bold-duotone" class="size-8" />
+              </div>
+              <div>
+                <BaseHeading as="h3" size="sm">Financeiro</BaseHeading>
+                <BaseText size="xs" class="text-muted-500">Receitas e análises</BaseText>
               </div>
             </div>
           </BaseCard>
