@@ -370,10 +370,22 @@ async function applyCoupon() {
 }
 function closePixCheckout() {
   showPixCheckout.value = false
+  // Clear payment polling
   if (checkPaymentInterval.value) {
     clearInterval(checkPaymentInterval.value)
     checkPaymentInterval.value = null
   }
+  // Clear PIX timer
+  if (pixInterval.value) {
+    clearInterval(pixInterval.value)
+    pixInterval.value = null
+  }
+  // Reset PIX state
+  pixCode.value = ''
+  pixQrCodeUrl.value = ''
+  checkoutUrl.value = ''
+  pixTimeRemaining.value = 0
+  pixExpiresAt.value = null
 }
 
 function removeCoupon() {
@@ -394,12 +406,19 @@ function updatePixTimer() {
   pixTimeRemaining.value = Math.floor(remaining / 1000)
 
   if (remaining <= 0) {
-    if (pixInterval.value) clearInterval(pixInterval.value)
-    toaster.add({
-      title: 'PIX expirado',
-      description: 'Gere um novo código para continuar.',
-      icon: 'ph:warning-circle-fill',
-    })
+    // Clear interval FIRST to prevent repeated calls
+    if (pixInterval.value) {
+      clearInterval(pixInterval.value)
+      pixInterval.value = null
+    }
+    // Only show toast if PIX checkout is still open
+    if (showPixCheckout.value) {
+      toaster.add({
+        title: 'PIX expirado',
+        description: 'Gere um novo código para continuar.',
+        icon: 'ph:warning-circle-fill',
+      })
+    }
   }
 }
 
@@ -1453,7 +1472,7 @@ watch([step, isFreeFlow, isSubmitting], () => {
           </DialogTitle>
           <DialogDescription class="text-sm text-muted-500 dark:text-muted-400 mb-4">
             Assinando o <strong class="text-muted-700 dark:text-muted-200">{{ upsellPlan?.name || 'Profissional'
-              }}</strong>
+            }}</strong>
             agora você ganha:
           </DialogDescription>
 

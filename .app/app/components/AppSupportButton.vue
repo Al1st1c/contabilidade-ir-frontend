@@ -3,7 +3,7 @@ import { onKeyStroke, onClickOutside } from '@vueuse/core'
 const isOpen = ref(false)
 const isVideoModalOpen = ref(false)
 
-const videoUrl = 'https://gestorx-files.s3.us-east-1.amazonaws.com/tutorial/tutorial-onboarding.mov'
+const videoUrl = 'https://d1fvzp82gc0zw6.cloudfront.net/tutorial/tutorial-onboarding.mov'
 
 function openWhatsApp() {
   window.open('https://wa.me/5521979044284', '_blank')

@@ -1163,7 +1163,7 @@ onMounted(async () => {
                             class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Admin</span>
                         </div>
                         <span class="text-xs text-muted-500 mt-1 line-clamp-2">{{ role.description || 'Sem descrição'
-                        }}</span>
+                          }}</span>
                       </button>
                     </div>
 
@@ -1213,7 +1213,7 @@ onMounted(async () => {
                             <div>
                               <div class="flex items-center gap-1.5">
                                 <span class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ permission.label
-                                }}</span>
+                                  }}</span>
                                 <BaseTooltip :content="permission.explanation" position="top">
                                   <Icon name="ph:info" class="size-3.5 text-muted-400 cursor-help" />
                                 </BaseTooltip>
@@ -1607,8 +1607,10 @@ onMounted(async () => {
               <div v-else class="space-y-6">
                 <div
                   class="aspect-video bg-muted-900 rounded-3xl overflow-hidden shadow-2xl relative group flex items-center justify-center">
-                  <video v-if="readyForVideo" class="w-full h-full object-cover" controls
-                    src="https://gestorx-files.s3.us-east-1.amazonaws.com/tutorial/tutorial-onboarding.mov" />
+                  <iframe v-if="readyForVideo" class="w-full h-full"
+                    src="https://www.youtube.com/embed/fsXYJy2pZLU?rel=0" title="Tutorial Gestor IRPF" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
                   <div v-else class="absolute inset-0 flex items-center justify-center">
                     <Icon name="solar:play-bold" class="size-20 text-white/20" />
                   </div>
@@ -1641,7 +1643,7 @@ onMounted(async () => {
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <BaseButton v-if="steps[currentStep]?.id === 5 && !hasWhitelabel" rounded="sm" class="h-12 px-8"
-            @click.prevent="continueWithoutUpgrade">
+            variant="primary" @click.prevent="continueWithoutUpgrade">
             <span>Pular Customização</span>
           </BaseButton>
 
