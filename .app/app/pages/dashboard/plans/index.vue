@@ -288,14 +288,28 @@ onMounted(async () => {
   isInitialLoading.value = false
   window.addEventListener('beforeunload', handleBeforeUnload)
 
+  // Show video help alert after 8 seconds
+  videoAlertTimer = setTimeout(() => {
+    if (!videoAlertDismissed.value) {
+      showVideoAlert.value = true
+    }
+  }, 8000)
+
   track('InitiateCheckout', {
     content_name: selectedPlan.value?.name,
     content_category: 'subscription'
   })
 })
 
+// Floating video help alert
+const showVideoAlert = ref(false)
+const showVideoModal = ref(false)
+const videoAlertDismissed = ref(false)
+let videoAlertTimer: ReturnType<typeof setTimeout> | null = null
+
 onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  if (videoAlertTimer) clearTimeout(videoAlertTimer)
 })
 
 const currentCyclePrice = computed(() => {
@@ -1041,7 +1055,7 @@ const featureMap: Record<string, string> = {
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
                       formatCurrency(rawCyclePrice)
-                    }}</span>
+                      }}</span>
                   </div>
                   <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
                     <span class="font-sans italic">Desconto Anual (10% OFF)</span>
@@ -1186,5 +1200,58 @@ const featureMap: Record<string, string> = {
         </div>
       </div>
     </form>
+    <!-- Floating Video Help Alert -->
+    <Transition enter-active-class="transition duration-500 ease-out" enter-from-class="opacity-0 translate-y-8"
+      enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-300 ease-in"
+      leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-8">
+      <div v-if="showVideoAlert && !videoAlertDismissed && !showVideoModal"
+        class="fixed bottom-6 right-6 left-6 sm:left-auto sm:w-[360px] z-50">
+        <div
+          class="bg-white dark:bg-muted-900 rounded-2xl shadow-2xl border border-muted-200 dark:border-muted-700 p-4 flex items-start gap-3 cursor-pointer hover:shadow-3xl transition-shadow"
+          @click="showVideoModal = true; showVideoAlert = false">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+            <Icon name="solar:play-circle-bold-duotone" class="size-6" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-muted-800 dark:text-white leading-tight">
+              Dúvidas sobre os planos?
+            </p>
+            <p class="text-xs text-muted-500 mt-0.5">
+              Assista esse vídeo curto e entenda cada opção.
+            </p>
+          </div>
+          <button class="shrink-0 mt-0.5 text-muted-400 hover:text-muted-600 transition-colors"
+            @click.stop="videoAlertDismissed = true; showVideoAlert = false">
+            <Icon name="lucide:x" class="size-4" />
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Video Modal -->
+    <Teleport to="body">
+      <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0"
+        enter-to-class="opacity-100" leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100"
+        leave-to-class="opacity-0">
+        <div v-if="showVideoModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          @click.self="showVideoModal = false">
+          <div class="absolute inset-0 bg-muted-900/70 backdrop-blur-sm" @click="showVideoModal = false" />
+          <div class="relative w-full max-w-3xl z-10">
+            <button
+              class="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors flex items-center gap-1.5 text-sm"
+              @click="showVideoModal = false">
+              <span>Fechar</span>
+              <Icon name="lucide:x" class="size-5" />
+            </button>
+            <div class="aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black">
+              <iframe class="w-full h-full" src="https://www.youtube.com/embed/ElsjVZVInjA?rel=0&autoplay=1"
+                title="Como funcionam os planos" frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen />
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
