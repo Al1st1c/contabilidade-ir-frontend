@@ -196,28 +196,32 @@ function resetPurchase() {
         </div>
       </div>
 
-      <!-- Free Plan Block -->
-      <div v-if="isFreePlan"
-        class="flex items-center justify-between gap-4 rounded-xl bg-primary-500/10 border border-primary-500/20 px-4 py-2.5 shadow-sm mb-6">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white shadow-sm shadow-primary-500/20">
-            <Icon name="solar:crown-minimalistic-bold" class="size-4" />
+      <!-- Free Plan Banner -->
+      <div v-if="isFreePlan" class="rounded-xl bg-amber-500/10 border border-amber-500/20 px-5 py-4 mb-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div
+              class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm shadow-amber-500/20">
+              <Icon name="lucide:lock" class="size-4" />
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Compra de créditos avulsos requer um plano ativo
+              </p>
+              <p class="text-xs text-amber-700/70 dark:text-amber-300/60 mt-0.5">
+                Você pode simular os preços abaixo. Para comprar, assine um plano primeiro.
+              </p>
+            </div>
           </div>
-          <p class="text-sm font-semibold text-primary-900 dark:text-primary-50">
-            Faça upgrade para comprar créditos de IR
-            <span class="hidden sm:inline font-normal opacity-70">— no plano gratuito você utiliza apenas os créditos de
-              bônus.</span>
-          </p>
+          <BaseButton to="/dashboard/plans/?plan=basic" size="sm" variant="primary" shadow="primary" rounded="lg"
+            class="h-9 px-5 text-xs font-bold uppercase tracking-wider shrink-0">
+            <Icon name="solar:crown-minimalistic-bold" class="size-3.5 mr-1.5" />
+            <span>Assinar Plano</span>
+          </BaseButton>
         </div>
-        <BaseButton to="/dashboard/plans/?plan=basic" size="sm" variant="primary" shadow="primary" rounded="lg"
-          class="h-9 px-5 text-xs font-bold uppercase tracking-wider shrink-0">
-          <span>Ver Planos</span>
-          <Icon name="lucide:arrow-right" class="ms-1.5 size-3" />
-        </BaseButton>
       </div>
 
-      <div v-else class="grid grid-cols-12 gap-6">
+      <div class="grid grid-cols-12 gap-6">
         <!-- Left Column -->
         <div class="col-span-12 lg:col-span-7 space-y-6">
           <!-- PIX Result -->
@@ -410,14 +414,35 @@ function resetPurchase() {
               </div>
 
               <!-- Submit -->
-              <BaseButton type="button" variant="primary" color="primary" class="w-full h-11 font-semibold"
-                :loading="isPurchasing" :disabled="isFreePlan" @click="handlePurchase">
-                Comprar {{ quantity }} IRs
-              </BaseButton>
+              <template v-if="isFreePlan">
+                <div
+                  class="rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 p-4 text-center space-y-3">
+                  <div class="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
+                    <Icon name="lucide:lock" class="size-4" />
+                    <BaseText size="xs" weight="bold" class="uppercase tracking-wider">
+                      Compra bloqueada
+                    </BaseText>
+                  </div>
+                  <BaseText size="xs" class="text-amber-700/70 dark:text-amber-300/50">
+                    Assine um plano para desbloquear a compra de créditos avulsos.
+                  </BaseText>
+                  <BaseButton type="button" to="/dashboard/plans/?plan=basic" variant="primary" color="primary"
+                    class="w-full h-11 font-semibold">
+                    <Icon name="solar:crown-minimalistic-bold" class="size-4 mr-2" />
+                    Assinar um Plano
+                  </BaseButton>
+                </div>
+              </template>
+              <template v-else>
+                <BaseButton type="button" variant="primary" color="primary" class="w-full h-11 font-semibold"
+                  :loading="isPurchasing" @click="handlePurchase">
+                  Comprar {{ quantity }} IRs
+                </BaseButton>
 
-              <BaseParagraph size="xs" class="text-muted-400 text-center mt-3">
-                Pagamento único via {{ paymentMethod === 'PIX' ? 'PIX' : 'Cartão (Stripe)' }}
-              </BaseParagraph>
+                <BaseParagraph size="xs" class="text-muted-400 text-center mt-3">
+                  Pagamento único via {{ paymentMethod === 'PIX' ? 'PIX' : 'Cartão (Stripe)' }}
+                </BaseParagraph>
+              </template>
             </BaseCard>
 
             <!-- Help -->
