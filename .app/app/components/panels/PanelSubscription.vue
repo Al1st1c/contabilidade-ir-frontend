@@ -26,9 +26,9 @@ onMounted(() => {
 const statusMap: Record<string, { label: string, color: string }> = {
   ACTIVE: { label: 'Ativo', color: 'text-success-500 bg-success-500/10' },
   TRIAL: { label: 'Período de Teste', color: 'text-primary-500 bg-primary-500/10' },
-  PAST_DUE: { label: 'Atrasado', color: 'text-danger-500 bg-danger-500/10' },
+  PAST_DUE: { label: 'Atrasado', color: 'text-red-500 bg-red-500/10' },
   CANCELED: { label: 'Cancelado', color: 'text-muted-500 bg-muted-500/10' },
-  EXPIRED: { label: 'Expirado', color: 'text-danger-500 bg-danger-500/10' },
+  EXPIRED: { label: 'Expirado', color: 'text-red-500 bg-red-500/10' },
 }
 
 const paymentStatusMap: Record<string, { label: string, color: string }> = {

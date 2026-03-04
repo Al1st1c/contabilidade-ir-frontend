@@ -7,30 +7,83 @@ const { currentSubscription, fetchMySubscription } = useSubscription()
 const { user, fetchUser } = useAuth()
 const { useCustomFetch } = useApi()
 const { open } = usePanels()
-const router = useRouter()
 const toaster = useNuiToasts()
 
-const isBlocked = computed(() => {
+// Ensure we always have fresh subscription data
+// The backend has a lazy check that marks ACTIVE subs with past nextBillingDate as PAST_DUE
+onMounted(() => {
+  fetchMySubscription()
+})
+
+// Status check
+const hasIssue = computed(() => {
   if (!currentSubscription.value) return false
   const status = currentSubscription.value.status
   return status === 'PENDING_PAYMENT' || status === 'EXPIRED' || status === 'PAST_DUE' || status === 'CANCELED'
 })
 
 const isMaster = computed(() => user.value?.role?.name === 'master')
-
+const isDismissed = ref(false)
 const isChecking = ref(false)
-const isPreparing = ref(false)
+
+// Banner config by status
+const bannerConfig = computed(() => {
+  const status = currentSubscription.value?.status
+  switch (status) {
+    case 'PAST_DUE':
+    case 'EXPIRED':
+      return {
+        bg: 'bg-amber-50 dark:bg-amber-950/40',
+        border: 'border-amber-200 dark:border-amber-800/50',
+        icon: 'lucide:alert-triangle',
+        iconColor: 'text-amber-500',
+        title: 'Cobrança pendente',
+        message: isMaster.value
+          ? 'Sua assinatura será cancelada caso a pendência não seja regularizada.'
+          : 'Há uma pendência financeira na conta. Contate o administrador.',
+        actionLabel: 'Regularizar',
+        actionColor: 'warning' as const,
+      }
+    case 'PENDING_PAYMENT':
+      return {
+        bg: 'bg-blue-50 dark:bg-blue-950/40',
+        border: 'border-blue-200 dark:border-blue-800/50',
+        icon: 'lucide:clock',
+        iconColor: 'text-blue-500',
+        title: 'Aguardando pagamento',
+        message: isMaster.value
+          ? 'Sua assinatura será ativada assim que o pagamento for confirmado.'
+          : 'Pagamento da assinatura está sendo processado.',
+        actionLabel: 'Concluir Pagamento',
+        actionColor: 'primary' as const,
+      }
+    case 'CANCELED':
+      return {
+        bg: 'bg-rose-50 dark:bg-rose-950/40',
+        border: 'border-rose-200 dark:border-rose-800/50',
+        icon: 'lucide:x-circle',
+        iconColor: 'text-rose-500',
+        title: 'Plano cancelado',
+        message: isMaster.value
+          ? 'Seu plano foi cancelado. Reative para continuar usando todas as funcionalidades.'
+          : 'O plano do escritório foi cancelado. Contate o administrador.',
+        actionLabel: 'Reativar Plano',
+        actionColor: 'primary' as const,
+      }
+    default:
+      return null
+  }
+})
+
+const showBanner = computed(() => hasIssue.value && !isDismissed.value && bannerConfig.value)
 
 async function checkStatus() {
   if (isChecking.value) return
   isChecking.value = true
-
   try {
     await fetchMySubscription()
-
     if (currentSubscription.value?.status === 'ACTIVE' || currentSubscription.value?.status === 'TRIAL') {
       await fetchUser()
-
       toaster.add({
         title: 'Assinatura Ativa',
         description: 'Seu acesso foi restaurado com sucesso!',
@@ -39,7 +92,7 @@ async function checkStatus() {
     } else {
       toaster.add({
         title: 'Ainda pendente',
-        description: 'Não detectamos o pagamento ainda. Se você já pagou, aguarde alguns instantes.',
+        description: 'Não detectamos o pagamento ainda. Se já pagou, aguarde alguns instantes.',
         icon: 'ph:info-fill',
       })
     }
@@ -50,110 +103,62 @@ async function checkStatus() {
   }
 }
 
-async function goToPayment() {
+function goToPayment() {
   open(PanelsPanelBillingCheckout, {}, {
     position: 'right',
     size: 'md',
-    overlay: true
+    overlay: true,
   })
+}
+
+function dismiss() {
+  isDismissed.value = true
 }
 </script>
 
 <template>
-  <div class="relative z-[70]">
-    <!-- Block overlay -->
-    <div v-if="isBlocked"
-      class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-muted-900/70 backdrop-blur-md">
+  <Transition enter-active-class="transition-all duration-300 ease-out"
+    leave-active-class="transition-all duration-200 ease-in" enter-from-class="opacity-0 -translate-y-full"
+    leave-to-class="opacity-0 -translate-y-full">
+    <div v-if="showBanner" class="fixed top-0 left-0 right-0 z-[100] border-b shadow-sm"
+      :class="[bannerConfig!.bg, bannerConfig!.border]">
+      <div class="px-4 py-2.5 flex items-center gap-3 max-w-screen-2xl mx-auto">
+        <!-- Icon -->
+        <Icon :name="bannerConfig!.icon" class="size-4 shrink-0" :class="bannerConfig!.iconColor" />
 
-      <BaseCard rounded="lg"
-        class="max-w-md w-full p-6 shadow-2xl border-muted-200 dark:border-muted-800 text-center relative z-[81]">
-
-        <div v-if="isMaster">
-          <!-- Status Icon Compacto -->
-          <div class="inline-flex items-center justify-center mb-4 mx-auto">
-            <div class="size-16 rounded-2xl bg-primary-100 dark:bg-primary-500/10 flex items-center justify-center">
-              <Icon
-                :name="currentSubscription?.status === 'PENDING_PAYMENT' ? 'ph:qr-code-fill' : 'ph:warning-circle-fill'"
-                class="size-8 text-primary-600 dark:text-primary-400" />
-            </div>
-          </div>
-
-          <!-- Título -->
-          <BaseHeading tag="h2" size="xl" weight="bold" class="text-muted-900 dark:text-white mb-2">
-            Acesso Restrito
-          </BaseHeading>
-
-          <!-- Descrição -->
-          <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-6 leading-relaxed text-sm max-w-sm mx-auto">
-            <template v-if="currentSubscription?.status === 'PENDING_PAYMENT'">
-              Sua assinatura aguarda confirmação de pagamento. Finalize o processo para liberar seu acesso.
-            </template>
-            <template v-else>
-              Sua assinatura expirou. Reative seu plano para continuar operando no sistema.
-            </template>
-          </BaseParagraph>
-
-          <!-- Ações -->
-          <div class="space-y-2.5">
-            <BaseButton variant="primary" rounded="lg" size="lg" class="w-full h-11 font-semibold"
-              :loading="isPreparing || isChecking" @click="goToPayment">
-              {{ currentSubscription?.status === 'PENDING_PAYMENT' ? 'Concluir Pagamento' : 'Reativar Plano' }}
-            </BaseButton>
-
-            <BaseButton variant="muted" rounded="lg" size="md" class="w-full h-10 font-medium" :loading="isChecking"
-              @click="checkStatus">
-              Já realizei o pagamento
-            </BaseButton>
-
-            <BaseButton to="https://wa.me/5521979044284" target="_blank" variant="muted" rounded="lg" size="md"
-              class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700">
-              <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
-              Falar com o suporte
-            </BaseButton>
-          </div>
-
-          <!-- Footer -->
-          <div class="mt-6 pt-4 border-t border-muted-100 dark:border-muted-800">
-            <div class="flex items-center justify-center gap-2">
-              <Icon name="ph:shield-check-fill" class="size-3.5 text-emerald-500" />
-              <span class="text-[10px] font-medium text-muted-400 uppercase tracking-wider">Ambiente Seguro</span>
-            </div>
-          </div>
+        <!-- Content -->
+        <div class="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+          <span class="text-xs font-bold text-muted-800 dark:text-white whitespace-nowrap">
+            {{ bannerConfig!.title }}
+          </span>
+          <span class="text-xs text-muted-600 dark:text-muted-300 line-clamp-1">
+            {{ bannerConfig!.message }}
+          </span>
         </div>
 
-        <!-- View para usuários não-master -->
-        <div v-else>
-          <div class="inline-flex items-center justify-center mb-4 mx-auto">
-            <div class="size-16 rounded-2xl bg-rose-100 dark:bg-rose-500/10 flex items-center justify-center">
-              <Icon name="ph:lock-key-fill" class="size-8 text-rose-500" />
-            </div>
-          </div>
-
-          <BaseHeading tag="h2" size="xl" weight="bold" class="text-muted-900 dark:text-white mb-2">
-            Acesso Bloqueado
-          </BaseHeading>
-
-          <BaseParagraph class="text-muted-500 dark:text-muted-400 mb-6 leading-relaxed text-sm max-w-sm mx-auto">
-            Detectamos uma pendência financeira na conta administrativa.
-            <span class="block mt-2 font-semibold text-muted-700 dark:text-muted-300">
-              Contate o administrador para regularizar o acesso.
-            </span>
-          </BaseParagraph>
-
-          <div class="space-y-2.5">
-            <BaseButton variant="muted" rounded="lg" size="md" class="w-full h-10" @click="checkStatus"
-              :loading="isChecking">
-              Verificar novamente
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Master: action button -->
+          <template v-if="isMaster">
+            <button type="button"
+              class="text-[11px] font-semibold text-muted-500 hover:text-muted-700 dark:text-muted-400 dark:hover:text-muted-200 transition-colors"
+              :class="{ 'opacity-50 pointer-events-none': isChecking }" @click="checkStatus">
+              {{ isChecking ? 'Verificando...' : 'Já paguei' }}
+            </button>
+            <BaseButton size="sm" variant="primary" rounded="lg" class="h-7 px-3 text-[11px] font-bold"
+              @click="goToPayment">
+              {{ bannerConfig!.actionLabel }}
             </BaseButton>
+          </template>
 
-            <BaseButton to="https://wa.me/5521979044284" target="_blank" variant="muted" rounded="lg" size="md"
-              class="w-full h-10 font-medium border-dashed border-muted-200 dark:border-muted-700 text-xs">
-              <Icon name="ph:whatsapp-logo-fill" class="size-4 mr-2 text-emerald-500" />
-              Falar com o suporte
-            </BaseButton>
-          </div>
+          <!-- Dismiss -->
+          <button type="button"
+            class="text-muted-400 hover:text-muted-600 dark:hover:text-muted-300 transition-colors p-0.5"
+            @click="dismiss">
+            <Icon name="lucide:x" class="size-3.5" />
+          </button>
         </div>
-      </BaseCard>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
