@@ -15,6 +15,7 @@ const { user } = useAuth()
 const { useCustomFetch } = useApi()
 const { selectedTaxYear } = useClientSession()
 const { fetchTenant, tenant } = useTenant()
+const { settings } = useWhitelabel()
 const route = useRoute()
 const config = useRuntimeConfig()
 const apiBaseUrl = (config.public.apiBase as string || '').replace(/\/$/, '')
@@ -35,6 +36,7 @@ const isReportingPayment = ref(false)
 const rawClient = ref<any>(null)
 const rawDeclaration = ref<any>(null)
 const showOnboarding = ref(false)
+const isCopied = ref(false)
 
 async function loadData() {
   if (!token.value && !user.value?.id)
@@ -75,7 +77,10 @@ async function loadData() {
       const res = await fetch(`${apiBaseUrl}/public/${token.value}`)
       const result = await res.json()
       if (result?.success) {
-        rawClient.value = { name: result.data?.client?.name }
+        rawClient.value = {
+          name: result.data?.client?.name,
+          pixKey: result.data?.declaration?.pixKey
+        }
         rawDeclaration.value = {
           id: null,
           taxYear: result.data?.declaration?.taxYear,
@@ -84,6 +89,7 @@ async function loadData() {
           paymentStatus: result.data?.declaration?.paymentStatus || null,
           result: result.data?.declaration?.result || null,
           resultValue: result.data?.declaration?.resultValue || 0,
+          serviceValue: result.data?.declaration?.serviceValue || 0,
           isPenaltyOffset: result.data?.declaration?.isPenaltyOffset || false,
         }
         selectedTaxYear.value = Number(result.data?.declaration?.taxYear) || selectedTaxYear.value
@@ -169,7 +175,7 @@ const clientData = computed(() => {
     },
     payment: {
       status: declaration?.paymentStatus || 'pending',
-      pixKey: tenant.value?.pixKey,
+      pixKey: settings.value?.pixKey || tenant.value?.pixKey || rawClient.value?.pixKey,
       value: declaration?.serviceValue || 0,
     },
     refund: {
@@ -190,20 +196,27 @@ const clientData = computed(() => {
 })
 
 async function handleReportPayment() {
-  if (!rawDeclaration.value?.id)
+  if (!rawDeclaration.value?.id && !isPublicMode.value)
     return
 
-  // Simular clique em "Já Paguei"
-  // Em uma implementação real, abriríamos um modal para upload opcional
-  // Por agora vamos apenas marcar como pago
   try {
     isReportingPayment.value = true
-    const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
-      method: 'POST',
-    })
 
-    if (res.success) {
-      await loadData()
+    if (isPublicMode.value) {
+      const res = await fetch(`${apiBaseUrl}/public/${token.value}/report-payment`, {
+        method: 'POST',
+      })
+      const result = await res.json()
+      if (result.success) {
+        await loadData()
+      }
+    } else {
+      const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
+        method: 'POST',
+      })
+      if (res.success) {
+        await loadData()
+      }
     }
   }
   catch (error) {
@@ -229,13 +242,24 @@ function handleUploadReceipt() {
 
     try {
       isReportingPayment.value = true
-      const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
-        method: 'POST',
-        body: formData,
-      })
 
-      if (res.success) {
-        await loadData()
+      if (isPublicMode.value) {
+        const res = await fetch(`${apiBaseUrl}/public/${token.value}/report-payment`, {
+          method: 'POST',
+          body: formData,
+        })
+        const result = await res.json()
+        if (result.success) {
+          await loadData()
+        }
+      } else {
+        const { data: res } = await useCustomFetch<any>(`/declarations/${rawDeclaration.value.id}/report-payment`, {
+          method: 'POST',
+          body: formData,
+        })
+        if (res.success) {
+          await loadData()
+        }
       }
     }
     catch (error) {
@@ -249,10 +273,32 @@ function handleUploadReceipt() {
 }
 
 function copyPixKey() {
-  if (!clientData.value.payment.pixKey)
+  const pixKey = clientData.value.payment.pixKey
+  if (!pixKey)
     return
-  navigator.clipboard.writeText(clientData.value.payment.pixKey)
-  // Toast opcional
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pixKey).then(() => {
+      isCopied.value = true
+      setTimeout(() => isCopied.value = false, 2000)
+    })
+  }
+  else {
+    // Fallback para contextos não seguros ou navegadores antigos
+    const textArea = document.createElement('textarea')
+    textArea.value = pixKey
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      isCopied.value = true
+      setTimeout(() => isCopied.value = false, 2000)
+    }
+    catch (err) {
+      console.error('Erro ao copiar:', err)
+    }
+    document.body.removeChild(textArea)
+  }
 }
 
 function formatCurrency(value: number) {
@@ -309,6 +355,7 @@ function goToDocuments() {
             Enviar Agora
           </BaseButton>
         </div>
+
       </BaseCard>
     </section>
 
@@ -366,18 +413,20 @@ function goToDocuments() {
               </BaseHeading>
 
               <!-- Minimalist Payment Section (REFINED) -->
-              <div v-if="!isPublicMode && index === 4 && step.active && rawDeclaration?.paymentStatus === 'pending'"
+              <div v-if="index === 4 && step.active && clientData.payment.status === 'pending'"
                 class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
-                <div class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
+                <div v-if="clientData.payment.pixKey"
+                  class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
                   <div class="flex items-center gap-2">
                     <Icon name="fa6-brands:pix" class="size-3 text-emerald-500" />
                     <BaseText size="xs" weight="bold" class="text-primary-600 dark:text-primary-400 font-mono">
                       {{ clientData.payment.pixKey }}
                     </BaseText>
                   </div>
-                  <button class="text-[10px] font-bold text-primary-500 hover:text-primary-600 uppercase tracking-wider"
+                  <button class="text-[10px] font-bold uppercase tracking-wider transition-colors duration-200"
+                    :class="isCopied ? 'text-success-500' : 'text-primary-500 hover:text-primary-600'"
                     @click="copyPixKey">
-                    Copiar
+                    {{ isCopied ? 'Copiado!' : 'Copiar' }}
                   </button>
                 </div>
 
@@ -404,7 +453,7 @@ function goToDocuments() {
               </div>
 
               <!-- Awaiting Verification Status (NEW) -->
-              <div v-if="index === 4 && step.active && rawDeclaration?.paymentStatus === 'processing'"
+              <div v-if="index === 4 && step.active && clientData.payment.status === 'processing'"
                 class="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-200 dark:border-orange-800/20 animate-in fade-in slide-in-from-top-2">
                 <div class="flex items-center gap-3">
                   <div class="size-8 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">

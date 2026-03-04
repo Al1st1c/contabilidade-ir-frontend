@@ -134,6 +134,10 @@ function formatCpf(cpf: string): string {
             <Icon name="lucide:plus" class="size-4 mr-1" />
             <span>Cadastrar Cliente</span>
           </BaseButton>
+          <BaseButton variant="muted" class="w-full sm:w-auto" to="/dashboard/marketing/new?source=clients">
+            <Icon name="lucide:megaphone" class="size-4 mr-1" />
+            <span>Campanha SMS</span>
+          </BaseButton>
           <BaseButton variant="muted" class="w-full sm:w-auto" @click="isImportModalOpen = true">
             <Icon name="solar:import-bold-duotone" class="size-4 mr-1" />
             <span>Importar</span>
@@ -278,7 +282,7 @@ function formatCpf(cpf: string): string {
                   <TairoTableCell spaced class="text-center">
                     <div class="flex flex-col items-center leading-none">
                       <span class="text-sm font-medium text-muted-800 dark:text-muted-100">{{ item.declarationsCount
-                        }}</span>
+                      }}</span>
                       <span class="text-[10px] text-muted-400 uppercase tracking-wider mt-1">enviadas</span>
                     </div>
                   </TairoTableCell>

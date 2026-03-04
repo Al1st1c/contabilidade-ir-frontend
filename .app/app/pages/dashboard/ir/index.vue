@@ -48,6 +48,7 @@ interface Task {
   clientTags?: string[]
   whatsapp?: string
   hasDependents?: boolean
+  email?: string
 }
 
 interface Column {
@@ -143,6 +144,9 @@ const filteredColumns = computed(() => {
         || task.clientName.toLowerCase().includes(search)
         || task.cpf.includes(search)
         || (task.description || '').toLowerCase().includes(search)
+        || (task.email || '').toLowerCase().includes(search)
+        || (task.tags || []).some(t => t.toLowerCase().includes(search))
+        || (task.clientTags || []).some(t => t.toLowerCase().includes(search))
 
       return matchEmployee && matchClient && matchTag && matchPayment && matchColumnSearch
     }),
@@ -436,6 +440,7 @@ async function fetchKanban() {
           clientTags: card.client?.tags || [],
           whatsapp: card.client?.whatsapp || card.client?.phone,
           hasDependents: card.hasDependents,
+          email: card.client?.email || '',
           paymentStatus: card.paymentStatus || 'pending',
         })),
       }))
@@ -916,7 +921,8 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
                   <div v-if="columnSearch[column.id] !== undefined"
                     class="px-3 pb-3 animate-in slide-in-from-top-2 fade-in duration-200">
                     <div class="relative">
-                      <input v-model="columnSearch[column.id]" type="text" placeholder="Filtrar nesta coluna..."
+                      <input v-model="columnSearch[column.id]" type="text"
+                        placeholder="Filtrar por nome, CPF, email ou tag..."
                         class="w-full h-8 pl-8 pr-2 rounded-lg text-xs bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-700 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all text-muted-600 dark:text-muted-300 placeholder-muted-400"
                         autoFocus>
                       <Icon name="lucide:filter" class="absolute left-2.5 top-2.5 size-3 text-muted-400" />

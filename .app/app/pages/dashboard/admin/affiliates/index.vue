@@ -300,7 +300,7 @@ watch(withdrawalStatus, () => { if (activeTab.value === 'withdrawals') fetchWith
                         @click="approveAffiliate(aff.id)">
                         Aprovar
                       </BaseButton>
-                      <BaseButton v-if="aff.status === 'PENDING'" size="sm" color="danger" variant="pastel"
+                      <BaseButton v-if="aff.status === 'PENDING'" size="sm" color="danger" variant="none"
                         @click="rejectAffiliate(aff.id)">
                         Rejeitar
                       </BaseButton>
@@ -532,7 +532,7 @@ watch(withdrawalStatus, () => { if (activeTab.value === 'withdrawals') fetchWith
                     class="p-3 rounded-lg bg-muted-50 dark:bg-muted-900/50 flex items-center justify-between">
                     <div>
                       <span class="font-mono text-sm font-bold text-primary-600 dark:text-primary-400">{{ coupon.code
-                        }}</span>
+                      }}</span>
                       <p class="text-xs text-muted-400 mt-0.5">{{ coupon.discountValue }}% de desconto</p>
                     </div>
                     <div class="text-right">
@@ -587,7 +587,7 @@ watch(withdrawalStatus, () => { if (activeTab.value === 'withdrawals') fetchWith
                       <span class="text-xs text-muted-400 ml-2">{{ formatDate(comm.createdAt) }}</span>
                     </div>
                     <span class="font-semibold text-success-600 dark:text-success-400">{{ formatCurrency(comm.amount)
-                      }}</span>
+                    }}</span>
                   </div>
                 </div>
               </div>
@@ -609,7 +609,7 @@ watch(withdrawalStatus, () => { if (activeTab.value === 'withdrawals') fetchWith
                       <span class="text-xs text-muted-400 ml-2">{{ formatDate(wd.createdAt) }}</span>
                     </div>
                     <span class="font-semibold text-muted-700 dark:text-muted-300">{{ formatCurrency(wd.amount)
-                      }}</span>
+                    }}</span>
                   </div>
                 </div>
               </div>

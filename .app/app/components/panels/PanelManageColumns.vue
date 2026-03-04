@@ -158,16 +158,40 @@ async function onDragEnd() {
   }
 }
 
+const hasTransmittedColumn = computed(() => {
+  return columns.value.some(c => c.clientStatus === 'TRANSMITTED')
+})
+
 onMounted(() => {
   fetchColumns()
 })
 
 const statusOptions = [
-  { label: 'Ocultar no App (Etapa Intermediária)', value: 'NONE' },
-  { label: 'Aguardando Documentos', value: 'DOCUMENTS' },
-  { label: 'Em Análise', value: 'ANALYSIS' },
-  { label: 'Em Preenchimento (Receita)', value: 'FILLING' },
-  { label: 'Transmitida', value: 'TRANSMITTED' },
+  {
+    label: 'Ocultar no App (Etapa Intermediária)',
+    value: 'NONE',
+    hint: 'Mantém o status da coluna anterior mapeada.',
+  },
+  {
+    label: 'Aguardando Documentos',
+    value: 'DOCUMENTS',
+    hint: 'Libera alerta de pendência e botão de envio.',
+  },
+  {
+    label: 'Em Análise',
+    value: 'ANALYSIS',
+    hint: 'Informa que os arquivos estão sob revisão.',
+  },
+  {
+    label: 'Em Preenchimento (Receita)',
+    value: 'FILLING',
+    hint: 'Indica preenchimento na Receita Federal.',
+  },
+  {
+    label: 'Transmitida',
+    value: 'TRANSMITTED',
+    hint: 'Libera download, resultado oficial e PIX.',
+  },
 ]
 </script>
 
@@ -186,6 +210,19 @@ const statusOptions = [
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto p-6">
+      <!-- Warning if Transmitted is missing -->
+      <div v-if="!isLoading && !hasTransmittedColumn"
+        class="p-4 mb-6 rounded-xl border border-danger-500/20 bg-danger-500/5 dark:bg-danger-500/10 animate-in fade-in slide-in-from-top-2">
+        <div class="flex gap-3 items-center">
+          <Icon name="solar:danger-bold" class="size-5 text-danger-500 shrink-0" />
+          <BaseParagraph size="xs" class="text-danger-800 dark:text-danger-200 leading-tight">
+            <strong>Atenção:</strong> Nenhuma coluna está mapeada como "Transmitida". Seus clientes não conseguirão ver
+            o
+            resultado final nem pagar os honorários no App.
+          </BaseParagraph>
+        </div>
+      </div>
+
       <!-- Add New -->
       <div class="flex gap-2 mb-6">
         <BaseInput v-model="newColumnName" placeholder="Nova coluna..." class="flex-1" @keyup.enter="addColumn" />
@@ -223,23 +260,34 @@ const statusOptions = [
           </div>
 
           <!-- Details (Color) -->
-          <div class="flex items-center gap-3 pl-6">
-            <div class="flex items-center gap-1 flex-wrap max-w-[200px]">
-              <button v-for="color in safeColors" :key="color.name" class="size-4 rounded-full border transition-all"
-                :class="[
-                  element.color === color.name ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
-                  color.class,
-                ]" :title="color.label" @click="element.color = color.name; updateColumn(element)" />
+          <div class="flex flex-col gap-3 pl-6">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1 flex-wrap max-w-[200px]">
+                <button v-for="color in safeColors" :key="color.name" class="size-4 rounded-full border transition-all"
+                  :class="[
+                    element.color === color.name ? 'ring-2 ring-offset-1 ring-primary-500 border-transparent' : 'border-transparent opacity-40 hover:opacity-100',
+                    color.class,
+                  ]" :title="color.label" @click="element.color = color.name; updateColumn(element)" />
+              </div>
+
+              <!-- Client App Status -->
+              <div class="flex-1">
+                <BaseSelect v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
+                  @update:model-value="updateColumn(element)">
+                  <BaseSelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </BaseSelectItem>
+                </BaseSelect>
+              </div>
             </div>
 
-            <!-- Client App Status -->
-            <div class="flex-1">
-              <BaseSelect v-model="element.clientStatus" placeholder="Status no App" size="sm" shape="rounded"
-                @update:model-value="updateColumn(element)">
-                <BaseSelectItem v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </BaseSelectItem>
-              </BaseSelect>
+            <!-- Hint for selected status -->
+            <div v-if="element.clientStatus && element.clientStatus !== 'NONE'"
+              class="flex items-center gap-1.5 px-2 py-1 bg-white/50 dark:bg-muted-950/50 rounded-md border border-muted-200 dark:border-muted-800 animate-in fade-in slide-in-from-left-2">
+              <Icon name="solar:info-circle-bold-duotone" class="size-3 text-primary-500" />
+              <span class="text-[10px] text-muted-500 italic">
+                {{statusOptions.find(o => o.value === element.clientStatus)?.hint}}
+              </span>
             </div>
           </div>
         </div>

@@ -827,13 +827,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -891,10 +891,11 @@ onMounted(() => {
               class="flex flex-col gap-4 p-4 rounded-xl bg-muted-50 dark:bg-muted-900/50 border border-muted-200 dark:border-muted-800">
               <!-- Top Row: Identity -->
               <div class="flex items-center gap-4">
-                <div
+                <div v-if="!declaration.client?.photoUrl"
                   class="size-11 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
                   <Icon name="lucide:user" class="size-5 text-primary-500" />
                 </div>
+                <BaseAvatar v-else :src="declaration.client.photoUrl" size="sm" class="shrink-0" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-bold text-muted-800 dark:text-muted-100">
                     {{ declaration.client?.name }}
@@ -905,10 +906,10 @@ onMounted(() => {
                     <span class="text-muted-500">{{ declaration.client?.phone || 'Sem telefone' }}</span>
                   </div>
                 </div>
-                <BaseButton size="sm" variant="muted" rounded="lg" class="shrink-0"
+                <!-- <BaseButton size="sm" variant="muted" rounded="lg" class="shrink-0"
                   @click="showClientDetailsPanel = true">
                   <Icon name="lucide:id-card" class="size-4 mr-1.5" /> <span class="hidden sm:inline">Detalhes</span>
-                </BaseButton>
+                </BaseButton> -->
               </div>
 
               <!-- Divider for Mobile -->
@@ -929,11 +930,11 @@ onMounted(() => {
                       class="hidden lg:inline text-xs text-muted-500 break-all bg-muted-50 dark:bg-muted-800 p-1 rounded border border-muted-200 dark:border-muted-700 select-all">
                       {{ fullCollectionLink }}
                     </span>
-                    <BaseButton size="sm" variant="none"
+                    <BaseButton variant="none" style="height: 26px;" rounded="sm"
                       class="px-3 py-1.5 bg-primary-500 text-white shrink-0 flex items-center gap-2 w-full sm:w-auto justify-center"
                       @click="copyLink">
                       <Icon name="lucide:copy" class="size-3" />
-                      <span class="text-[10px] font-bold">Copiar Link</span>
+                      <span class="text-[10px] font-bold">Copiar</span>
                     </BaseButton>
                   </div>
                   <div v-else>
@@ -1125,7 +1126,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName
                         || 'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1284,7 +1285,7 @@ onMounted(() => {
                         @click="openPreview(item)">
                         <Icon name="solar:eye-bold-duotone" class="size-4" />
                       </BaseButton>
-                      <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                      <BaseButton variant="ghost" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
                         class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-warning-500 hover:bg-warning-500/10"
                         title="Reverter Aprovação" @click="updateItemStatus(item.id, 'pending')">
                         <Icon name="lucide:rotate-ccw" class="size-4" />
@@ -1980,69 +1981,59 @@ onMounted(() => {
         <DialogOverlay class="bg-muted-800/70 dark:bg-muted-900/80 fixed inset-0 z-[100]" />
         <DialogContent
           class="fixed starting:opacity-0 starting:top-[8%] top-[10%] start-[50%] max-h-[85vh] w-[90vw] max-w-[32rem] translate-x-[-50%] rounded-lg overflow-hidden border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-800 focus:outline-none z-[101] transition-discrete transition-all duration-200 ease-out flex flex-col">
-          <div class="flex w-full items-center justify-between p-6 border-b border-muted-200 dark:border-muted-800">
-            <DialogTitle class="font-heading text-muted-900 text-lg font-medium dark:text-white">
-              Vincular ao Checklist
-            </DialogTitle>
-            <BaseButton rounded="full" variant="ghost" @click="cancelChecklistUpload">
-              <Icon name="solar:close-circle-linear" class="size-5" />
-            </BaseButton>
-          </div>
-          <div class="nui-slimscroll overflow-y-auto p-8 space-y-6">
-            <DialogDescription class="text-sm text-muted-500">
-              Este arquivo corresponde a algum documento do checklist? Selecione abaixo.
-            </DialogDescription>
-            <!-- File card -->
-            <div
-              class="bg-muted-50 dark:bg-muted-900/40 rounded-xl p-4 border border-muted-200 dark:border-muted-700 flex items-center gap-3">
-              <div class="size-12 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
-                <Icon name="solar:file-bold-duotone" class="size-7" />
-              </div>
-              <div class="flex-1 min-w-0">
-                <BaseText size="sm" weight="semibold" class="text-muted-900 dark:text-white truncate">
-                  {{ pendingFile?.name }}
-                </BaseText>
-                <BaseText size="xs" class="text-muted-500">
-                  {{ pendingFile ? (pendingFile.size / 1024).toFixed(2) : 0 }} KB
-                </BaseText>
-              </div>
+          <div class="flex w-full items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800">
+            <div class="flex items-center gap-2">
+              <Icon name="lucide:link" class="size-4 text-primary-500" />
+              <DialogTitle class="font-heading text-muted-900 text-sm font-semibold dark:text-white">
+                Vincular ao Checklist
+              </DialogTitle>
             </div>
+            <button type="button"
+              class="hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-muted-600 rounded-lg p-1 transition-colors"
+              @click="cancelChecklistUpload">
+              <Icon name="lucide:x" class="size-4" />
+            </button>
+          </div>
+          <div class="nui-slimscroll overflow-y-auto p-4 space-y-4">
+            <!-- File info (compact) -->
+            <div class="flex items-center gap-2 text-xs text-muted-500">
+              <Icon name="lucide:paperclip" class="size-3 shrink-0" />
+              <span class="truncate font-medium text-muted-700 dark:text-muted-300">{{ pendingFile?.name }}</span>
+              <span class="shrink-0">({{ pendingFile ? (pendingFile.size / 1024).toFixed(0) : 0 }} KB)</span>
+            </div>
+
             <!-- Checklist items -->
-            <div class="space-y-2">
-              <BaseText size="xs" class="text-muted-400 uppercase tracking-wider font-bold">
+            <div class="space-y-1">
+              <BaseText size="xs" class="text-muted-400 uppercase tracking-wider font-bold px-1 mb-2">
                 Selecione o documento correspondente
               </BaseText>
               <button v-for="item in checklistItems.filter(i => i.status === 'pending')" :key="item.id" type="button"
-                class="w-full text-left p-4 rounded-xl border transition-all"
-                :class="selectedChecklistItemId === item.id ? 'border-primary-500 bg-primary-500/5 ring-1 ring-primary-500' : 'border-muted-200 dark:border-muted-800 hover:border-primary-500/50'"
+                class="w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-3" :class="selectedChecklistItemId === item.id
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                  : 'hover:bg-muted-50 dark:hover:bg-muted-800/50 text-muted-700 dark:text-muted-300'"
                 @click="selectedChecklistItemId = item.id">
-                <div class="flex items-center gap-3">
-                  <div class="size-8 rounded-full flex items-center justify-center transition-colors"
-                    :class="selectedChecklistItemId === item.id ? 'bg-primary-500 text-white' : 'bg-muted-100 dark:bg-muted-800 text-muted-500'">
-                    <Icon name="solar:document-text-bold-duotone" class="size-4" />
-                  </div>
-                  <div class="flex-1">
-                    <BaseText size="sm" weight="medium" class="text-muted-900 dark:text-white">
-                      {{ item.title }}
-                    </BaseText>
-                    <BaseTag v-if="item.isRequired" size="sm" variant="none"
-                      class="mt-1 scale-100 origin-left bg-destructive-500 text-white">
-                      Obrigatório
-                    </BaseTag>
-                  </div>
-                  <Icon v-if="selectedChecklistItemId === item.id" name="solar:check-circle-bold"
-                    class="size-5 text-primary-500" />
+                <div class="size-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+                  :class="selectedChecklistItemId === item.id
+                    ? 'border-primary-500 bg-primary-500'
+                    : 'border-muted-300 dark:border-muted-600'">
+                  <div v-if="selectedChecklistItemId === item.id" class="size-1.5 rounded-full bg-white" />
                 </div>
+                <BaseText size="xs" weight="medium" class="flex-1 truncate">
+                  {{ item.title }}
+                </BaseText>
+                <BaseTag v-if="item.isRequired" size="sm" variant="none"
+                  class="text-[8px] uppercase font-bold tracking-wider bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 px-1.5 py-0.5 leading-none shrink-0">
+                  Obrigatório
+                </BaseTag>
               </button>
             </div>
           </div>
-          <div
-            class="p-6 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-3 bg-muted-50/50 dark:bg-muted-900/50">
-            <BaseButton @click="cancelChecklistUpload">
+          <div class="px-4 py-3 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-2">
+            <BaseButton size="sm" @click="cancelChecklistUpload">
               Cancelar
             </BaseButton>
-            <BaseButton variant="primary" rounded="lg" :loading="isUploading" @click="confirmChecklistUpload">
-              <Icon name="solar:upload-bold-duotone" class="size-4 mr-2" /> Enviar e Vincular
+            <BaseButton size="sm" variant="primary" rounded="lg" :loading="isUploading" @click="confirmChecklistUpload">
+              <Icon name="lucide:upload" class="size-3.5 mr-1.5" /> Vincular
             </BaseButton>
           </div>
         </DialogContent>
@@ -2116,7 +2107,7 @@ onMounted(() => {
             </div>
           </div>
           <!-- Footer -->
-          <div
+          <!-- <div
             class="p-4 border-t border-muted-200 dark:border-muted-800 flex justify-center gap-3 bg-muted-50/50 dark:bg-muted-900/50">
             <BaseButton color="danger" @click="updateItemStatus(previewItem.id, 'rejected'); showPreviewModal = false">
               <Icon name="lucide:x" class="size-4 mr-2" /> Rejeitar
@@ -2124,7 +2115,7 @@ onMounted(() => {
             <BaseButton color="success" @click="updateItemStatus(previewItem.id, 'approved'); showPreviewModal = false">
               <Icon name="lucide:check" class="size-4 mr-2" /> Aprovar
             </BaseButton>
-          </div>
+          </div> -->
         </DialogContent>
       </DialogPortal>
     </DialogRoot>

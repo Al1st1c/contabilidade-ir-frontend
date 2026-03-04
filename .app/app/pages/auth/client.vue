@@ -24,10 +24,20 @@ const step = ref<'cpf' | 'otp'>('cpf')
 const cpf = ref('')
 const otp = ref('')
 const isLoading = ref(false)
+const isInitialLoading = ref(true)
 
 const { add } = useNuiToasts()
 
 const { token, user } = useAuth()
+
+// Check for subdomain whitelabel on mount
+onMounted(async () => {
+  await checkSubdomain()
+  // Small delay for smooth transition and ensure images are ready
+  setTimeout(() => {
+    isInitialLoading.value = false
+  }, 600)
+})
 
 const authMessage = computed(() => {
   return step.value === 'cpf'
@@ -137,15 +147,40 @@ async function verifyOtp() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-muted-50 dark:bg-muted-950 font-sans">
+  <!-- Full-page Initial Loader -->
+  <div v-if="isInitialLoading"
+    class="min-h-screen flex items-center justify-center bg-muted-50 dark:bg-muted-950 font-sans">
+    <div class="flex flex-col items-center gap-6 animate-pulse">
+      <div class="relative size-20">
+        <div class="absolute inset-0 rounded-full border-4 border-primary-500/20" />
+        <div class="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin" />
+      </div>
+      <BaseParagraph size="sm" weight="medium" class="text-muted-500 dark:text-muted-400">
+        Preparando seu acesso seguro...
+      </BaseParagraph>
+    </div>
+  </div>
 
-    <div class="w-full max-w-sm space-y-8">
-      <!-- Header / Logo -->
-      <div class="text-center space-y-6">
-        <div class="inline-flex justify-center">
-          <img v-if="tenant?.logo" :src="tenant.logo" :alt="tenant?.tradeName || tenant?.name"
-            class="h-16 w-auto object-contain" />
-          <TairoLogo v-else class="h-10 w-auto" />
+  <div v-else
+    class="min-h-screen flex flex-col items-center justify-center p-4 bg-muted-50 dark:bg-muted-950 font-sans relative overflow-hidden">
+    <!-- Mesh Gradient Background Elements -->
+    <div class="absolute inset-0 z-0 opacity-40 pointer-events-none overflow-hidden">
+      <div
+        class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary-500/10 dark:bg-primary-500/5 blur-[120px] animate-pulse" />
+      <div
+        class="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary-600/10 dark:bg-primary-600/5 blur-[120px] animate-pulse transition-duration-3000" />
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="w-full max-w-sm space-y-8 relative z-10">
+      <!-- Header / Logo Section -->
+      <div class="text-center space-y-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div class="inline-flex justify-center h-20 items-center">
+          <Transition name="scale-fade" mode="out-in">
+            <img v-if="tenant?.logo" :key="tenant.logo" :src="tenant.logo" :alt="tenant?.tradeName || tenant?.name"
+              class="h-16 w-auto object-contain drop-shadow-sm" />
+            <TairoLogo v-else class="h-12 w-auto" />
+          </Transition>
         </div>
 
         <div class="space-y-2">
@@ -153,15 +188,15 @@ async function verifyOtp() {
             class="text-muted-900 dark:text-white tracking-tight leading-tight">
             {{ tenant?.tradeName || tenant?.name || 'Acesso ao IRPF' }}
           </BaseHeading>
-          <BaseParagraph size="md" class="text-muted-500 dark:text-muted-400 font-medium">
+          <BaseParagraph size="md" class="text-muted-500 dark:text-muted-300 font-medium">
             {{ authMessage }}
           </BaseParagraph>
         </div>
       </div>
 
-      <!-- Auth Form Card -->
+      <!-- Auth Form Card with Glassmorphism -->
       <BaseCard
-        class="p-8 shadow-xl rounded-2xl bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+        class="p-8 shadow-2xl rounded-2xl bg-white/80 dark:bg-muted-900/80 backdrop-blur-xl border border-white/20 dark:border-muted-800/50 animate-in zoom-in-95 fade-in duration-500 delay-200">
 
         <div class="relative z-20">
           <Transition name="fade-slide" mode="out-in">
@@ -171,14 +206,14 @@ async function verifyOtp() {
                 <div class="group/input">
                   <BaseInput v-model="cpf" v-maska data-maska="###.###.###-##" label="Seu CPF"
                     placeholder="000.000.000-00" icon="solar:user-id-bold-duotone" rounded="lg" size="lg"
-                    class="transition-all duration-300 group-focus-within/input:ring-2 group-focus-within/input:ring-primary-500/20"
+                    class="transition-all duration-300 group-focus-within/input:ring-4 group-focus-within/input:ring-primary-500/10 !bg-white/50 dark:!bg-muted-950/50"
                     autofocus @keyup.enter="requestOtp" />
                 </div>
               </div>
 
               <BaseButton variant="primary" block size="xl" rounded="lg" :loading="isLoading"
                 :disabled="unmaskedCpf.length < 11"
-                class="shadow-lg shadow-primary-500/25 hover:translate-y-[-2px] active:translate-y-0 transition-all font-bold tracking-wide"
+                class="shadow-xl shadow-primary-500/30 hover:shadow-primary-500/40 hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all transform duration-300 font-bold tracking-wide h-14"
                 @click="requestOtp">
                 Solicitar Código
                 <Icon name="solar:arrow-right-bold-duotone" class="ml-2 size-5" />
@@ -189,38 +224,41 @@ async function verifyOtp() {
             <div v-else key="otp" class="space-y-8">
               <div class="space-y-6">
                 <div class="flex items-center justify-between px-1">
-                  <span class="text-xs font-semibold text-muted-400 uppercase tracking-widest">Código SMS</span>
+                  <span class="text-[10px] font-bold text-muted-400 uppercase tracking-[0.2em]">Código de
+                    Segurança</span>
                   <button
-                    class="text-xs text-primary-500 font-bold hover:text-primary-600 transition-colors flex items-center gap-1"
+                    class="text-xs text-primary-500 font-bold hover:text-primary-600 transition-colors flex items-center gap-1.5"
                     @click="step = 'cpf'">
-                    <Icon name="solar:undo-left-round-bold-duotone" class="size-3" />
-                    Alterar CPF
+                    <Icon name="solar:undo-left-round-bold-duotone" class="size-3.5" />
+                    Trocar CPF
                   </button>
                 </div>
 
                 <div class="group/otp relative">
-                  <BaseInput v-model="otp" v-maska data-maska="######" placeholder="— — — — — —"
+                  <BaseInput v-model="otp" v-maska data-maska="######" placeholder="••••••"
                     icon="solar:shield-keyhole-bold-duotone" rounded="lg" size="xl"
-                    class="text-center tracking-[0.8em] font-mono text-xl !bg-muted-50 dark:!bg-muted-800" maxlength="6"
-                    autofocus @keyup.enter="verifyOtp" />
+                    class="text-center tracking-[0.5em] font-mono text-2xl !bg-muted-50/50 dark:!bg-muted-950/50 focus:!bg-white dark:focus:!bg-muted-950 transition-colors"
+                    maxlength="6" autofocus @keyup.enter="verifyOtp" />
                 </div>
 
                 <div class="text-center">
-                  <BaseParagraph size="xs" class="text-muted-400">
-                    O código pode levar até 2 minutos para chegar.
+                  <BaseParagraph size="xs" class="text-muted-400 leading-relaxed">
+                    O código SMS pode levar até 2 minutos para chegar em seu aparelho.
                   </BaseParagraph>
                 </div>
               </div>
 
               <div class="space-y-4">
                 <BaseButton variant="primary" block size="xl" rounded="lg" :loading="isLoading"
-                  :disabled="otp.length < 4" class="shadow-lg shadow-primary-500/25 font-bold tracking-wide"
+                  :disabled="otp.length < 4"
+                  class="shadow-xl shadow-primary-500/30 hover:-translate-y-1 active:translate-y-0 transition-all font-bold tracking-wide h-14"
                   @click="verifyOtp">
                   Confirmar Acesso
                   <Icon name="solar:lock-unlocked-bold-duotone" class="ml-2 size-5" />
                 </BaseButton>
 
-                <BaseButton variant="ghost" block size="md" rounded="lg" class="text-muted-500 hover:text-primary-500"
+                <BaseButton variant="ghost" block size="md" rounded="lg"
+                  class="text-muted-500 hover:text-primary-500 hover:bg-primary-500/5 transition-all"
                   @click="requestOtp">
                   Reenviar Código
                 </BaseButton>
@@ -230,25 +268,25 @@ async function verifyOtp() {
         </div>
       </BaseCard>
 
-      <footer class="text-center space-y-6">
-        <div class="space-y-2">
-          <BaseParagraph size="sm" class="text-muted-500 dark:text-muted-400">
+      <footer class="text-center space-y-8 animate-in fade-in duration-1000 delay-500">
+        <div class="space-y-4">
+          <BaseParagraph size="sm" class="text-muted-400 dark:text-muted-500 font-medium">
             Dúvidas ou dificuldades?
           </BaseParagraph>
           <a href="https://wa.me/5511999999999" target="_blank"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-muted-100 dark:bg-muted-800 text-muted-700 dark:text-muted-200 rounded-full text-xs font-bold hover:bg-primary-500 hover:text-white transition-all duration-300">
-            <Icon name="fa6-brands:whatsapp" class="size-3" />
-            Suporte ao Cliente
+            class="inline-flex items-center gap-2.5 px-6 py-2.5 bg-white dark:bg-muted-900 border border-muted-200 dark:border-muted-800 text-muted-600 dark:text-muted-300 rounded-full text-xs font-bold hover:border-primary-500/50 hover:bg-primary-500/5 hover:text-primary-500 transition-all duration-300 shadow-sm">
+            <Icon name="fa6-brands:whatsapp" class="size-3.5 text-green-500" />
+            Canal de Suporte
           </a>
         </div>
 
-        <div v-if="!tenant" class="pt-6 border-t border-muted-200 dark:border-muted-800">
-          <BaseParagraph size="xs" class="text-muted-400 mb-2">
-            Este é um painel para contadores e contabilidades.
+        <div v-if="!tenant" class="pt-8 border-t border-muted-200/50 dark:border-muted-800/50">
+          <BaseParagraph size="xs" class="text-muted-400/80 mb-3 leading-relaxed">
+            Painel exclusivo para clientes de contabilidades parceiras.
           </BaseParagraph>
           <a href="https://gestorirpf.com.br" target="_blank"
-            class="text-xs text-primary-500 hover:text-primary-600 font-bold hover:underline transition-colors">
-            Caso queira contratar, acesse: https://gestorirpf.com.br
+            class="text-xs text-primary-500/70 hover:text-primary-500 font-bold transition-colors">
+            gestorirpf.com.br
           </a>
         </div>
       </footer>

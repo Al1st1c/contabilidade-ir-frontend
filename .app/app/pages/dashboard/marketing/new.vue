@@ -7,7 +7,12 @@ definePageMeta({
 
 const { useCustomFetch } = useApi()
 const router = useRouter()
+const route = useRoute()
 const toaster = useNuiToasts()
+
+// Source detection
+const isFromClients = computed(() => route.query.source === 'clients')
+const isLoadingPhones = ref(false)
 
 // Wizard steps
 const currentStep = ref(1)
@@ -140,6 +145,32 @@ function formatPhone(phone: string) {
   }
   return phone
 }
+
+// Auto-fill phones from clients
+onMounted(async () => {
+  if (isFromClients.value) {
+    isLoadingPhones.value = true
+    try {
+      const { data } = await useCustomFetch<any>('/clients/phones')
+      if (data?.success && data.phones?.length > 0) {
+        parsedPhones.value = data.phones
+        manualPhones.value = data.phones.join('\n')
+        inputMethod.value = 'manual'
+        toaster.add({
+          title: `${data.total} telefones carregados`,
+          description: 'Números dos seus clientes foram preenchidos automaticamente.',
+          icon: 'solar:check-circle-bold-duotone',
+        })
+      }
+    }
+    catch (error) {
+      console.error('Erro ao buscar telefones:', error)
+    }
+    finally {
+      isLoadingPhones.value = false
+    }
+  }
+})
 </script>
 
 <template>
@@ -220,6 +251,15 @@ function formatPhone(phone: string) {
           <Icon name="solar:users-group-rounded-bold-duotone" class="size-5 text-primary-500" />
           Adicionar Contatos
         </BaseHeading>
+
+        <!-- From clients indicator -->
+        <div v-if="isFromClients && parsedPhones.length > 0"
+          class="mb-4 p-3 rounded-lg bg-primary-500/5 border border-primary-500/20 flex items-center gap-2">
+          <Icon name="lucide:users" class="size-4 text-primary-500 shrink-0" />
+          <BaseText size="xs" class="text-primary-700 dark:text-primary-300">
+            <strong>{{ parsedPhones.length }}</strong> números importados automaticamente da sua base de clientes.
+          </BaseText>
+        </div>
 
         <!-- Method Toggle -->
         <div class="flex gap-2 mb-6">
