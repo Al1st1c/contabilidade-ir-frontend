@@ -11,10 +11,11 @@ useSeoMeta({
 
 const links = [
   {
-    title: 'Agende uma apresentação',
-    url: 'https://calendly.com/gustavo-bindandi-arestech/apresentacao-gestor-irpf',
+    title: 'Agendar uma apresentação',
+    url: '/links/assistente',
     icon: 'solar:calendar-date-bold-duotone',
-    color: 'primary'
+    color: 'primary',
+    subtitle: 'Fale com a Sofia para agendar'
   },
   {
     title: 'Criar conta com 5% de desconto',
@@ -23,10 +24,11 @@ const links = [
     color: 'success'
   },
   {
-    title: 'Suporte no WhatsApp',
-    url: 'https://wa.me/5511945390461',
+    title: 'Suporte',
+    url: '/links/assistente',
     icon: 'logos:whatsapp-icon',
-    color: 'green'
+    color: 'green',
+    subtitle: 'Tire suas dúvidas agora'
   },
   {
     title: 'Nossos Preços e Simulador',
@@ -70,18 +72,52 @@ const links = [
         </BaseParagraph>
       </div>
 
-      <!-- Links List -->
-      <div class="mt-8 flex flex-col gap-4">
-        <a v-for="(link, index) in links" :key="index" :href="link.url" target="_blank" rel="noopener noreferrer"
-          class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-muted-200 bg-white p-4 text-center text-base font-medium text-muted-700 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 hover:shadow-xl hover:shadow-primary-500/20 dark:border-muted-800 dark:bg-muted-900 dark:text-muted-100 dark:hover:border-primary-500 dark:hover:bg-muted-800 dark:hover:text-primary-400">
-          <!-- Subtle background highlight on hover -->
+      <!-- Support CTA -->
+      <NuxtLink to="/links/assistente"
+        class="group relative mt-8 flex w-full items-center gap-4 overflow-hidden rounded-2xl border-2 border-primary-500/30 bg-gradient-to-r from-primary-500/5 to-primary-600/5 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary-500 hover:shadow-xl hover:shadow-primary-500/20 dark:from-primary-900/20 dark:to-primary-800/20">
+        <div
+          class="absolute inset-0 translate-y-[100%] bg-gradient-to-t from-primary-500/10 to-transparent transition-transform duration-300 group-hover:translate-y-0" />
+        <div class="relative shrink-0">
+          <div class="size-12 rounded-full overflow-hidden shadow-lg shadow-primary-500/30 ring-2 ring-primary-500/20">
+            <img src="/img/sofia-avatar.png" alt="Sofia Suporte" class="size-full object-cover">
+          </div>
           <div
-            class="absolute inset-0 translate-y-[100%] bg-gradient-to-t from-primary-500/10 to-transparent transition-transform duration-300 group-hover:translate-y-0" />
+            class="absolute bottom-0 right-0 size-3.5 rounded-full bg-success-500 border-2 border-white dark:border-muted-950 animate-pulse" />
+        </div>
+        <div class="relative z-10 flex-1">
+          <p class="text-base font-bold text-muted-800 dark:text-white">Suporte Online</p>
+          <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5">Tire suas dúvidas — Disponível 24h</p>
+        </div>
+        <Icon name="lucide:chevron-right"
+          class="relative z-10 size-5 text-primary-400 group-hover:translate-x-1 transition-transform" />
+      </NuxtLink>
 
-          <Icon :name="link.icon"
-            class="size-6 text-muted-400 transition-colors duration-300 group-hover:text-primary-500 dark:group-hover:text-primary-400" />
-          <span class="relative z-10">{{ link.title }}</span>
-        </a>
+      <!-- Links List -->
+      <div class="mt-4 flex flex-col gap-4">
+        <template v-for="(link, index) in links" :key="index">
+          <NuxtLink v-if="link.url.startsWith('/')" :to="link.url"
+            class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-muted-200 bg-white p-4 text-center text-base font-medium text-muted-700 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 hover:shadow-xl hover:shadow-primary-500/20 dark:border-muted-800 dark:bg-muted-900 dark:text-muted-100 dark:hover:border-primary-500 dark:hover:bg-muted-800 dark:hover:text-primary-400">
+            <div
+              class="absolute inset-0 translate-y-[100%] bg-gradient-to-t from-primary-500/10 to-transparent transition-transform duration-300 group-hover:translate-y-0" />
+            <Icon :name="link.icon"
+              class="size-6 text-muted-400 transition-colors duration-300 group-hover:text-primary-500 dark:group-hover:text-primary-400" />
+            <div class="relative z-10 flex flex-col items-center">
+              <span>{{ link.title }}</span>
+              <span v-if="link.subtitle" class="text-[10px] opacity-60 font-normal">{{ link.subtitle }}</span>
+            </div>
+          </NuxtLink>
+          <a v-else :href="link.url" target="_blank" rel="noopener noreferrer"
+            class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-muted-200 bg-white p-4 text-center text-base font-medium text-muted-700 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 hover:shadow-xl hover:shadow-primary-500/20 dark:border-muted-800 dark:bg-muted-900 dark:text-muted-100 dark:hover:border-primary-500 dark:hover:bg-muted-800 dark:hover:text-primary-400">
+            <div
+              class="absolute inset-0 translate-y-[100%] bg-gradient-to-t from-primary-500/10 to-transparent transition-transform duration-300 group-hover:translate-y-0" />
+            <Icon :name="link.icon"
+              class="size-6 text-muted-400 transition-colors duration-300 group-hover:text-primary-500 dark:group-hover:text-primary-400" />
+            <div class="relative z-10 flex flex-col items-center">
+              <span>{{ link.title }}</span>
+              <span v-if="link.subtitle" class="text-[10px] opacity-60 font-normal">{{ link.subtitle }}</span>
+            </div>
+          </a>
+        </template>
       </div>
 
       <!-- Footer -->
