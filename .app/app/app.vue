@@ -146,6 +146,6 @@ useSeoMeta({
     </NuxtLayout>
 
     <TairoPanels />
-    <MarketingBalloon />
+    <!-- <MarketingBalloon /> -->
   </BaseProviders>
 </template>

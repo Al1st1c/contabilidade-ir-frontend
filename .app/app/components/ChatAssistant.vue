@@ -37,10 +37,14 @@ const inputRef = ref<HTMLInputElement>()
 
 // Mensagem de boas vindas
 onMounted(() => {
+  const welcomeContent = props.authenticated
+    ? 'Oi! Tudo bem? 😊\n\nEu sou a **Sofia**, consultora do **Gestor IRPF**. Posso te ajudar com dúvidas de como usar o sistema, configurar sua conta ou enviar declarações.\n\nComo posso te ajudar hoje?'
+    : 'Oi! Tudo bem? 😊\n\nEu sou a **Sofia**, da equipe do **Gestor IRPF**. Posso te ajudar com qualquer dúvida sobre o sistema — como funciona, preços, planos, ou qualquer outra coisa.\n\nNo que posso te ajudar?'
+
   messages.value.push({
     id: 'welcome',
     role: 'assistant',
-    content: 'Oi! Tudo bem? 😊\n\nEu sou a **Sofia**, da equipe do **Gestor IRPF**. Posso te ajudar com qualquer dúvida sobre o sistema — como funciona, preços, planos, ou qualquer outra coisa.\n\nNo que posso te ajudar?',
+    content: welcomeContent,
     timestamp: new Date(),
   })
   nextTick(() => inputRef.value?.focus())
@@ -300,7 +304,7 @@ function sendQuickAction(text: string) {
       </template>
 
       <!-- Quick actions (appear after welcome message when no user messages yet) -->
-      <div v-if="messages.length <= 1" class="flex flex-wrap gap-2 mt-2 animate-fade-in">
+      <div v-if="messages.length <= 1 && !props.authenticated" class="flex flex-wrap gap-2 mt-2 animate-fade-in">
         <button v-for="action in quickActions" :key="action.text" type="button"
           class="flex items-center gap-1.5 px-3 py-2 rounded-full border border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/10 text-primary-600 dark:text-primary-400 text-xs font-medium hover:bg-primary-100 dark:hover:bg-primary-900/20 transition-colors"
           @click="sendQuickAction(action.text)">
