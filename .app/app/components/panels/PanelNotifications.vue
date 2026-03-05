@@ -12,7 +12,7 @@ const { open, close } = usePanels()
 // State
 const isLoading = ref(true)
 const notifications = ref<any[]>([])
-const activeTab = ref<'new' | 'history'>('new')
+const activeTab = ref<'new' | 'transactions' | 'history'>('new')
 const { dismissedIds, dismiss, restore } = useNotifications()
 
 // Fetch notifications (same alerts from dashboard)
@@ -60,6 +60,24 @@ async function fetchNotifications() {
       // Stuck clients
       alerts.stuckClients?.forEach((item: any) => add(item, 'stuck', 'solar:hourglass-line-bold', 'text-muted-500 bg-muted-500/10', 'Fluxo Travado', `${item.client?.name || 'Cliente'} - ${item.column?.name}`, '> 7 dias sem ação', 4))
 
+      // System Notifications (Transactions)
+      const systemNotifs = response.data.data.systemNotifications || []
+      systemNotifs.forEach((item: any) => {
+        items.push({
+          id: item.id,
+          uid: item.id, // Persistent ID
+          type: 'system',
+          icon: item.type === 'error' ? 'solar:danger-bold' : 'solar:bell-bold',
+          color: item.type === 'error' ? 'text-danger-500 bg-danger-500/10' : 'text-primary-500 bg-primary-500/10',
+          title: item.title,
+          description: item.description,
+          timeLabel: 'Sistema',
+          priority: 0,
+          updatedAt: new Date(item.createdAt || Date.now()),
+          isSystem: true,
+        })
+      })
+
       // Sort by updatedAt DESC (most recent first)
       notifications.value = items.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     }
@@ -73,19 +91,29 @@ async function fetchNotifications() {
 }
 
 // Computed filters
-const newNotifications = computed(() => notifications.value.filter(n => !dismissedIds.value.includes(n.uid)))
+const newNotifications = computed(() => notifications.value.filter(n => !n.isSystem && !dismissedIds.value.includes(n.uid)))
+const transactionNotifications = computed(() => notifications.value.filter(n => n.isSystem && !dismissedIds.value.includes(n.uid)))
 const historyNotifications = computed(() => notifications.value.filter(n => dismissedIds.value.includes(n.uid)))
-const displayNotifications = computed(() => activeTab.value === 'new' ? newNotifications.value : historyNotifications.value)
+
+const displayNotifications = computed(() => {
+  if (activeTab.value === 'new') return newNotifications.value
+  if (activeTab.value === 'transactions') return transactionNotifications.value
+  return historyNotifications.value
+})
 
 const newCount = computed(() => newNotifications.value.length)
+const transactionsCount = computed(() => transactionNotifications.value.length)
 const historyCount = computed(() => historyNotifications.value.length)
-const criticalCount = computed(() => newNotifications.value.filter(n => n.type === 'error').length)
+const criticalCount = computed(() => newNotifications.value.filter(n => n.type === 'error').length + transactionNotifications.value.filter(n => n.type === 'error' || n.priority === 0).length)
 
 onMounted(() => {
   fetchNotifications()
 })
 
 function handleItemClick(notification: any) {
+  if (notification.type === 'system' || notification.isSystem)
+    return
+
   close()
   setTimeout(() => {
     open(PanelsPanelDeclarationDetails, {
@@ -95,8 +123,20 @@ function handleItemClick(notification: any) {
   }, 150)
 }
 
-function dismissNotification(uid: string) {
-  dismiss(uid)
+async function dismissNotification(notification: any) {
+  // If it's a persistent system notification, dismiss it in the backend
+  if (notification.isSystem) {
+    try {
+      await useCustomFetch(`/declarations/notifications/${notification.id}/dismiss`, {
+        method: 'PATCH',
+      })
+    }
+    catch (e) {
+      console.error('Error dismissing system notification:', e)
+    }
+  }
+
+  dismiss(notification.uid)
 }
 
 function restoreNotification(uid: string) {
@@ -150,20 +190,20 @@ function formatTime(date: Date) {
       <!-- Tabs Container -->
       <div class="px-4 mt-4">
         <div class="flex items-center p-1 rounded-xl bg-muted-100 dark:bg-muted-900 overflow-hidden">
-          <button v-for="tab in (['new', 'history'] as const)" :key="tab"
+          <button v-for="tab in (['new', 'transactions', 'history'] as const)" :key="tab"
             class="flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all" :class="[
               activeTab === tab
                 ? 'bg-white dark:bg-muted-800 text-primary-600 shadow-sm border border-muted-200 dark:border-muted-700'
                 : 'text-muted-500 hover:text-muted-700 dark:hover:text-muted-300',
             ]" @click="activeTab = tab">
             <span class="flex items-center justify-center gap-2">
-              {{ tab === 'new' ? 'Novos' : 'Histórico' }}
+              {{ tab === 'new' ? 'Novos' : tab === 'transactions' ? 'Transações' : 'Histórico' }}
               <span class="px-1.5 py-0.5 rounded-md text-[10px]" :class="[
                 activeTab === tab
                   ? 'bg-primary-500 text-white'
                   : 'bg-muted-200 dark:bg-muted-800 text-muted-500',
               ]">
-                {{ tab === 'new' ? newCount : historyCount }}
+                {{ tab === 'new' ? newCount : tab === 'transactions' ? transactionsCount : historyCount }}
               </span>
             </span>
           </button>
@@ -223,9 +263,9 @@ function formatTime(date: Date) {
                 <!-- Actions Area -->
                 <div class="flex flex-col items-center gap-2">
                   <!-- Dismiss (X) -->
-                  <button v-if="activeTab === 'new'"
+                  <button v-if="activeTab !== 'history'"
                     class="p-1 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 text-muted-400 hover:text-danger-500 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Mover para histórico" @click.stop="dismissNotification(notification.uid)">
+                    title="Mover para histórico" @click.stop="dismissNotification(notification)">
                     <Icon name="solar:close-circle-bold" class="size-5" />
                   </button>
                   <!-- Restore (History) -->
