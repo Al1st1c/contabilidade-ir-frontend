@@ -99,6 +99,9 @@ async function fetchClient() {
 async function saveClient() {
   saving.value = true
   try {
+    // Sincronizar telefone e whatsapp para usar o mesmo número
+    form.value.phone = form.value.whatsapp
+
     await useCustomFetch(`/clients/${clientId}`, {
       method: 'PUT',
       body: form.value,
@@ -390,8 +393,8 @@ onMounted(fetchClient)
                 <BaseField label="E-mail Principal">
                   <BaseInput v-model="form.email" type="email" icon="lucide:mail" rounded="lg" />
                 </BaseField>
-                <BaseField label="WhatsApp">
-                  <BaseInput v-model="form.whatsapp" icon="lucide:phone" rounded="lg" />
+                <BaseField label="Telefone / WhatsApp">
+                  <BaseInput v-model="form.whatsapp" icon="lucide:phone" rounded="lg" :masks="['(99) 99999-9999']" />
                 </BaseField>
               </div>
             </BaseCard>
@@ -539,7 +542,8 @@ onMounted(fetchClient)
                 Excluir Cliente
               </BaseButton>
 
-              <BaseButton type="submit" variant="primary" :loading="saving" class="rounded-xl px-8 shadow-xl shadow-primary-500/20">
+              <BaseButton type="submit" variant="primary" :loading="saving"
+                class="rounded-xl px-8 shadow-xl shadow-primary-500/20">
                 <Icon name="lucide:save" class="size-4 mr-2" />
                 Salvar Alterações
               </BaseButton>
