@@ -323,25 +323,14 @@ const currentCyclePrice = computed(() => {
 })
 
 const rawCyclePrice = computed(() => {
-  if (!selectedPlan.value || customRadio.value === 'custom') {
-    // Para personalizados, o subtotal bruto é o mensal * meses
-    const { total: base } = calculateCustomPrice()
-    switch (billingCycles.value) {
-      case 'monthly': return base
-      case 'annual': return base * 12
-    }
-  }
+  // Base mensal calculada (inclui customizações de extras)
+  const { total: base } = calculateCustomPrice()
 
-  // Para planos da API, usamos o monthly do plano original
-  const apiPlan = plans.value.find(p => p.slug === customRadio.value)
-  if (!apiPlan) return 0
-
-  const base = apiPlan.pricing.monthly
   switch (billingCycles.value) {
     case 'monthly': return base
-    case 'annual': return base * 12
+    case 'annual': return base * 12 // Preço cheio sem desconto anual
   }
-  return 0
+  return base
 })
 
 const cycleDiscountAmount = computed(() => {
@@ -610,7 +599,7 @@ const featureMap: Record<string, string> = {
                 <TairoLogo class="size-12 sm:size-16 shrink-0" :class="planColor" />
                 <div class="flex items-baseline gap-1 sm:hidden">
                   <BaseHeading as="h3" size="lg" weight="bold" class="text-muted-800 dark:text-white">
-                    {{ formatCurrency(currentCyclePrice) }}
+                    {{ formatCurrency(rawCyclePrice) }}
                   </BaseHeading>
                   <BaseText size="xs" class="text-muted-400">
                     / {{ currentCycleLabel }}
@@ -620,7 +609,7 @@ const featureMap: Record<string, string> = {
               <div class="flex-1 min-w-0">
                 <div class="hidden sm:flex items-baseline gap-2">
                   <BaseHeading as="h3" size="xl" weight="bold" class="text-muted-800 dark:text-white">
-                    {{ formatCurrency(currentCyclePrice) }}
+                    {{ formatCurrency(rawCyclePrice) }}
                   </BaseHeading>
                   <BaseText size="sm" class="text-muted-400">
                     / {{ currentCycleLabel }}
@@ -938,7 +927,7 @@ const featureMap: Record<string, string> = {
                       </BaseParagraph>
                     </div>
                     <BaseText weight="bold" class="font-sans">
-                      {{ formatCurrency(currentCyclePrice) }}
+                      {{ formatCurrency(rawCyclePrice) }}
                     </BaseText>
                   </div>
 
@@ -1055,7 +1044,7 @@ const featureMap: Record<string, string> = {
                     <span class="text-muted-500 font-sans">Subtotal</span>
                     <span class="text-muted-800 dark:text-white font-medium font-sans">{{
                       formatCurrency(rawCyclePrice)
-                      }}</span>
+                    }}</span>
                   </div>
                   <div v-if="cycleDiscountAmount > 0" class="flex justify-between text-sm text-success-500">
                     <span class="font-sans italic">Desconto Anual (10% OFF)</span>

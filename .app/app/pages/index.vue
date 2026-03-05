@@ -228,7 +228,6 @@ async function startRecovery() {
       recoveryForm.maskedPhone = result.data.phone
       recoveryForm.hasPhone = result.data.hasPhone
       mode.value = 'recovery-method'
-      startCooldown()
     } else {
       toaster.add({ title: 'Erro', description: result.message, icon: 'ph:warning-circle-fill' })
     }
@@ -524,32 +523,40 @@ const onSubmit = handleSubmit(async (values) => {
               <div class="space-y-4">
                 <!-- Email Option -->
                 <button
-                  class="flex w-full items-center gap-4 p-4 rounded-2xl border-2 border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all text-left bg-white dark:bg-muted-950 shadow-sm hover:shadow-md group"
-                  @click="sendRecoveryCode('EMAIL')">
+                  class="flex w-full items-center gap-4 p-4 rounded-2xl border-2 border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all text-left bg-white dark:bg-muted-950 shadow-sm hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed"
+                  :disabled="loading || resendCooldown > 0" @click="sendRecoveryCode('EMAIL')">
                   <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 group-hover:bg-primary-500 group-hover:text-white transition-all">
-                    <Icon name="ph:envelope-duotone" class="size-6" />
+                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 group-hover:bg-primary-500 group-hover:text-white group-disabled:bg-muted-200 group-disabled:text-muted-400 dark:group-disabled:bg-muted-800 transition-all">
+                    <Icon v-if="loading && recoveryForm.method === 'EMAIL'" name="svg-spinners:270-ring-with-bg"
+                      class="size-6" />
+                    <Icon v-else name="ph:envelope-duotone" class="size-6" />
                   </div>
                   <div class="flex-1">
                     <BaseText weight="semibold" class="text-muted-800 dark:text-muted-100 block">Enviar por E-mail
                     </BaseText>
-                    <BaseText size="xs" class="text-muted-400">{{ recoveryForm.maskedEmail }}</BaseText>
+                    <BaseText size="xs" class="text-muted-400">
+                      {{ resendCooldown > 0 ? `Aguarde ${resendCooldown}s para reenviar` : recoveryForm.maskedEmail }}
+                    </BaseText>
                   </div>
                   <Icon name="ph:caret-right-bold" class="size-4 text-muted-400" />
                 </button>
 
                 <!-- SMS Option -->
                 <button v-if="recoveryForm.hasPhone"
-                  class="flex w-full items-center gap-4 p-4 rounded-2xl border-2 border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all text-left bg-white dark:bg-muted-950 shadow-sm hover:shadow-md group"
-                  @click="sendRecoveryCode('SMS')">
+                  class="flex w-full items-center gap-4 p-4 rounded-2xl border-2 border-muted-200 dark:border-muted-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all text-left bg-white dark:bg-muted-950 shadow-sm hover:shadow-md group disabled:opacity-60 disabled:cursor-not-allowed"
+                  :disabled="loading || resendCooldown > 0" @click="sendRecoveryCode('SMS')">
                   <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-info-100 dark:bg-info-900/30 text-info-600 dark:text-info-400 group-hover:bg-info-500 group-hover:text-white transition-all">
-                    <Icon name="ph:chats-teardrop-duotone" class="size-6" />
+                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-info-100 dark:bg-info-900/30 text-info-600 dark:text-info-400 group-hover:bg-info-500 group-hover:text-white group-disabled:bg-muted-200 group-disabled:text-muted-400 dark:group-disabled:bg-muted-800 transition-all">
+                    <Icon v-if="loading && recoveryForm.method === 'SMS'" name="svg-spinners:270-ring-with-bg"
+                      class="size-6" />
+                    <Icon v-else name="ph:chats-teardrop-duotone" class="size-6" />
                   </div>
                   <div class="flex-1">
                     <BaseText weight="semibold" class="text-muted-800 dark:text-muted-100 block">Enviar por SMS
                     </BaseText>
-                    <BaseText size="xs" class="text-muted-400">{{ recoveryForm.maskedPhone }}</BaseText>
+                    <BaseText size="xs" class="text-muted-400">
+                      {{ resendCooldown > 0 ? `Aguarde ${resendCooldown}s para reenviar` : recoveryForm.maskedPhone }}
+                    </BaseText>
                   </div>
                   <Icon name="ph:caret-right-bold" class="size-4 text-muted-400" />
                 </button>

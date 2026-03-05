@@ -156,6 +156,7 @@ export function useSubscription() {
     paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | 'STRIPE'
     customLimits?: any
     customPrice?: number
+    couponCode?: string
   }) => {
     loading.value = true
     error.value = null
