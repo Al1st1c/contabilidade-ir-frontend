@@ -99,6 +99,15 @@ function adjustQuantity(delta: number) {
   const newVal = simsIrCount.value + delta
   if (newVal >= 0) simsIrCount.value = newVal
 }
+const showAssistant = ref(false)
+const assistantMessage = ref('')
+
+onMounted(() => {
+  setTimeout(() => {
+    assistantMessage.value = 'Dúvidas sobre os planos? Posso te ajudar a escolher o melhor para você! 😊'
+    showAssistant.value = true
+  }, 8000)
+})
 </script>
 
 <template>
@@ -319,6 +328,9 @@ function adjustQuantity(delta: number) {
       </div>
 
     </div>
+
+    <!-- Assistant Trigger -->
+    <AppSupportButton :force-show="showAssistant" :welcome-message="assistantMessage" />
   </div>
 </template>
 

@@ -1,20 +1,35 @@
 <script setup lang="ts">
 import { onKeyStroke, onClickOutside } from '@vueuse/core'
 
+interface Props {
+  welcomeMessage?: string
+  forceShow?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  welcomeMessage: 'Sou a Sofia, precisa de ajuda? Estou online! 👋',
+  forceShow: false,
+})
+
 const isOpen = ref(false)
 const showWelcomeBubble = ref(true)
 const container = ref<HTMLElement | null>(null)
 
-// Close on escape
-onKeyStroke('Escape', () => {
-  if (isOpen.value) isOpen.value = false
-})
-
+// If forceShow is true, ensure bubble is visible on mount
 onMounted(() => {
+  if (props.forceShow) {
+    showWelcomeBubble.value = true
+  }
+  
   // Close popover when clicking outside
   onClickOutside(container, () => {
     if (isOpen.value) isOpen.value = false
   })
+})
+
+// Watch for forceShow changes to trigger bubble
+watch(() => props.forceShow, (val) => {
+  if (val) showWelcomeBubble.value = true
 })
 </script>
 
@@ -61,7 +76,7 @@ onMounted(() => {
 
               <div class="flex items-start">
                 <p class="text-[13px] font-medium text-muted-800 dark:text-muted-100 leading-snug">
-                  Sou a Sofia, precisa de ajuda? Estou online! 👋
+                  {{ props.welcomeMessage }}
                 </p>
               </div>
 
