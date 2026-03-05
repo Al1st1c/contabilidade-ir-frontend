@@ -481,7 +481,6 @@ async function handleRevealPassword() {
         title: 'Acesso Negado',
         description: msg,
         icon: 'solar:danger-circle-bold-duotone',
-        color: 'danger',
       })
       return
     }
@@ -827,13 +826,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-          }}</span>
+            }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-          }}</span>
+            }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1126,7 +1125,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName
                         || 'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                      }}</span>
+                        }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
@@ -1702,7 +1701,7 @@ onMounted(() => {
                   </div>
                   <div class="flex gap-1.5 mt-1">
                     <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs"
-                      @keyup.enter="addTag" />
+                      autocomplete="off" @keyup.enter="addTag" />
                     <BaseButton size="sm" variant="muted" @click="addTag">
                       <Icon name="lucide:plus" class="size-3.5" />
                     </BaseButton>
@@ -1716,7 +1715,7 @@ onMounted(() => {
                   <div class="relative">
                     <BaseInput id="gvpas-mob" v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'"
                       size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs"
-                      @blur="saveDebounced" />
+                      autocomplete="new-password" @blur="saveDebounced" />
                     <button type="button"
                       class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
                       :disabled="isRevealingPassword" @click="handleRevealPassword">
@@ -1935,7 +1934,7 @@ onMounted(() => {
                 </div>
                 <div class="flex gap-1.5 mt-1">
                   <BaseInput v-model="newTag" placeholder="Nova tag..." size="sm" rounded="md" class="flex-1 text-xs"
-                    @keyup.enter="addTag" />
+                    autocomplete="off" @keyup.enter="addTag" />
                   <BaseButton size="sm" variant="muted" @click="addTag">
                     <Icon name="lucide:plus" class="size-3.5" />
                   </BaseButton>
@@ -1949,7 +1948,8 @@ onMounted(() => {
                 </BaseText>
                 <div class="relative">
                   <BaseInput id="gvpas" v-model="form.govPassword" :type="showGovPassword ? 'text' : 'password'"
-                    size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs" @blur="saveDebounced" />
+                    size="sm" rounded="md" placeholder="Senha do cliente" class="pr-9 text-xs"
+                    autocomplete="new-password" @blur="saveDebounced" />
                   <button type="button"
                     class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
                     :disabled="isRevealingPassword" @click="handleRevealPassword">
@@ -2026,6 +2026,21 @@ onMounted(() => {
                   Obrigatório
                 </BaseTag>
               </button>
+
+              <div class="my-3 border-t border-muted-200 dark:border-muted-800" />
+
+              <button type="button"
+                class="w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center gap-3 border-2 border-dashed"
+                :class="!selectedChecklistItemId
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10 text-primary-700 dark:text-primary-300'
+                  : 'border-muted-200 dark:border-muted-700 hover:border-muted-300 text-muted-500'"
+                @click="selectedChecklistItemId = null">
+                <Icon name="lucide:paperclip" class="size-4 shrink-0" />
+                <BaseText size="xs" weight="medium" class="flex-1">
+                  Anexo Livre (Não vincular)
+                </BaseText>
+                <div v-if="!selectedChecklistItemId" class="size-2 rounded-full bg-primary-500" />
+              </button>
             </div>
           </div>
           <div class="px-4 py-3 border-t border-muted-200 dark:border-muted-800 flex justify-end gap-2">
@@ -2033,7 +2048,8 @@ onMounted(() => {
               Cancelar
             </BaseButton>
             <BaseButton size="sm" variant="primary" rounded="lg" :loading="isUploading" @click="confirmChecklistUpload">
-              <Icon name="lucide:upload" class="size-3.5 mr-1.5" /> Vincular
+              <Icon :name="selectedChecklistItemId ? 'lucide:link' : 'lucide:upload'" class="size-3.5 mr-1.5" />
+              {{ selectedChecklistItemId ? 'Vincular' : 'Enviar Anexo' }}
             </BaseButton>
           </div>
         </DialogContent>

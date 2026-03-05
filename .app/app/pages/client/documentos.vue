@@ -22,23 +22,29 @@ const notes = ref<Record<string, string>>({})
 const showNote = ref<Record<string, boolean>>({})
 const localFileNames = ref<Record<string, string>>({}) // Nome original do arquivo selecionado pelo usuário
 
-const banks = ['Itaú', 'Bradesco', 'Santander', 'Nubank', 'Banco do Brasil']
-const customBanks = ref<Record<string, string>>({})
-const showCustomInput = ref<Record<string, boolean>>({})
+const defaultBanks = ['Itaú', 'Bradesco', 'Santander', 'Nubank', 'Banco do Brasil', 'Inter', 'C6 Bank', 'Caixa']
+const customBankName = ref('')
+const showCustomBankInput = ref(false)
 
 function isIncomeReport(title: string) {
   return title?.toUpperCase().includes('INFORME DE RENDIMENTO')
 }
 
-function handleBankSelect(docId: string, bank: string) {
-  if (bank === 'Outro') {
-    showCustomInput.value[docId] = true
-    notes.value[docId] = customBanks.value[docId] || ''
-  }
-  else {
-    showCustomInput.value[docId] = false
-    notes.value[docId] = bank
-  }
+// Computed: quais bancos já foram enviados para um item de informe de rendimentos
+function getBankUploads(parentDocId: string) {
+  // Filtra documentos cujo título começa com 'Informe de Rendimentos - '
+  return documents.value.filter(d =>
+    d.title.startsWith('Informe de Rendimentos - ')
+    && d.id !== parentDocId
+    && (d.status === 'uploaded' || d.status === 'approved')
+  )
+}
+
+function isBankAlreadySent(bankName: string) {
+  return documents.value.some(d =>
+    d.title === `Informe de Rendimentos - ${bankName}`
+    && (d.status === 'uploaded' || d.status === 'approved')
+  )
 }
 
 async function loadDocuments() {
@@ -170,6 +176,76 @@ watch(selectedTaxYear, loadDocuments)
 
 onMounted(loadDocuments)
 
+// Upload de informe de rendimento por banco
+async function handleBankUpload(event: Event, parentDocId: string, bankName: string) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0)
+    return
+  if (!collectionLink.value?.token) {
+    add({
+      title: 'Erro',
+      description: 'Link de coleta não disponível. Contate seu contador.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
+    return
+  }
+
+  const file = target.files[0]
+  if (!file) return
+
+  isUploading.value = `${parentDocId}-${bankName}`
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('checklistItemId', parentDocId)
+    formData.append('bankName', bankName)
+    formData.append('description', `Informe do banco ${bankName}`)
+    formData.append('category', 'document')
+
+    const result = await $fetch<any>(getApiUrl(`/public/${collectionLink.value.token}/upload`), {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (result.id || result.success) {
+      add({
+        title: 'Sucesso!',
+        description: `Informe do ${bankName} enviado com sucesso.`,
+        icon: 'solar:check-circle-bold-duotone',
+      })
+      await loadDocuments()
+    }
+  }
+  catch (error: any) {
+    add({
+      title: 'Erro no Upload',
+      description: error.data?.message || 'Não foi possível enviar o documento.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
+  }
+  finally {
+    isUploading.value = null
+    target.value = ''
+  }
+}
+
+// Upload de banco personalizado
+async function handleCustomBankUpload(event: Event, parentDocId: string) {
+  const name = customBankName.value.trim()
+  if (!name) {
+    add({
+      title: 'Nome obrigatório',
+      description: 'Informe o nome do banco antes de enviar.',
+      icon: 'solar:info-circle-bold-duotone',
+    })
+    return
+  }
+  await handleBankUpload(event, parentDocId, name)
+  customBankName.value = ''
+  showCustomBankInput.value = false
+}
+
 async function handleFileUpload(event: Event, itemId: string) {
   const target = event.target as HTMLInputElement
   if (!target.files || target.files.length === 0)
@@ -188,21 +264,6 @@ async function handleFileUpload(event: Event, itemId: string) {
 
   // Guarda o nome original do arquivo (como veio do celular/computador do usuário)
   localFileNames.value[itemId] = file.name
-
-  // Validação para Informe de Rendimento
-  const doc = documents.value.find(d => d.id === itemId)
-  if (doc && isIncomeReport(doc.title)) {
-    const note = notes.value[itemId]
-    if (!note || !note.trim()) {
-      add({
-        title: 'Seleção Obrigatória',
-        description: 'Por favor, informe o nome do banco para este Informe de Rendimento.',
-        icon: 'solar:info-circle-bold-duotone',
-      })
-      target.value = ''
-      return
-    }
-  }
 
   isUploading.value = itemId
 
@@ -264,10 +325,6 @@ async function handleFileUpload(event: Event, itemId: string) {
       if (itemId === 'extra') {
         documentTitle.value = ''
       }
-      if (customBanks.value[itemId]) {
-        customBanks.value[itemId] = ''
-      }
-      showCustomInput.value[itemId] = false
     }
   }
 }
@@ -346,84 +403,157 @@ function viewDocument(doc: any) {
 
     <!-- Documents List -->
     <div v-else class="px-4 space-y-4">
-      <div v-for="doc in documents" :key="doc.id"
-        class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
-                {{ doc.title }}
-              </BaseHeading>
-              <BaseTag v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
-                class="text-[9px] uppercase font-bold py-0.5 px-2">
-                Obrigatório
-              </BaseTag>
-            </div>
-            <BaseParagraph size="xs" class="text-muted-500 line-clamp-2 leading-relaxed">
-              {{ doc.description }}
-            </BaseParagraph>
-
-            <!-- Filename Display -->
-            <div v-if="localFileNames[doc.id] || doc.fileName"
-              class="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted-100 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 w-fit">
-              <Icon name="solar:document-text-bold-duotone" class="size-3.5 text-primary-500" />
-              <span class="text-[10px] font-medium text-muted-600 dark:text-muted-400 truncate max-w-[200px]">
-                {{ localFileNames[doc.id] || doc.fileName }}
-              </span>
-            </div>
-
-            <!-- Rejection Reason -->
-            <div v-if="doc.status === 'rejected' && doc.comment"
-              class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2">
-              <Icon name="solar:info-circle-bold" class="size-4 text-danger-500 shrink-0 mt-0.5" />
-              <p class="text-[10px] text-danger-600 dark:text-danger-400 font-medium leading-tight">
-                {{ doc.comment }}
-              </p>
+      <template v-for="doc in documents" :key="doc.id">
+        <!-- =================================================================
+             INFORME DE RENDIMENTOS: Layout especial de bancos
+             ================================================================= -->
+        <div v-if="isIncomeReport(doc.title) && !doc.title.startsWith('Informe de Rendimentos - ')"
+          class="p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm">
+          <!-- Header -->
+          <div class="flex items-start justify-between gap-4 mb-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <Icon name="solar:bank-bold-duotone" class="size-5 text-primary-500 shrink-0" />
+                <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
+                  {{ doc.title }}
+                </BaseHeading>
+              </div>
+              <BaseParagraph size="xs" class="text-muted-500 leading-relaxed">
+                Envie o informe de rendimentos de cada banco separadamente. Selecione o banco e importe o documento.
+              </BaseParagraph>
             </div>
           </div>
 
-          <!-- Status / Action -->
-          <div class="shrink-0 flex flex-col items-center gap-2">
-            <div class="size-10 rounded-xl flex items-center justify-center transition-colors"
-              :class="[getStatusColor(doc.status)]">
-              <Icon :name="getStatusIcon(doc.status)" class="size-6" />
+          <!-- Bancos já enviados -->
+          <div v-if="getBankUploads(doc.id).length > 0" class="mb-4">
+            <p class="text-[10px] font-bold text-muted-400 uppercase tracking-wider mb-2">Enviados</p>
+            <div class="space-y-1.5">
+              <div v-for="bankDoc in getBankUploads(doc.id)" :key="bankDoc.id"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-success-500/5 border border-success-500/15">
+                <Icon name="solar:check-circle-bold" class="size-4 text-success-500 shrink-0" />
+                <span class="text-xs font-semibold text-success-700 dark:text-success-400 flex-1">
+                  {{ bankDoc.title.replace('Informe de Rendimentos - ', '') }}
+                </span>
+                <BaseTag size="sm" variant="none" class="text-[8px] uppercase font-bold px-1.5 py-0.5 leading-none"
+                  :class="bankDoc.status === 'approved'
+                    ? 'bg-success-100 text-success-600'
+                    : 'bg-warning-100 text-warning-600'">
+                  {{ getStatusLabel(bankDoc.status) }}
+                </BaseTag>
+              </div>
             </div>
-            <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
-            }}</span>
+          </div>
+
+          <!-- Grid de bancos para upload -->
+          <div class="border-t border-muted-100 dark:border-muted-800 pt-4">
+            <p class="text-[10px] font-bold text-muted-400 uppercase tracking-wider mb-3">
+              Selecione o banco e importe
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <template v-for="bank in defaultBanks" :key="bank">
+                <label v-if="!isBankAlreadySent(bank)" class="relative cursor-pointer group">
+                  <input type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
+                    :disabled="!!isUploading" @change="handleBankUpload($event, doc.id, bank)">
+                  <div
+                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 border-dashed transition-all text-center"
+                    :class="isUploading === `${doc.id}-${bank}`
+                      ? 'border-primary-500 bg-primary-500/5'
+                      : 'border-muted-200 dark:border-muted-700 hover:border-primary-400 hover:bg-primary-500/5'">
+                    <Icon v-if="isUploading === `${doc.id}-${bank}`" name="line-md:loading-twotone-loop"
+                      class="size-5 text-primary-500" />
+                    <Icon v-else name="solar:upload-minimalistic-bold-duotone"
+                      class="size-5 text-muted-400 group-hover:text-primary-500 transition-colors" />
+                    <span class="text-[11px] font-bold text-muted-600 dark:text-muted-300">{{ bank }}</span>
+                  </div>
+                </label>
+              </template>
+
+              <!-- Outro banco -->
+              <button v-if="!showCustomBankInput" type="button"
+                class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 border-dashed border-muted-200 dark:border-muted-700 hover:border-primary-400 hover:bg-primary-500/5 transition-all text-center"
+                @click="showCustomBankInput = true">
+                <Icon name="lucide:plus" class="size-5 text-muted-400" />
+                <span class="text-[11px] font-bold text-muted-500">Outro</span>
+              </button>
+            </div>
+
+            <!-- Input para banco personalizado -->
+            <div v-if="showCustomBankInput" class="mt-3 flex gap-2 animate-fade-in">
+              <BaseInput v-model="customBankName" placeholder="Nome do banco..." size="sm" rounded="lg" class="flex-1"
+                autocomplete="off" @keyup.enter="($refs.customBankFile as HTMLInputElement)?.click()" />
+              <label class="cursor-pointer shrink-0">
+                <input ref="customBankFile" type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
+                  :disabled="!!isUploading || !customBankName.trim()" @change="handleCustomBankUpload($event, doc.id)">
+                <div
+                  class="flex items-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20 h-full">
+                  <Icon v-if="isUploading === `${doc.id}-${customBankName}`" name="line-md:loading-twotone-loop"
+                    class="size-4" />
+                  <Icon v-else name="solar:upload-linear" class="size-4" />
+                  Enviar
+                </div>
+              </label>
+              <BaseButton size="sm" variant="muted" rounded="lg"
+                @click="showCustomBankInput = false; customBankName = ''">
+                <Icon name="lucide:x" class="size-3.5" />
+              </BaseButton>
+            </div>
           </div>
         </div>
 
-        <!-- Upload Area (only if not approved) -->
-        <div v-if="doc.status !== 'approved'" class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800">
+        <!-- =================================================================
+             DOCUMENTOS NORMAIS (e sub-itens de banco já enviados — hidden)
+             ================================================================= -->
+        <div v-else-if="!doc.title.startsWith('Informe de Rendimentos - ')"
+          class="group p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm transition-all duration-300">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
+                  {{ doc.title }}
+                </BaseHeading>
+                <BaseTag v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
+                  class="text-[9px] uppercase font-bold py-0.5 px-2">
+                  Obrigatório
+                </BaseTag>
+              </div>
+              <BaseParagraph size="xs" class="text-muted-500 line-clamp-2 leading-relaxed">
+                {{ doc.description }}
+              </BaseParagraph>
 
-          <!-- Note input or Bank Selection -->
-          <div class="mb-4">
-            <!-- Caso seja Informe de Rendimento: Seleção de Banco -->
-            <div v-if="isIncomeReport(doc.title)" class="animate-fade-in">
-              <p class="text-[11px] font-bold text-muted-400 uppercase mb-3 flex items-center gap-2">
-                <Icon name="solar:bank-bold-duotone" class="size-4 text-primary-500" />
-                Selecione o Banco Emissor
-              </p>
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <button v-for="bank in [...banks, 'Outro']" :key="bank" type="button"
-                  class="px-3 py-2.5 rounded-xl border text-[11px] font-bold transition-all text-center"
-                  :class="notes[doc.id] === bank || (bank === 'Outro' && showCustomInput[doc.id])
-                    ? 'border-primary-500 bg-primary-500/5 text-primary-600 shadow-sm'
-                    : 'border-muted-200 dark:border-muted-800 bg-muted-50/50 dark:bg-muted-900/50 text-muted-500 hover:border-primary-400'" @click="handleBankSelect(doc.id, bank)">
-                  {{ bank }}
-                </button>
+              <!-- Filename Display -->
+              <div v-if="localFileNames[doc.id] || doc.fileName"
+                class="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted-100 dark:bg-muted-900 border border-muted-200 dark:border-muted-800 w-fit">
+                <Icon name="solar:document-text-bold-duotone" class="size-3.5 text-primary-500" />
+                <span class="text-[10px] font-medium text-muted-600 dark:text-muted-400 truncate max-w-[200px]">
+                  {{ localFileNames[doc.id] || doc.fileName }}
+                </span>
               </div>
 
-              <!-- Input para outro banco -->
-              <div v-if="showCustomInput[doc.id]" class="mt-3 animate-fade-in">
-                <BaseInput v-model="customBanks[doc.id]" placeholder="Digite o nome do banco..." size="sm" rounded="lg"
-                  class="bg-muted-50/50 dark:bg-muted-900/50 shadow-inner"
-                  @input="notes[doc.id] = customBanks[doc.id] || ''" />
+              <!-- Rejection Reason -->
+              <div v-if="doc.status === 'rejected' && doc.comment"
+                class="mt-3 p-2 rounded-lg bg-danger-500/5 border border-danger-500/10 flex gap-2">
+                <Icon name="solar:info-circle-bold" class="size-4 text-danger-500 shrink-0 mt-0.5" />
+                <p class="text-[10px] text-danger-600 dark:text-danger-400 font-medium leading-tight">
+                  {{ doc.comment }}
+                </p>
               </div>
             </div>
 
-            <!-- Caso normal: Observação opcional -->
-            <div v-else>
+            <!-- Status / Action -->
+            <div class="shrink-0 flex flex-col items-center gap-2">
+              <div class="size-10 rounded-xl flex items-center justify-center transition-colors"
+                :class="[getStatusColor(doc.status)]">
+                <Icon :name="getStatusIcon(doc.status)" class="size-6" />
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
+                }}</span>
+            </div>
+          </div>
+
+          <!-- Upload Area (only if not approved) -->
+          <div v-if="doc.status !== 'approved'" class="mt-4 pt-4 border-t border-muted-100 dark:border-muted-800">
+            <!-- Observação opcional -->
+            <div class="mb-4">
               <div class="flex items-center gap-2 mb-2">
                 <BaseCheckbox :id="`note-check-${doc.id}`" v-model="showNote[doc.id]" shape="rounded" color="primary"
                   label="Adicionar observação" />
@@ -433,33 +563,34 @@ function viewDocument(doc: any) {
                   size="sm" class="bg-muted-50/50 dark:bg-muted-900/50" />
               </div>
             </div>
-          </div>
 
-          <div class="flex justify-end gap-2">
-            <BaseButton v-if="doc.attachmentId && canPreview(doc)" variant="muted" size="sm" rounded="lg" class="p-0"
-              @click="viewDocument(doc)">
-              <Icon name="solar:eye-linear" class="size-4" />
-            </BaseButton>
+            <div class="flex justify-end gap-2">
+              <BaseButton v-if="doc.attachmentId && canPreview(doc)" variant="muted" size="sm" rounded="lg" class="p-0"
+                @click="viewDocument(doc)">
+                <Icon name="solar:eye-linear" class="size-4" />
+              </BaseButton>
 
-            <BaseButton v-if="doc.status === 'pending' || doc.status === 'rejected'" variant="muted" size="sm"
-              rounded="lg" class="h-8 text-[11px] font-bold" :disabled="!!isUploading" @click="handleNotOwned(doc.id)">
-              <Icon name="solar:info-circle-linear" class="size-3.5 mr-1" />
-              Não Possuo
-            </BaseButton>
+              <BaseButton v-if="doc.status === 'pending' || doc.status === 'rejected'" variant="muted" size="sm"
+                rounded="lg" class="h-8 text-[11px] font-bold" :disabled="!!isUploading"
+                @click="handleNotOwned(doc.id)">
+                <Icon name="solar:info-circle-linear" class="size-3.5 mr-1" />
+                Não Possuo
+              </BaseButton>
 
-            <label class="relative cursor-pointer">
-              <input type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
-                :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
-              <div
-                class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
-                <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
-                <Icon v-else name="solar:upload-linear" class="size-4" />
-                {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
-              </div>
-            </label>
+              <label class="relative cursor-pointer">
+                <input type="file" class="hidden" accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.zip"
+                  :disabled="!!isUploading" @change="handleFileUpload($event, doc.id)">
+                <div
+                  class="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-primary-500/20">
+                  <Icon v-if="isUploading === doc.id" name="line-md:loading-twotone-loop" class="size-4" />
+                  <Icon v-else name="solar:upload-linear" class="size-4" />
+                  {{ doc.status === 'pending' || doc.status === 'rejected' ? 'Enviar Arquivo' : 'Substituir' }}
+                </div>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
 
       <!-- Optional Extra Files -->
       <BaseCard

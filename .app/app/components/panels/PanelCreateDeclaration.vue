@@ -30,6 +30,8 @@ const newClientData = ref({
 // Step 2: Service Configuration
 const teamMembers = ref<any[]>([])
 const isLoadingTeam = ref(false)
+const hasGovPassword = ref(false)
+const showGovPasswordValue = ref(false)
 
 const serviceData = ref({
   taxYear: new Date().getFullYear(),
@@ -38,6 +40,13 @@ const serviceData = ref({
   serviceValue: 0,
   assignedToId: '',
   description: '',
+  govPassword: '',
+})
+
+watch(hasGovPassword, (val) => {
+  if (!val) {
+    serviceData.value.govPassword = ''
+  }
 })
 
 // Step 3: Generated Link
@@ -795,6 +804,8 @@ onMounted(() => {
           </p>
         </BaseField>
 
+
+
         <BaseField label="Responsável" class="z-20">
           <TairoSelect v-model="serviceData.assignedToId" icon="ph:user-circle"
             placeholder="Selecione o responsável...">
@@ -818,6 +829,27 @@ onMounted(() => {
         <BaseField label="Observações Iniciais">
           <BaseTextarea v-model="serviceData.description" rows="3" placeholder="Ex: Aguardando informe do banco X..." />
         </BaseField>
+
+        <div class="flex items-center gap-2 mb-2 mt-4">
+          <BaseCheckbox v-model="hasGovPassword" label="Informar senha GOV.BR" shape="curved" color="primary" />
+        </div>
+
+        <Transition enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-2 max-h-0" enter-to-class="opacity-100 translate-y-0 max-h-40"
+          leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 max-h-40"
+          leave-to-class="opacity-0 -translate-y-2 max-h-0">
+          <BaseField v-if="hasGovPassword" label="Senha GOV.BR" class="overflow-hidden">
+            <div class="relative">
+              <BaseInput v-model="serviceData.govPassword" placeholder="Senha gov.br" icon="ph:lock"
+                :type="showGovPasswordValue ? 'text' : 'password'" autocomplete="new-password" />
+              <button type="button"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-400 hover:text-primary-500 transition-colors"
+                @click="showGovPasswordValue = !showGovPasswordValue">
+                <Icon :name="showGovPasswordValue ? 'ph:eye-slash-bold' : 'ph:eye-bold'" class="size-5" />
+              </button>
+            </div>
+          </BaseField>
+        </Transition>
       </div>
 
       <!-- Step 3: Resumo e Checklist -->

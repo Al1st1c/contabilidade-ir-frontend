@@ -24,7 +24,7 @@ const links = [
   },
   {
     title: 'Suporte no WhatsApp',
-    url: 'https://wa.me/5521979044284',
+    url: 'https://wa.me/5511945390461',
     icon: 'logos:whatsapp-icon',
     color: 'green'
   },
