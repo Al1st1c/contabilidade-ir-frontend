@@ -98,6 +98,50 @@ const internalAttachments = computed(() => {
   return declaration.value.attachments.filter((a: any) => a.category === 'internal')
 })
 
+const checklistTree = computed(() => {
+  const items = checklistItems.value || []
+  const result: any[] = []
+  const map: Record<string, any> = {}
+
+  // 1. Identify "Informe de Rendimentos" parent
+  const parentTitle = "Informe de Rendimentos"
+  let parent = items.find(i => i.title === parentTitle)
+
+  // 2. If parent doesn't exist but children do, we might want to create a "virtual" parent or just list them.
+  // User said "os itens que são do informe de rendimento ficar como se fosse um subitem"
+  // Let's assume there is a main "Informe de Rendimentos" item.
+
+  items.forEach(item => {
+    if (item.title === parentTitle) {
+      if (!map[parentTitle]) {
+        map[parentTitle] = { ...item, children: [] }
+        result.push(map[parentTitle])
+      } else {
+        // Merge if somehow there are multiple (shouldn't happen)
+        map[parentTitle] = { ...item, children: map[parentTitle].children }
+      }
+    } else if (item.title.startsWith(`${parentTitle} -`)) {
+      const child = { ...item, isChild: true }
+      if (!map[parentTitle]) {
+        // Create virtual parent if it doesn't exist yet
+        map[parentTitle] = { title: parentTitle, isVirtual: true, children: [] }
+        result.push(map[parentTitle])
+      }
+      map[parentTitle].children.push(child)
+    } else {
+      result.push({ ...item, children: [] })
+    }
+  })
+
+  // 3. Force parent status if children exist
+  if (map[parentTitle] && map[parentTitle].children.length > 0) {
+    map[parentTitle].status = 'approved'
+    map[parentTitle].isInformeParent = true
+  }
+
+  return result
+})
+
 const baseUrl = computed(() => {
   if (import.meta.server)
     return ''
@@ -198,7 +242,7 @@ async function handleDownload(item: any) {
 
   const previewUrl = attachment.previewUrl
   if (!previewUrl) {
-    toaster.add({ title: 'Erro', description: 'URL de download não disponível', icon: 'ph:warning-circle-fill' })
+    toaster.add({ title: 'Erro', description: 'Link para download expirou! Feche e abra novamente o card.', icon: 'ph:warning-circle-fill' })
     return
   }
 
@@ -405,13 +449,19 @@ async function addChecklistItem() {
   newChecklistTitle.value = ''
   await syncChecklist()
 }
-async function removeChecklistItem(index: number) {
-  checklistItems.value.splice(index, 1)
-  await syncChecklist()
+async function removeChecklistItem(item: any) {
+  const index = checklistItems.value.findIndex(i => i.id === item.id)
+  if (index !== -1) {
+    checklistItems.value.splice(index, 1)
+    await syncChecklist()
+  }
 }
-async function toggleItemRequired(index: number) {
-  checklistItems.value[index].isRequired = !checklistItems.value[index].isRequired
-  await syncChecklist()
+async function toggleItemRequired(item: any) {
+  const index = checklistItems.value.findIndex(i => i.id === item.id)
+  if (index !== -1) {
+    checklistItems.value[index].isRequired = !checklistItems.value[index].isRequired
+    await syncChecklist()
+  }
 }
 async function syncChecklist() {
   isSavingChecklist.value = true
@@ -441,6 +491,24 @@ async function updateItemStatus(itemId: string, status: string, comment?: string
   catch (error) { console.error('Erro ao atualizar status:', error) }
   finally {
     processingItems.value.delete(itemId)
+  }
+}
+async function toggleDigitado(item: any) {
+  processingItems.value.add(item.id)
+  const newValue = !item.isTyped
+  try {
+    await useCustomFetch<any>(`/declarations/${props.declarationId}/checklist/${item.id}`, {
+      method: 'PATCH',
+      body: { isTyped: newValue },
+    })
+    const idx = checklistItems.value.findIndex(i => i.id === item.id)
+    if (idx !== -1) {
+      checklistItems.value[idx] = { ...checklistItems.value[idx], isTyped: newValue }
+    }
+  }
+  catch (error) { console.error('Erro ao alternar status digitado:', error) }
+  finally {
+    processingItems.value.delete(item.id)
   }
 }
 
@@ -543,6 +611,31 @@ async function handleDelete() {
     toaster.add({ title: 'Erro', description: error.data?.message || 'Erro ao excluir', icon: 'ph:warning-circle-fill' })
   }
   finally { isDeleting.value = false }
+}
+
+function getBankIcon(title: string) {
+  const lower = title.toLowerCase()
+  if (lower.includes('itau') || lower.includes('itaú'))
+    return '/img/banks/itau-ico.png'
+  if (lower.includes('bradesco'))
+    return '/img/banks/bradesco-ico.png'
+  if (lower.includes('santander'))
+    return '/img/banks/santander-ico.png'
+  if (lower.includes('nubank'))
+    return '/img/banks/nubank-ico.webp'
+  if (lower.includes('banco do brasil') || lower.includes(' bb'))
+    return '/img/banks/bb-ico.png'
+  if (lower.includes('caixa'))
+    return '/img/banks/caixa-ico.png'
+  if (lower.includes('c6'))
+    return '/img/banks/c6-ico.png'
+  if (lower.includes('caixa'))
+    return '/img/banks/caixa-ico.png'
+  if (lower.includes('inter'))
+    return '/img/banks/inter-ico.png'
+  if (lower.includes('inter'))
+    return '/img/banks/inter-ico.png'
+  return '/img/banks/generic.png'
 }
 
 // ─── Collection Link ──────────────────────────────────────────────────────────
@@ -1185,113 +1278,224 @@ onMounted(() => {
             <div
               class="bg-white dark:bg-muted-950 border border-muted-200 dark:border-muted-800 rounded-lg overflow-hidden">
               <div class="divide-y divide-muted-100 dark:divide-muted-800">
-                <div v-for="(item, idx) in checklistItems" :key="item.id || idx"
-                  class="group flex items-center gap-3 px-4 py-3 hover:bg-muted-50/50 dark:hover:bg-muted-900/20 transition-colors border-l-3"
-                  :class="[
-                    item.status === 'approved' ? 'border-success-500' :
-                      item.status === 'rejected' ? 'border-danger-500' :
-                        item.status === 'uploaded' ? 'border-warning-500' :
-                          item.status === 'not_owned' ? 'border-info-500' :
-                            'border-muted-200 dark:border-muted-700'
-                  ]">
-                  <!-- Bloco principal: título + badges + obs -->
-                  <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-muted-800 dark:text-muted-100 leading-snug">
-                      {{ item.title }}
-                    </p>
-                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <BaseTag v-if="item.isRequired && item.status === 'pending'" size="sm" variant="none"
-                        class="bg-red-100 text-red-500 text-[9px] px-1.5 h-4 leading-none font-bold uppercase">
-                        Obrigatório
-                      </BaseTag>
-                      <BaseTag v-if="item.status !== 'pending'" size="sm" variant="none"
-                        class="text-[9px] px-1.5 h-4 leading-none font-bold uppercase"
-                        :class="statusTagClass(item.status)">
-                        {{ statusLabel(item.status) }}
-                      </BaseTag>
-                    </div>
-                    <div v-if="item.attachment?.description || (item.status === 'not_owned' && item.comment)"
-                      class="flex items-center gap-1 text-[10px] text-muted-400 italic mt-1">
-                      <Icon name="solar:notes-bold-duotone" class="size-3 shrink-0" />
-                      <span class="truncate">"{{ item.attachment?.description || item.comment }}"</span>
-                    </div>
-                  </div>
-
-                  <!-- Arquivo: ícone compacto -->
-                  <div class="hidden md:flex items-center gap-1.5 shrink-0 w-20">
-                    <template v-if="item.attachment">
-                      <Icon name="lucide:file-text" class="size-4 text-muted-400 shrink-0" />
-                      <div class="min-w-0">
-                        <p class="text-[10px] font-bold text-muted-600 dark:text-muted-300 uppercase leading-none">
-                          .{{ item.attachment.fileName.split('.').pop() }}
-                        </p>
-                        <p class="text-[9px] text-muted-400 font-mono leading-none mt-0.5">
-                          {{ (item.attachment.fileSize / 1024).toFixed(0) }}KB
-                        </p>
+                <template v-for="node in checklistTree" :key="node.id || node.title">
+                  <!-- Parent or regular item -->
+                  <div
+                    class="group flex items-center gap-3 px-4 py-3 hover:bg-muted-50/50 dark:hover:bg-muted-900/20 transition-colors border-l-3"
+                    :class="[
+                      node.status === 'approved' ? 'border-success-500' :
+                        node.status === 'rejected' ? 'border-danger-500' :
+                          node.status === 'uploaded' ? 'border-warning-500' :
+                            node.status === 'not_owned' ? 'border-info-500' :
+                              node.isVirtual ? 'border-primary-500/50 bg-primary-50/30' :
+                                'border-muted-200 dark:border-muted-700'
+                    ]">
+                    <!-- Bloco principal: título + badges + obs -->
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-muted-800 dark:text-muted-100 leading-snug">
+                        {{ node.title }}
+                      </p>
+                      <div v-if="!node.isVirtual" class="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <BaseTag v-if="node.isRequired && node.status === 'pending'" size="sm" variant="none"
+                          class="bg-red-100 text-red-500 text-[9px] px-1.5 h-4 leading-none font-bold uppercase">
+                          Obrigatório
+                        </BaseTag>
+                        <BaseTag v-if="node.status !== 'pending' && !node.isInformeParent" size="sm" variant="none"
+                          class="text-[9px] px-1.5 h-4 leading-none font-bold uppercase"
+                          :class="statusTagClass(node.status)">
+                          {{ statusLabel(node.status) }}
+                        </BaseTag>
+                        <BaseTag v-if="node.isTyped" size="sm" variant="none"
+                          class="bg-primary-500 text-white text-[9px] px-1.5 h-4 leading-none font-bold uppercase">
+                          Digitado
+                        </BaseTag>
                       </div>
-                    </template>
-                    <span v-else class="text-[10px] text-muted-300">—</span>
+                      <div v-if="node.attachment?.description || (node.status === 'not_owned' && node.comment)"
+                        class="flex items-center gap-1 text-[10px] text-muted-400 italic mt-1">
+                        <Icon name="solar:notes-bold-duotone" class="size-3 shrink-0" />
+                        <span class="truncate">"{{ node.attachment?.description || node.comment }}"</span>
+                      </div>
+                    </div>
+
+                    <!-- Arquivo -->
+                    <div v-if="!node.isVirtual" class="hidden md:flex items-center gap-1.5 shrink-0 w-20">
+                      <template v-if="node.attachment">
+                        <Icon name="lucide:file-text" class="size-4 text-muted-400 shrink-0" />
+                        <div class="min-w-0">
+                          <p class="text-[10px] font-bold text-muted-600 dark:text-muted-300 uppercase leading-none">
+                            .{{ node.attachment.fileName.split('.').pop() }}
+                          </p>
+                          <p class="text-[9px] text-muted-400 font-mono leading-none mt-0.5">
+                            {{ (node.attachment.fileSize / 1024).toFixed(0) }}KB
+                          </p>
+                        </div>
+                      </template>
+                      <span v-else class="text-[10px] text-muted-300">—</span>
+                    </div>
+
+                    <!-- Data -->
+                    <div v-if="!node.isVirtual" class="hidden md:block shrink-0 w-14 text-center">
+                      <span v-if="node.attachment?.createdAt" class="text-[10px] text-muted-400 font-mono">
+                        {{ new Date(node.attachment.createdAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit', month: '2-digit'
+                        }) }}
+                      </span>
+                      <span v-else class="text-[10px] text-muted-300">—</span>
+                    </div>
+
+                    <!-- Ações -->
+                    <div class="flex items-center gap-1 shrink-0">
+                      <template v-if="!node.isVirtual">
+                        <!-- Enviado ou Não Possui -->
+                        <template v-if="(node.status === 'uploaded' && node.attachment) || node.status === 'not_owned'">
+                          <BaseButton v-if="node.attachment" variant="ghost" size="icon-sm" rounded="md"
+                            class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                            @click="openPreview(node)">
+                            <Icon name="solar:eye-bold-duotone" class="size-4" />
+                          </BaseButton>
+                          <BaseButton v-if="node.status !== 'not_owned'" color="success" size="icon-sm" rounded="md"
+                            :loading="processingItems.has(node.id)" @click="updateItemStatus(node.id, 'approved')">
+                            <Icon name="lucide:check" class="size-4" />
+                          </BaseButton>
+                          <BaseButton color="danger" size="icon-sm" rounded="md" :loading="processingItems.has(node.id)"
+                            @click="updateItemStatus(node.id, 'rejected')">
+                            <Icon name="lucide:x" class="size-4" />
+                          </BaseButton>
+                        </template>
+
+                        <!-- Pendente ou Rejeitado -->
+                        <template v-else-if="node.status === 'pending' || node.status === 'rejected'">
+                          <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                            :class="node.isRequired ? 'text-danger-500 hover:bg-danger-500/10' : 'text-muted-400 hover:bg-muted-100 hover:text-primary-500'"
+                            @click="toggleItemRequired(node)">
+                            <Icon :name="node.isRequired ? 'lucide:alert-circle' : 'lucide:circle-dashed'"
+                              class="size-4" />
+                          </BaseButton>
+                          <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                            class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10"
+                            @click="removeChecklistItem(node)">
+                            <Icon name="lucide:trash-2" class="size-4" />
+                          </BaseButton>
+                        </template>
+
+                        <!-- Aprovado -->
+                        <template v-else-if="node.status === 'approved'">
+                          <BaseButton v-if="node.attachment" variant="ghost" size="icon-sm" rounded="md"
+                            class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                            @click="openPreview(node)">
+                            <Icon name="solar:eye-bold-duotone" class="size-4" />
+                          </BaseButton>
+                          <BaseButton v-if="!node.isInformeParent" :variant="node.isTyped ? 'muted' : 'ghost'"
+                            size="icon-sm" rounded="md" :loading="processingItems.has(node.id)"
+                            class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                            :class="{ 'opacity-0 group-hover:opacity-100': !node.isTyped, 'text-primary-500!': node.isTyped }"
+                            title="Marcar como Digitado" @click="toggleDigitado(node)">
+                            <Icon name="solar:pen-bold-duotone" class="size-4" />
+                          </BaseButton>
+                          <BaseButton v-if="!node.isInformeParent" variant="ghost" size="icon-sm" rounded="md"
+                            :loading="processingItems.has(node.id)"
+                            class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-warning-500 hover:bg-warning-500/10"
+                            title="Reverter Aprovação" @click="updateItemStatus(node.id, 'pending')">
+                            <Icon name="lucide:rotate-ccw" class="size-4" />
+                          </BaseButton>
+                        </template>
+                      </template>
+                    </div>
                   </div>
 
-                  <!-- Data -->
-                  <div class="hidden md:block shrink-0 w-14 text-center">
-                    <span v-if="item.attachment?.createdAt" class="text-[10px] text-muted-400 font-mono">
-                      {{ new Date(item.attachment.createdAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit', month:
-                          '2-digit'
-                      }) }}
-                    </span>
-                    <span v-else class="text-[10px] text-muted-300">—</span>
-                  </div>
+                  <!-- Children (Sub-items) -->
+                  <div v-for="child in node.children" :key="child.id"
+                    class="group flex items-center gap-3 pl-12 pr-4 py-2 bg-muted-50/30 dark:bg-muted-900/10 hover:bg-muted-50/60 dark:hover:bg-muted-900/30 transition-colors border-l-3"
+                    :class="[
+                      child.status === 'approved' ? 'border-success-500' :
+                        child.status === 'rejected' ? 'border-danger-500' :
+                          child.status === 'uploaded' ? 'border-warning-500' :
+                            child.status === 'not_owned' ? 'border-info-500' :
+                              'border-muted-200 dark:border-muted-700'
+                    ]">
+                    <!-- Bank Icon -->
+                    <div
+                      class="size-6 rounded-md overflow-hidden bg-white border border-muted-200 dark:border-muted-800 shrink-0 flex items-center justify-center">
+                      <img :src="getBankIcon(child.title)" class="size-full object-cover" :alt="child.title">
+                    </div>
 
-                  <!-- Ações -->
-                  <div class="flex items-center gap-1 shrink-0">
-                    <!-- Enviado ou Não Possui: Visualizar + Aprovar + Rejeitar -->
-                    <template v-if="(item.status === 'uploaded' && item.attachment) || item.status === 'not_owned'">
-                      <BaseButton v-if="item.attachment" variant="ghost" size="icon-sm" rounded="md"
-                        class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                        @click="openPreview(item)">
-                        <Icon name="solar:eye-bold-duotone" class="size-4" />
-                      </BaseButton>
-                      <BaseButton color="success" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
-                        v-if="item.status !== 'not_owned'" @click="updateItemStatus(item.id, 'approved')">
-                        <Icon name="lucide:check" class="size-4" />
-                      </BaseButton>
-                      <BaseButton color="danger" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
-                        @click="updateItemStatus(item.id, 'rejected')">
-                        <Icon name="lucide:x" class="size-4" />
-                      </BaseButton>
-                    </template>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[11px] font-medium text-muted-700 dark:text-muted-200 leading-snug">
+                        {{ child.title.split(' - ').slice(1).join(' - ') }}
+                      </p>
+                      <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <BaseTag v-if="child.status !== 'pending'" size="sm" variant="none"
+                          class="text-[8px] px-1 h-3.5 leading-none font-bold uppercase"
+                          :class="statusTagClass(child.status)">
+                          {{ statusLabel(child.status) }}
+                        </BaseTag>
+                        <BaseTag v-if="child.isTyped" size="sm" variant="none"
+                          class="bg-primary-500 text-white text-[8px] px-1 h-3.5 leading-none font-bold uppercase">
+                          Digitado
+                        </BaseTag>
+                      </div>
+                    </div>
 
-                    <!-- Pendente ou Rejeitado: Obrigatório + Lixeira -->
-                    <template v-else-if="item.status === 'pending' || item.status === 'rejected'">
+                    <!-- Arquivo Child -->
+                    <div class="hidden md:flex items-center gap-1 shrink-0 w-16">
+                      <template v-if="child.attachment">
+                        <Icon name="lucide:file-text" class="size-3 text-muted-400 shrink-0" />
+                        <span class="text-[9px] font-bold text-muted-500 uppercase truncate">
+                          .{{ child.attachment.fileName.split('.').pop() }}
+                        </span>
+                      </template>
+                    </div>
+
+                    <!-- Ações Child -->
+                    <div class="flex items-center gap-1 shrink-0">
+                      <!-- Enviado ou Não Possui -->
+                      <template
+                        v-if="(child.status === 'uploaded' && child.attachment) || child.status === 'not_owned'">
+                        <BaseButton variant="ghost" size="icon-sm" rounded="md"
+                          class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                          @click="openPreview(child)">
+                          <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                        </BaseButton>
+                        <BaseButton v-if="child.status !== 'not_owned'" color="success" size="icon-sm" rounded="md"
+                          :loading="processingItems.has(child.id)" @click="updateItemStatus(child.id, 'approved')">
+                          <Icon name="lucide:check" class="size-3.5" />
+                        </BaseButton>
+                        <BaseButton color="danger" size="icon-sm" rounded="md" :loading="processingItems.has(child.id)"
+                          @click="updateItemStatus(child.id, 'rejected')">
+                          <Icon name="lucide:x" class="size-3.5" />
+                        </BaseButton>
+                      </template>
+
+                      <!-- Aprovado -->
+                      <template v-else-if="child.status === 'approved'">
+                        <BaseButton v-if="child.attachment" variant="ghost" size="icon-sm" rounded="md"
+                          class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                          @click="openPreview(child)">
+                          <Icon name="solar:eye-bold-duotone" class="size-3.5" />
+                        </BaseButton>
+                        <BaseButton :variant="child.isTyped ? 'muted' : 'ghost'" size="icon-sm" rounded="md"
+                          :loading="processingItems.has(child.id)"
+                          class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                          :class="{ 'text-primary-500!': child.isTyped }" title="Marcar como Digitado"
+                          @click="toggleDigitado(child)">
+                          <Icon name="solar:pen-bold-duotone" class="size-3.5" />
+                        </BaseButton>
+                        <BaseButton variant="ghost" size="icon-sm" rounded="md" :loading="processingItems.has(child.id)"
+                          class="text-muted-300 hover:text-warning-500 hover:bg-warning-500/10"
+                          @click="updateItemStatus(child.id, 'pending')">
+                          <Icon name="lucide:rotate-ccw" class="size-3.5" />
+                        </BaseButton>
+                      </template>
+
+                      <!-- Delete Child -->
                       <BaseButton variant="ghost" size="icon-sm" rounded="md"
-                        :class="item.isRequired ? 'text-danger-500 hover:bg-danger-500/10' : 'text-muted-400 hover:bg-muted-100 hover:text-primary-500'"
-                        @click="toggleItemRequired(idx)">
-                        <Icon :name="item.isRequired ? 'lucide:alert-circle' : 'lucide:circle-dashed'" class="size-4" />
+                        class="text-muted-300 hover:text-danger-500 opacity-0 group-hover:opacity-100"
+                        @click="removeChecklistItem(child)">
+                        <Icon name="lucide:trash-2" class="size-3.5" />
                       </BaseButton>
-                      <BaseButton variant="ghost" size="icon-sm" rounded="md"
-                        class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-danger-500 hover:bg-danger-500/10"
-                        @click="removeChecklistItem(idx)">
-                        <Icon name="lucide:trash-2" class="size-4" />
-                      </BaseButton>
-                    </template>
-
-                    <!-- Aprovado: Visualizar + Reverter -->
-                    <template v-else-if="item.status === 'approved'">
-                      <BaseButton v-if="item.attachment" variant="ghost" size="icon-sm" rounded="md"
-                        class="text-muted-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                        @click="openPreview(item)">
-                        <Icon name="solar:eye-bold-duotone" class="size-4" />
-                      </BaseButton>
-                      <BaseButton variant="ghost" size="icon-sm" rounded="md" :loading="processingItems.has(item.id)"
-                        class="opacity-0 group-hover:opacity-100 text-muted-400 hover:text-warning-500 hover:bg-warning-500/10"
-                        title="Reverter Aprovação" @click="updateItemStatus(item.id, 'pending')">
-                        <Icon name="lucide:rotate-ccw" class="size-4" />
-                      </BaseButton>
-                    </template>
+                    </div>
                   </div>
-                </div>
+                </template>
 
                 <!-- Empty State -->
                 <div v-if="checklistItems.length === 0" class="flex flex-col items-center justify-center py-16 px-4">

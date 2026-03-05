@@ -47,6 +47,15 @@ function isBankAlreadySent(bankName: string) {
   )
 }
 
+function getParentBankStatus(doc: any) {
+  const uploads = getBankUploads(doc.id)
+  if (uploads.length > 0) {
+    if (uploads.every(d => d.status === 'approved')) return 'approved'
+    return 'uploaded'
+  }
+  return doc.status
+}
+
 async function loadDocuments() {
   if (!token.value && !user.value?.id)
     return
@@ -417,10 +426,25 @@ function viewDocument(doc: any) {
                 <BaseHeading as="h4" size="sm" weight="bold" class="text-muted-800 dark:text-muted-100">
                   {{ doc.title }}
                 </BaseHeading>
+                <BaseTag v-if="doc.isRequired" color="danger" variant="primary" rounded="full"
+                  class="text-[9px] uppercase font-bold py-0.5 px-2">
+                  Obrigatório
+                </BaseTag>
               </div>
               <BaseParagraph size="xs" class="text-muted-500 leading-relaxed">
                 Envie o informe de rendimentos de cada banco separadamente. Selecione o banco e importe o documento.
               </BaseParagraph>
+            </div>
+
+            <!-- Status / Action -->
+            <div class="shrink-0 flex flex-col items-center gap-2">
+              <div class="size-10 rounded-xl flex items-center justify-center transition-colors"
+                :class="[getStatusColor(getParentBankStatus(doc))]">
+                <Icon :name="getStatusIcon(getParentBankStatus(doc))" class="size-6" />
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{
+                getStatusLabel(getParentBankStatus(doc))
+                }}</span>
             </div>
           </div>
 
