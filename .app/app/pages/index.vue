@@ -88,26 +88,53 @@ function handlePinPaste(event: ClipboardEvent) {
 }
 
 function handlePinType(event: KeyboardEvent, index: number) {
-  if (event.code === 'ArrowRight') {
+  if (event.code === 'ArrowRight' || event.key === 'ArrowRight') {
     event.preventDefault()
     nextTick(() => focusPinField(Math.min(pinLength.value, index + 1)))
     return
   }
-  if (event.code === 'ArrowLeft') {
+  if (event.code === 'ArrowLeft' || event.key === 'ArrowLeft') {
     event.preventDefault()
     nextTick(() => focusPinField(Math.max(1, index - 1)))
     return
   }
-  if (event.code === 'Backspace') {
-    event.preventDefault()
+  if (event.code === 'Backspace' || event.key === 'Backspace') {
+    // If field is empty, go back
+    if (!pinInput.value[index - 1] && index > 1) {
+      event.preventDefault()
+      pinInput.value[index - 2] = undefined
+      nextTick(() => focusPinField(index - 1))
+    } else {
+      pinInput.value[index - 1] = undefined
+    }
+    return
+  }
+}
+
+function handleInput(event: Event, index: number) {
+  const el = event.target as HTMLInputElement
+  const rawValue = el.value
+
+  // Pegamos apenas o último dígito para evitar duplicidade em colagem ou digitação rápida
+  const digit = rawValue.replace(/\D/g, '').slice(-1)
+
+  if (digit !== '') {
+    // Atualiza o estado do Vue
+    pinInput.value[index - 1] = Number(digit)
+
+    // Força o valor no elemento para garantir sincronia imediata
+    el.value = digit
+
+    if (index < pinLength.value) {
+      // Pequeno delay para permitir que o evento de input termine antes de mudar o foco
+      setTimeout(() => {
+        focusPinField(index + 1)
+      }, 20)
+    }
+  }
+  else {
     pinInput.value[index - 1] = undefined
-    nextTick(() => focusPinField(Math.max(1, index - 1)))
-    return
-  }
-  const key = event.key.replace(/\D/g, '')
-  if (key !== '') {
-    pinInput.value[index - 1] = Number(key)
-    nextTick(() => focusPinField(Math.min(pinLength.value, index + 1)))
+    el.value = ''
   }
 }
 
@@ -163,14 +190,23 @@ async function getRecaptcha() {
   }
 }
 
+// Adiciona um debounce no watch para evitar múltiplas chamadas rápidas
+const debouncedValidate2FA = useDebounceFn((code: string) => {
+  validate2FACode(code)
+}, 300)
+
+const debouncedVerifyRecovery = useDebounceFn((code: string) => {
+  verifyRecoveryCode(code)
+}, 300)
+
 // PIN Watcher
 watch(pinInput, (newValue) => {
-  const code = newValue.join('')
+  const code = newValue.filter(v => v !== undefined).join('')
   if (code.length === pinLength.value) {
     if (isTwoFactor.value) {
-      validate2FACode(code)
+      debouncedValidate2FA(code)
     } else if (mode.value === 'recovery-verify') {
-      verifyRecoveryCode(code)
+      debouncedVerifyRecovery(code)
     }
   }
 }, { deep: true })
@@ -594,10 +630,12 @@ const onSubmit = handleSubmit(async (values) => {
                   <div class="flex justify-center gap-2 sm:gap-3" :class="logged && 'pointer-events-none'">
                     <input v-for="i in pinLength" :key="`pin${i}`"
                       :ref="(el) => pinInputElements[i] = el as HTMLInputElement" v-focus="i === 1" type="text"
-                      maxlength="1"
+                      inputmode="numeric" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore
+                      data-autofill="false" maxlength="1"
                       class="dark:bg-muted-800 dark:border-muted-700 h-14 w-10 sm:h-16 sm:w-12 rounded-xl border-2 border-muted-200 bg-white text-center text-3xl font-bold transition-all focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
                       :value="pinInput[i - 1] !== undefined ? pinInput[i - 1] : ''" placeholder="&bull;"
-                      :disabled="logged" @paste.prevent="handlePinPaste" @keydown="(event) => handlePinType(event, i)">
+                      :disabled="logged" @paste.prevent="handlePinPaste" @keydown="(event) => handlePinType(event, i)"
+                      @input="handleInput($event, i)">
                   </div>
 
                   <!-- Status -->
