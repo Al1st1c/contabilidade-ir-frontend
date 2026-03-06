@@ -416,7 +416,8 @@ function viewDocument(doc: any) {
         <!-- =================================================================
              INFORME DE RENDIMENTOS: Layout especial de bancos
              ================================================================= -->
-        <div v-if="isIncomeReport(doc.title) && !doc.title.startsWith('Informe de Rendimentos - ')"
+        <div
+          v-if="isIncomeReport(doc.title) && !doc.title.startsWith('Informe de Rendimentos - ') && !doc.title.toUpperCase().includes('ASSALARIADO')"
           class="p-5 bg-white dark:bg-muted-950 rounded-2xl border border-muted-200 dark:border-muted-800 shadow-sm">
           <!-- Header -->
           <div class="flex items-start justify-between gap-4 mb-4">
@@ -444,7 +445,7 @@ function viewDocument(doc: any) {
               </div>
               <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{
                 getStatusLabel(getParentBankStatus(doc))
-                }}</span>
+              }}</span>
             </div>
           </div>
 
@@ -570,7 +571,7 @@ function viewDocument(doc: any) {
                 <Icon :name="getStatusIcon(doc.status)" class="size-6" />
               </div>
               <span class="text-[10px] font-bold uppercase tracking-tighter opacity-70">{{ getStatusLabel(doc.status)
-                }}</span>
+              }}</span>
             </div>
           </div>
 
