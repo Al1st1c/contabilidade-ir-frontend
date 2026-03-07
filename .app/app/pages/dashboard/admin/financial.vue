@@ -1,551 +1,479 @@
 <script setup lang="ts">
-import { PanelsPanelAdminUserAnalytics } from '#components'
-
-definePageMeta({ title: 'Financeiro — Admin' })
-
-const { open } = usePanels()
 const { useCustomFetch } = useApi()
+const { data, refresh, pending } = await useAsyncData('admin-financial', async () => {
+  const { data } = await useCustomFetch<any>('/admin/financial')
+  return data
+})
 
-const data = ref<any>(null)
-const isLoading = ref(true)
-const activeTab = ref<'overview' | 'overdue' | 'churn' | 'transactions'>('overview')
-
-async function fetchData() {
-  try {
-    isLoading.value = true
-    const { data: res } = await useCustomFetch<any>('/admin/financial')
-    data.value = res
-  }
-  catch (e) {
-    console.error('Erro ao buscar dados financeiros:', e)
-  }
-  finally {
-    isLoading.value = false
-  }
+const fmt = (v: number) => {
+  if (v === undefined || v === null) return 'R$ 0,00'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 }
 
-onMounted(fetchData)
-
-function openUser(userId: string) {
-  open(PanelsPanelAdminUserAnalytics, { userId })
-}
-
-function fmt(val: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
-}
-
-function fmtCompact(val: number) {
-  if (val >= 1000) {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(val)
-  }
-  return fmt(val)
-}
-
-function fmtDate(d: string) {
+const fmtDate = (d: string | Date) => {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('pt-BR')
 }
 
-function fmtDateTime(d: string) {
+const fmtDateTime = (d: string | Date) => {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-function statusColor(status: string) {
-  switch (status) {
+
+
+const statusColor = (status: string) => {
+  const s = String(status || '').toUpperCase()
+  switch (s) {
     case 'PAID':
-    case 'COMPLETED':
-      return 'success'
-    case 'PENDING':
-      return 'warning'
-    case 'FAILED':
-    case 'CANCELLED':
-      return 'danger'
-    default:
-      return 'muted'
+    case 'COMPLETED': return 'success'
+    case 'PENDING': return 'warning'
+    case 'FAILED': return 'danger'
+    case 'REFUNDED': return 'info'
+    default: return 'muted'
   }
 }
 
-function paymentTypeLabel(type: string) {
+const paymentTypeLabel = (type: string) => {
   switch (type) {
-    case 'SUBSCRIPTION':
-      return 'Assinatura'
-    case 'CREDIT_PURCHASE':
-      return 'Compra IR'
-    default:
-      return type
+    case 'SUBSCRIPTION': return 'Assinatura'
+    case 'CREDIT_PURCHASE': return 'Pré-pago'
+    default: return type
   }
 }
 
-// ─── Charts ───
+// KPI Modal State
+const isKpiModalOpen = ref(false)
+const kpiModalTitle = ref('')
+const kpiItems = ref<any[]>([])
+const pendingKpi = ref(false)
 
-const timelineChart = computed(() => {
-  if (!data.value?.timeline) return null
-  return defineApexchartsProps({
-    type: 'area',
-    height: 350,
-    series: [
-      { name: 'Assinaturas', data: data.value.timeline.subscriptions },
-      { name: 'Pré-pago (IRs)', data: data.value.timeline.prepaid },
-      { name: 'Comissões', data: data.value.timeline.commissions },
-      { name: 'Líquido', data: data.value.timeline.net },
-    ],
-    options: {
-      chart: { toolbar: { show: false }, stacked: false },
-      colors: ['#6366f1', '#06b6d4', '#f97316', '#10b981'],
-      xaxis: { categories: data.value.timeline.labels },
-      stroke: { curve: 'smooth', width: [2, 2, 2, 3] },
-      fill: {
-        type: 'gradient',
-        gradient: { shadeIntensity: 1, opacityFrom: [0.4, 0.3, 0.2, 0.5], opacityTo: [0.05, 0.05, 0.05, 0.1] },
-      },
-      yaxis: {
-        labels: {
-          formatter: (v: number) => fmtCompact(v),
-        },
-      },
-      tooltip: { y: { formatter: (v: number) => fmt(v) } },
-    },
-  })
-})
+const openKpiDetails = async (kpiCode: string, title: string) => {
+  kpiModalTitle.value = title
+  kpiItems.value = []
+  isKpiModalOpen.value = true
+  pendingKpi.value = true
 
-const planBarChart = computed(() => {
-  if (!data.value?.revenueByPlan?.length) return null
-  return defineApexchartsProps({
-    type: 'bar',
-    height: 280,
-    series: [{ name: 'Receita', data: data.value.revenueByPlan.map((p: any) => p.revenue) }],
-    options: {
-      chart: { toolbar: { show: false } },
-      plotOptions: { bar: { borderRadius: 8, horizontal: true, barHeight: '60%' } },
-      colors: ['#6366f1'],
-      xaxis: { categories: data.value.revenueByPlan.map((p: any) => p.name), labels: { formatter: (v: number) => fmtCompact(v) } },
-      tooltip: { y: { formatter: (v: number) => fmt(v) } },
-      dataLabels: { enabled: false },
-    },
-  })
-})
+  try {
+    const { data: res } = await useCustomFetch<any[]>(`/admin/financial/kpi-details?kpi=${kpiCode}`)
+    if (res) kpiItems.value = res as any[]
+  } catch (err) {
+    console.error(err)
+  } finally {
+    pendingKpi.value = false
+  }
+}
 
-const methodDonut = computed(() => {
-  if (!data.value?.revenueByMethod?.length) return null
-  return defineApexchartsProps({
-    type: 'donut',
-    height: 280,
-    series: data.value.revenueByMethod.map((m: any) => m.revenue),
-    options: {
-      labels: data.value.revenueByMethod.map((m: any) => m.method),
-      legend: { position: 'bottom' },
-      dataLabels: { enabled: false },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '70%',
-            labels: {
-              show: true,
-              total: {
-                show: true,
-                label: 'Total',
-                formatter: () => fmt(data.value.revenueByMethod.reduce((s: number, m: any) => s + m.revenue, 0)),
-              },
-            },
-          },
-        },
-      },
-    },
-  })
+const activeTab = ref('dashboard')
+
+const latestFivePayments = computed(() => {
+  if (!data.value?.recentPayments) return []
+  return data.value.recentPayments.slice(0, 5)
 })
 </script>
 
 <template>
   <div class="px-4 md:px-6 lg:px-8 pb-20">
-    <AppPageLoading v-if="isLoading" min-height="60vh" message="Carregando dados financeiros..." />
-
-    <div v-else-if="data" class="space-y-8 animate-fade-in">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <NuxtLink to="/dashboard/admin"
-            class="text-primary-500 hover:opacity-75 transition-opacity flex items-center gap-1 mb-2 text-sm font-medium">
-            <Icon name="solar:alt-arrow-left-linear" class="size-4" />
-            Admin
-          </NuxtLink>
-          <BaseHeading as="h1" size="2xl" weight="bold" class="text-muted-800 dark:text-white">
-            Financeiro
-          </BaseHeading>
-          <BaseParagraph size="sm" class="text-muted-500">
-            Visão completa de receita, assinaturas e pagamentos
-          </BaseParagraph>
-        </div>
-        <BaseButton rounded="md" :loading="isLoading" @click="fetchData">
-          <Icon name="lucide:refresh-cw" class="size-4 mr-1" />
-          Atualizar
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <BaseHeading as="h2" size="2xl">Financeiro</BaseHeading>
+        <BaseParagraph size="sm" class="text-muted-500">Métricas completas de faturamento e comissões</BaseParagraph>
+      </div>
+      <div>
+        <BaseButton color="default" variant="default" size="sm" @click="refresh" :loading="pending">
+          <Icon name="lucide:refresh-cw" class="size-4 mr-2" />
+          Atualizar Dados
         </BaseButton>
       </div>
+    </div>
 
-      <!-- ── KPI Cards ── -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <!-- MRR -->
-        <BaseCard class="p-4 sm:p-5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:graph-up-bold-duotone" class="size-5 text-indigo-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-400">MRR</p>
-              <p class="text-lg font-bold text-muted-800 dark:text-white truncate">{{ fmtCompact(data.kpis.mrr) }}</p>
-            </div>
-          </div>
-        </BaseCard>
-
-        <!-- ARR -->
-        <BaseCard class="p-4 sm:p-5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:chart-2-bold-duotone" class="size-5 text-purple-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-400">ARR</p>
-              <p class="text-lg font-bold text-muted-800 dark:text-white truncate">{{ fmtCompact(data.kpis.arr) }}</p>
-            </div>
-          </div>
-        </BaseCard>
-
-        <!-- Revenue This Month -->
-        <BaseCard class="p-4 sm:p-5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:wallet-money-bold-duotone" class="size-5 text-primary-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-400">Este Mês</p>
-              <p class="text-lg font-bold text-muted-800 dark:text-white truncate">
-                {{ fmtCompact(data.kpis.revenueThisMonth) }}</p>
-              <div v-if="data.kpis.momGrowth !== 0" class="flex items-center gap-1 mt-0.5">
-                <Icon :name="data.kpis.momGrowth > 0 ? 'lucide:trending-up' : 'lucide:trending-down'" class="size-3"
-                  :class="data.kpis.momGrowth > 0 ? 'text-success-500' : 'text-danger-500'" />
-                <span class="text-[10px] font-bold"
-                  :class="data.kpis.momGrowth > 0 ? 'text-success-500' : 'text-danger-500'">
-                  {{ data.kpis.momGrowth > 0 ? '+' : '' }}{{ data.kpis.momGrowth }}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </BaseCard>
-
-        <!-- Prepaid This Month -->
-        <BaseCard class="p-4 sm:p-5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:tag-price-bold-duotone" class="size-5 text-cyan-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-400">Pré-pago</p>
-              <p class="text-lg font-bold text-muted-800 dark:text-white truncate">
-                {{ fmtCompact(data.kpis.prepaidThisMonth) }}</p>
-            </div>
-          </div>
-        </BaseCard>
-
-        <!-- Commissions This Month -->
-        <BaseCard class="p-4 sm:p-5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:hand-money-bold-duotone" class="size-5 text-orange-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-muted-400">Comissões</p>
-              <p class="text-lg font-bold text-muted-800 dark:text-white truncate">
-                {{ fmtCompact(data.kpis.commissionsThisMonth) }}</p>
-            </div>
-          </div>
-        </BaseCard>
-
-        <!-- Net Revenue -->
-        <BaseCard class="p-4 sm:p-5 border-success-500/20 bg-success-500/5">
-          <div class="flex items-center gap-3">
-            <div class="size-10 rounded-xl bg-success-500/10 flex items-center justify-center shrink-0">
-              <Icon name="solar:dollar-minimalistic-bold-duotone" class="size-5 text-success-500" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-widest text-success-500">Líquido</p>
-              <p class="text-lg font-bold text-success-600 dark:text-success-400 truncate">
-                {{ fmtCompact(data.kpis.netThisMonth) }}</p>
-            </div>
-          </div>
-        </BaseCard>
-      </div>
-
-      <!-- ── All-Time Summary Bar ── -->
-      <BaseCard class="p-4 sm:p-5 flex flex-wrap items-center gap-6 sm:gap-10">
-        <div class="flex items-center gap-2">
-          <Icon name="solar:safe-2-bold-duotone" class="size-5 text-muted-400" />
-          <div>
-            <p class="text-[10px] text-muted-400 uppercase font-bold">Total Geral</p>
-            <p class="text-sm font-bold text-muted-700 dark:text-muted-200">{{ fmt(data.kpis.totalRevenue) }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <Icon name="solar:hand-money-bold-duotone" class="size-5 text-orange-400" />
-          <div>
-            <p class="text-[10px] text-muted-400 uppercase font-bold">Comissões Totais</p>
-            <p class="text-sm font-bold text-orange-500">{{ fmt(data.kpis.totalCommissions) }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <Icon name="solar:dollar-minimalistic-bold-duotone" class="size-5 text-success-500" />
-          <div>
-            <p class="text-[10px] text-muted-400 uppercase font-bold">Líquido Total</p>
-            <p class="text-sm font-bold text-success-600">{{ fmt(data.kpis.totalNet) }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <Icon name="solar:users-group-rounded-bold-duotone" class="size-5 text-primary-400" />
-          <div>
-            <p class="text-[10px] text-muted-400 uppercase font-bold">Assinaturas Ativas</p>
-            <p class="text-sm font-bold text-primary-500">{{ data.kpis.activeSubscriptions }}</p>
-          </div>
-        </div>
-      </BaseCard>
-
-      <!-- ── Tabs ── -->
-      <div class="flex items-center gap-2 border-b border-muted-200 dark:border-muted-800 overflow-x-auto">
-        <button v-for="tab in [
-          { id: 'overview', label: 'Visão Geral', icon: 'solar:chart-square-bold-duotone' },
-          { id: 'overdue', label: `Em Atraso (${data.overduePayments?.length || 0})`, icon: 'solar:alarm-bold-duotone' },
-          { id: 'churn', label: `Cancelamentos (${data.churn?.length || 0})`, icon: 'solar:forbidden-circle-bold-duotone' },
-          { id: 'transactions', label: 'Transações', icon: 'solar:list-check-bold-duotone' },
-        ]" :key="tab.id"
-          class="flex items-center gap-1.5 px-4 py-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap"
-          :class="activeTab === tab.id
-            ? 'border-primary-500 text-primary-500'
-            : 'border-transparent text-muted-400 hover:text-muted-600'" @click="activeTab = tab.id as any">
-          <Icon :name="tab.icon" class="size-4" />
-          {{ tab.label }}
+    <!-- Abas -->
+    <div class="mb-6 border-b border-muted-200 dark:border-muted-800">
+      <div class="flex gap-6">
+        <button @click="activeTab = 'dashboard'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
+          :class="activeTab === 'dashboard' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300'">
+          Visão Geral
+        </button>
+        <button @click="activeTab = 'prepaid'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
+          :class="activeTab === 'prepaid' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300'">
+          Pré-pagos (IR)
+        </button>
+        <button @click="activeTab = 'transactions'" class="pb-3 text-sm font-medium border-b-2 transition-colors"
+          :class="activeTab === 'transactions' ? 'border-primary-500 text-primary-600' : 'border-transparent text-muted-500 hover:text-muted-700 dark:hover:text-muted-300'">
+          Transações
         </button>
       </div>
+    </div>
 
-      <!-- ═══ Tab: Overview ═══ -->
-      <div v-if="activeTab === 'overview'" class="space-y-6">
-        <!-- Revenue Timeline -->
-        <BaseCard class="p-6">
-          <div class="flex items-center justify-between mb-6">
-            <BaseHeading as="h4" size="md">Evolução de Receita</BaseHeading>
-            <div class="flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider">
-              <div class="flex items-center gap-1 text-indigo-500">
-                <div class="size-2 rounded-full bg-current" />
-                <span>Assinaturas</span>
+    <!-- SKELETON LOADING -->
+    <div v-if="pending" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <BaseCard v-for="i in 4" :key="i" class="p-6 h-28 animate-pulse bg-muted-100 dark:bg-muted-900"></BaseCard>
+      </div>
+      <BaseCard class="p-20 text-center animate-pulse bg-muted-100 dark:bg-muted-900"></BaseCard>
+    </div>
+
+    <!-- CONTEUDO -->
+    <div v-else-if="data" class="space-y-6">
+
+      <!-- ABA 1: VISÃO GERAL -->
+      <div v-if="activeTab === 'dashboard'" class="space-y-6">
+
+        <!-- KPIs Principais -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <BaseCard class="p-5 cursor-pointer hover:border-primary-500 transition-colors"
+            @click="openKpiDetails('total_entradas', 'Total Geral Entradas')">
+            <BaseText size="xs" class="text-muted-500 uppercase tracking-wider font-semibold mb-1">Total Geral
+              Entradas</BaseText>
+            <BaseHeading as="h3" size="2xl">{{ fmt(data.kpis.totalAllTime) }}</BaseHeading>
+            <BaseText size="sm" class="text-muted-400 mt-2">Mês: {{ fmt(data.kpis.totalMonth) }}</BaseText>
+          </BaseCard>
+
+          <BaseCard class="p-5 border-l-4 border-success-500 cursor-pointer hover:border-success-400 transition-colors"
+            @click="openKpiDetails('mrr', 'MRR (Mensal Recorrente)')">
+            <BaseText size="xs" class="text-success-600 uppercase tracking-wider font-semibold mb-1">MRR (Mensal
+              Recorrente)</BaseText>
+            <BaseHeading as="h3" size="2xl" class="text-success-600">{{ fmt(data.kpis.mrr) }}</BaseHeading>
+            <BaseText size="sm" class="text-muted-400 mt-2">Previsão baseada em ativos</BaseText>
+          </BaseCard>
+
+          <BaseCard class="p-5 cursor-pointer hover:border-primary-500 transition-colors"
+            @click="openKpiDetails('pix', 'Total PIX')">
+            <BaseText size="xs" class="text-muted-500 uppercase tracking-wider font-semibold mb-1">Total PIX</BaseText>
+            <BaseHeading as="h3" size="2xl">{{ fmt(data.kpis.pixAllTime) }}</BaseHeading>
+            <BaseText size="sm" class="text-muted-400 mt-2">Mês: {{ fmt(data.kpis.pixMonth) }}</BaseText>
+          </BaseCard>
+
+          <BaseCard class="p-5 cursor-pointer hover:border-primary-500 transition-colors"
+            @click="openKpiDetails('cartao', 'Total Cartão / Boleto')">
+            <BaseText size="xs" class="text-muted-500 uppercase tracking-wider font-semibold mb-1">Total Cartão / Boleto
+            </BaseText>
+            <BaseHeading as="h3" size="2xl">{{ fmt(data.kpis.cardAllTime) }}</BaseHeading>
+            <BaseText size="sm" class="text-muted-400 mt-2">Mês: {{ fmt(data.kpis.cardMonth) }}</BaseText>
+          </BaseCard>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Coluna Maior: Planos -->
+          <div class="lg:col-span-2 space-y-6">
+            <BaseCard class="p-6">
+              <BaseHeading as="h4" size="md" class="mb-6">Performance por Plano</BaseHeading>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="text-xs uppercase text-muted-400 border-b border-muted-200 dark:border-muted-800">
+                      <th class="py-3 px-4">Plano</th>
+                      <th class="py-3 px-4 text-center">Assinaturas Ativas</th>
+                      <th class="py-3 px-4 text-center">Pendentes/Não Pago</th>
+                      <th class="py-3 px-4 text-right">Faturamento Total</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-muted-100 dark:divide-muted-800">
+                    <tr v-for="plan in data.planStats" :key="plan.slug"
+                      class="hover:bg-muted-50 dark:hover:bg-muted-900/50 transition-colors">
+                      <td class="py-3 px-4">
+                        <span class="font-medium text-muted-800 dark:text-muted-100">{{ plan.name }}</span>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <span class="font-semibold text-muted-900 dark:text-white">{{ plan.activePaidCount }}</span>
+                        <div class="text-[10px] text-muted-500">{{ plan.monthlyCount }} Mensal | {{ plan.annualCount }}
+                          Anual</div>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <span class="text-muted-600">{{ plan.unpaidCount }}</span>
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <span class="font-semibold text-success-600">{{ fmt(plan.totalRevenue) }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="flex items-center gap-1 text-cyan-500">
-                <div class="size-2 rounded-full bg-current" />
-                <span>Pré-pago</span>
+            </BaseCard>
+
+            <BaseCard class="p-6">
+              <div class="flex items-center justify-between mb-6">
+                <BaseHeading as="h4" size="md">Repasses de Comissões (Pagos)</BaseHeading>
               </div>
-              <div class="flex items-center gap-1 text-orange-500">
-                <div class="size-2 rounded-full bg-current" />
-                <span>Comissões</span>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="text-xs uppercase text-muted-400 border-b border-muted-200 dark:border-muted-800">
+                      <th class="py-3 px-4">Afiliado</th>
+                      <th class="py-3 px-4">Cliente (Venda)</th>
+                      <th class="py-3 px-4 text-right">Data</th>
+                      <th class="py-3 px-4 text-right">Valor Comissão</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-muted-100 dark:divide-muted-800">
+                    <tr v-for="com in data.recentCommissions" :key="com.id"
+                      class="hover:bg-muted-50 dark:hover:bg-muted-900/50">
+                      <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                          <BaseAvatar :src="com.affiliatePhoto" :text="com.affiliateName?.charAt(0)" size="xs" />
+                          <span class="text-sm font-medium">{{ com.affiliateName }}</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4">
+                        <span class="text-sm text-muted-600">{{ com.clientName }}</span>
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <span class="text-xs text-muted-500">{{ fmtDateTime(com.date) }}</span>
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <span class="font-semibold text-success-600">{{ fmt(com.amount) }}</span>
+                      </td>
+                    </tr>
+                    <tr v-if="!data.recentCommissions?.length">
+                      <td colspan="4" class="py-4 text-center text-sm text-muted-500 italic">Nenhuma comissão paga
+                        recentemente.</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div class="flex items-center gap-1 text-success-500">
-                <div class="size-2 rounded-full bg-current" />
-                <span>Líquido</span>
-              </div>
-            </div>
+            </BaseCard>
           </div>
-          <LazyAddonApexcharts v-if="timelineChart" v-bind="timelineChart" />
-        </BaseCard>
 
-        <!-- Revenue by Plan & Method -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- By Plan -->
-          <BaseCard class="p-6">
-            <BaseHeading as="h4" size="md" class="mb-6">Receita por Plano</BaseHeading>
-            <LazyAddonApexcharts v-if="planBarChart" v-bind="planBarChart" />
-
-            <!-- Plan Details Table -->
-            <div class="mt-6 space-y-3 border-t border-muted-200 dark:border-muted-800 pt-4">
-              <div v-for="plan in data.revenueByPlan" :key="plan.name"
-                class="flex items-center justify-between p-2 rounded-lg hover:bg-muted-50 dark:hover:bg-muted-900/40 transition-colors">
-                <div>
-                  <p class="text-sm font-bold text-muted-700 dark:text-muted-200">{{ plan.name }}</p>
-                  <p class="text-[10px] text-muted-400">{{ plan.activeSubscribers }} ativos • {{ plan.payments }}
-                    pgtos</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-sm font-bold text-muted-800 dark:text-muted-100">{{ fmt(plan.revenue) }}</p>
-                  <p class="text-[10px] text-muted-400">Ticket médio: {{ fmt(plan.avgTicket) }}</p>
+          <!-- Coluna Menor: Side widgets -->
+          <div class="space-y-6">
+            <BaseCard class="p-6">
+              <div class="flex items-center justify-between mb-6">
+                <BaseHeading as="h4" size="md">Últimos Pedidos</BaseHeading>
+                <BaseButton size="sm" variant="default" color="default" @click="activeTab = 'transactions'">Ver
+                  Histórico
+                </BaseButton>
+              </div>
+              <div class="space-y-3">
+                <div v-for="p in latestFivePayments" :key="p.id"
+                  class="p-3 border rounded-lg hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors"
+                  :class="['PAID', 'COMPLETED'].includes(p.status) ? 'border-success-500/30 bg-success-500/5' : 'border-muted-200 dark:border-muted-800'">
+                  <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-bold truncate pr-4">{{ p.user?.name || 'Sistema' }}</span>
+                    <span class="text-sm font-black"
+                      :class="['PAID', 'COMPLETED'].includes(p.status) ? 'text-success-600' : 'text-muted-500'">{{
+                        fmt(p.amount) }}</span>
+                  </div>
+                  <div v-if="p.description || p.plan" class="mb-2 text-xs text-muted-600 line-clamp-2">
+                    {{ p.description || `Assinatura - ${p.plan}` }}
+                  </div>
+                  <div class="flex justify-between items-center text-xs text-muted-500">
+                    <div class="flex items-center gap-2">
+                      <BaseTag :color="statusColor(p.status)" size="sm" variant="muted"
+                        class="font-bold !px-1.5 !py-0 uppercase text-[9px]">{{ p.status }}</BaseTag>
+                      <span class="uppercase text-[10px]">{{ p.paymentMethod || '—' }}</span>
+                    </div>
+                    <span>{{ fmtDate(p.createdAt) }}</span>
+                  </div>
                 </div>
               </div>
-              <div v-if="!data.revenueByPlan?.length" class="text-center py-4 text-xs text-muted-400 italic">
-                Nenhum dado de plano disponível.
+            </BaseCard>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 2: PRÉ-PAGOS -->
+      <div v-else-if="activeTab === 'prepaid'" class="space-y-6">
+
+        <!-- Resumo Pré-pagos e Top Buyers -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <BaseCard class="p-6 lg:col-span-1 border-t-4 border-info-500">
+            <BaseHeading as="h4" size="md" class="mb-4">Resumo Mensal</BaseHeading>
+            <div class="space-y-4">
+              <div
+                class="flex justify-between items-center p-3 rounded-md bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+                <div class="flex items-center gap-2">
+                  <Icon name="solar:qr-code-linear" class="size-4 text-primary-500" />
+                  <span class="text-xs font-medium">Acumulado PIX</span>
+                </div>
+                <span class="font-bold text-muted-800 dark:text-white">{{ fmt(data.kpis.prepaidPixMonth) }}</span>
+              </div>
+              <div
+                class="flex justify-between items-center p-3 rounded-md bg-muted-50 dark:bg-muted-900 border border-muted-200 dark:border-muted-800">
+                <div class="flex items-center gap-2">
+                  <Icon name="solar:card-linear" class="size-4 text-info-500" />
+                  <span class="text-xs font-medium">Acumulado Cartão</span>
+                </div>
+                <span class="font-bold text-muted-800 dark:text-white">{{ fmt(data.kpis.prepaidCardMonth) }}</span>
+              </div>
+              <div class="pt-2 flex justify-between items-end">
+                <span class="text-xs uppercase font-bold text-muted-400">Total Mês</span>
+                <span class="text-xl font-black text-info-600">{{ fmt(data.kpis.prepaidMonth) }}</span>
               </div>
             </div>
           </BaseCard>
 
-          <!-- By Method -->
-          <BaseCard class="p-6">
-            <BaseHeading as="h4" size="md" class="mb-6">Receita por Forma de Pagamento</BaseHeading>
-            <LazyAddonApexcharts v-if="methodDonut" v-bind="methodDonut" />
-
-            <div class="mt-6 space-y-3 border-t border-muted-200 dark:border-muted-800 pt-4">
-              <div v-for="m in data.revenueByMethod" :key="m.method"
-                class="flex items-center justify-between p-2 rounded-lg">
-                <div class="flex items-center gap-2">
-                  <Icon
-                    :name="m.method.includes('PIX') ? 'simple-icons:pix' : m.method.includes('Cartão') ? 'solar:card-bold-duotone' : 'solar:bill-list-bold-duotone'"
-                    class="size-4 text-muted-400" />
-                  <p class="text-sm font-medium text-muted-700 dark:text-muted-200">{{ m.method }}</p>
+          <BaseCard class="p-6 lg:col-span-2">
+            <BaseHeading as="h4" size="md" class="mb-4">Maiores Compradores</BaseHeading>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div v-for="(buyer, idx) in data.topBuyers.slice(0, 6)" :key="buyer.userId"
+                class="flex items-center justify-between p-2 rounded-lg border border-muted-200 dark:border-muted-800 hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="size-6 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center text-[10px] font-bold text-muted-400">
+                    {{ Number(idx) + 1 }}
+                  </div>
+                  <BaseAvatar :src="buyer.photo" :text="buyer.name?.charAt(0)" size="xs" />
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-bold text-muted-800 dark:text-white truncate max-w-[130px]">{{ buyer.name
+                    }}</p>
+                    <p class="text-[9px] text-muted-400">{{ buyer.purchaseCount }} Compras</p>
+                  </div>
                 </div>
-                <div class="text-right">
-                  <p class="text-sm font-bold text-muted-800 dark:text-muted-100">{{ fmt(m.revenue) }}</p>
-                  <p class="text-[10px] text-muted-400">{{ m.count }} pagamentos</p>
-                </div>
+                <p class="text-xs font-bold text-success-600">{{ fmt(buyer.totalSpent) }}</p>
               </div>
             </div>
           </BaseCard>
         </div>
-      </div>
 
-      <!-- ═══ Tab: Overdue ═══ -->
-      <div v-if="activeTab === 'overdue'" class="space-y-4">
-        <BaseCard v-if="!data.overduePayments?.length"
-          class="p-10 text-center flex flex-col items-center justify-center">
-          <div class="size-16 bg-success-500/10 rounded-full flex items-center justify-center mb-4">
-            <Icon name="solar:check-circle-bold-duotone" class="size-8 text-success-500" />
-          </div>
-          <BaseHeading as="h3" size="md" class="text-success-600">Sem atrasos!</BaseHeading>
-          <BaseParagraph size="xs" class="text-muted-500 mt-1">Todos os pagamentos estão em dia.</BaseParagraph>
-        </BaseCard>
-
-        <BaseCard v-for="item in data.overduePayments" :key="item.id"
-          class="p-4 flex items-center justify-between hover:bg-muted-50/50 dark:hover:bg-muted-900/30 cursor-pointer transition-colors"
-          @click="openUser(item.user.id)">
-          <div class="flex items-center gap-3 min-w-0">
-            <BaseAvatar :src="item.user.photo" :text="item.user.name?.charAt(0)" size="sm" rounded="full" />
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-muted-800 dark:text-muted-100 truncate">{{ item.user.name }}</p>
-              <p class="text-[10px] text-muted-400 truncate">{{ item.user.email }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4 shrink-0">
-            <div class="text-right">
-              <BaseTag :color="item.daysOverdue > 7 ? 'danger' : 'warning'" variant="muted" rounded="full" size="sm"
-                class="font-bold">
-                {{ item.daysOverdue }}d atraso
-              </BaseTag>
-              <p class="text-[10px] text-muted-400 mt-1">{{ item.plan }} • {{ item.billingPeriod }}</p>
-            </div>
-            <Icon name="lucide:chevron-right" class="size-4 text-muted-300" />
-          </div>
-        </BaseCard>
-      </div>
-
-      <!-- ═══ Tab: Churn ═══ -->
-      <div v-if="activeTab === 'churn'" class="space-y-4">
-        <BaseCard v-if="!data.churn?.length" class="p-10 text-center flex flex-col items-center justify-center">
-          <div class="size-16 bg-success-500/10 rounded-full flex items-center justify-center mb-4">
-            <Icon name="solar:heart-pulse-bold-duotone" class="size-8 text-success-500" />
-          </div>
-          <BaseHeading as="h3" size="md" class="text-success-600">Sem cancelamentos!</BaseHeading>
-          <BaseParagraph size="xs" class="text-muted-500 mt-1">Nenhum cancelamento nos últimos 30 dias.
+        <BaseCard class="p-6">
+          <BaseHeading as="h4" size="md" class="mb-2">Lista de Pré-pagos</BaseHeading>
+          <BaseParagraph size="sm" class="text-muted-500 mb-6">Registro sequencial de compras avulsas de IR.
           </BaseParagraph>
-        </BaseCard>
 
-        <BaseCard v-for="item in data.churn" :key="item.id"
-          class="p-4 flex items-center justify-between hover:bg-muted-50/50 dark:hover:bg-muted-900/30 cursor-pointer transition-colors"
-          @click="openUser(item.user.id)">
-          <div class="flex items-center gap-3 min-w-0">
-            <BaseAvatar :src="item.user.photo" :text="item.user.name?.charAt(0)" size="sm" rounded="full" />
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-muted-800 dark:text-muted-100 truncate">{{ item.user.name }}</p>
-              <p class="text-[10px] text-muted-400 truncate">{{ item.user.email }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-4 shrink-0">
-            <div class="text-right">
-              <BaseTag :color="item.status === 'CANCELLED' ? 'danger' : 'warning'" variant="muted" rounded="full"
-                size="sm" class="font-bold uppercase">
-                {{ item.cancelAtPeriodEnd ? 'Cancelará' : 'Cancelado' }}
-              </BaseTag>
-              <p class="text-[10px] text-muted-400 mt-1">
-                {{ item.plan }} ·
-                {{ item.canceledAt ? fmtDate(item.canceledAt) : `Até ${fmtDate(item.currentPeriodEnd)}` }}
-              </p>
-              <p v-if="item.cancellationReason"
-                class="text-[10px] text-danger-400 italic mt-0.5 truncate max-w-[200px]">
-                "{{ item.cancellationReason }}"
-              </p>
-            </div>
-            <Icon name="lucide:chevron-right" class="size-4 text-muted-300" />
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="text-xs uppercase text-muted-400 border-b border-muted-200 dark:border-muted-800 bg-muted-50 dark:bg-muted-900">
+                  <th class="py-3 px-4 text-center">Data</th>
+                  <th class="py-3 px-4">Cliente / Escritório</th>
+                  <th class="py-3 px-4 text-center">Quantidade de IRs</th>
+                  <th class="py-3 px-4 text-right">Valor Pago</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-muted-100 dark:divide-muted-800">
+                <tr v-for="cp in data.allPrepaid" :key="cp.id"
+                  class="hover:bg-muted-50 dark:hover:bg-muted-900/50 transition-colors">
+                  <td class="py-3 px-4 text-center text-sm text-muted-600">{{ fmtDateTime(cp.date) }}</td>
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-2">
+                      <BaseAvatar :src="cp.user.photo" :text="cp.user.name?.charAt(0)" size="xs" />
+                      <span class="font-medium text-muted-800 dark:text-muted-100">{{ cp.user.name }}</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-4 text-center font-semibold text-muted-700 dark:text-muted-300">
+                    {{ cp.credits }}
+                  </td>
+                  <td class="py-3 px-4 text-right font-semibold text-success-600">
+                    {{ fmt(cp.amount) }}
+                  </td>
+                </tr>
+                <tr v-if="!data.allPrepaid?.length">
+                  <td colspan="4" class="py-6 text-center text-sm text-muted-500 italic">Nenhum crédito vendido.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </BaseCard>
       </div>
 
-      <!-- ═══ Tab: Transactions ═══ -->
-      <div v-if="activeTab === 'transactions'">
-        <BaseCard class="overflow-hidden">
+      <!-- ABA 3: TRANSAÇÕES -->
+      <div v-else-if="activeTab === 'transactions'">
+        <BaseCard class="p-6">
+          <BaseHeading as="h4" size="md" class="mb-6">Histórico de Transações do Sistema</BaseHeading>
+
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left border-collapse">
               <thead>
-                <tr class="bg-muted-50/50 dark:bg-muted-900/50 text-muted-400 uppercase text-[10px] tracking-wider">
-                  <th class="px-4 py-3 font-bold">Usuário</th>
-                  <th class="px-4 py-3 font-bold">Tipo</th>
-                  <th class="px-4 py-3 font-bold">Valor</th>
-                  <th class="px-4 py-3 font-bold">Status</th>
-                  <th class="px-4 py-3 font-bold">Método</th>
-                  <th class="px-4 py-3 font-bold">Plano/Detalhe</th>
-                  <th class="px-4 py-3 font-bold">Data</th>
+                <tr class="text-xs uppercase text-muted-400 border-b border-muted-200 dark:border-muted-800">
+                  <th class="py-3 px-4">Data/Hora</th>
+                  <th class="py-3 px-4">Usuário</th>
+                  <th class="py-3 px-4 text-center">Tipo</th>
+                  <th class="py-3 px-4 text-center">Método</th>
+                  <th class="py-3 px-4 text-center">Status</th>
+                  <th class="py-3 px-4 text-right">Valor</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-muted-100 dark:divide-muted-800">
                 <tr v-for="p in data.recentPayments" :key="p.id"
-                  class="hover:bg-muted-50/50 dark:hover:bg-muted-900/20 cursor-pointer transition-colors"
-                  @click="openUser(p.user.id)">
-                  <td class="px-4 py-3">
+                  class="hover:bg-muted-50 dark:hover:bg-muted-900/50 transition-colors">
+                  <td class="py-3 px-4 text-sm text-muted-500">
+                    {{ fmtDateTime(p.paidAt || p.createdAt) }}
+                  </td>
+                  <td class="py-3 px-4">
                     <div class="flex items-center gap-2">
-                      <BaseAvatar :src="p.user.photo" :text="p.user.name?.charAt(0)" size="xxs" rounded="full" />
-                      <span class="font-medium text-muted-700 dark:text-muted-200 truncate max-w-[120px]">{{
-                        p.user.name }}</span>
+                      <BaseAvatar :src="p.user?.photo" :text="p.user?.name?.charAt(0) || 'S'" size="xs" />
+                      <div>
+                        <span class="font-medium text-muted-800 dark:text-muted-100 block">{{ p.user?.name || 'Sistema'
+                        }}</span>
+                        <span class="text-xs text-muted-500 block">{{ p.user?.email || '—' }}</span>
+                      </div>
                     </div>
                   </td>
-                  <td class="px-4 py-3">
-                    <BaseTag :color="p.paymentType === 'SUBSCRIPTION' ? 'primary' : 'info'" variant="muted"
-                      rounded="full" size="sm" class="font-bold !text-[9px]">
-                      {{ paymentTypeLabel(p.paymentType) }}
-                    </BaseTag>
+                  <td class="py-3 px-4 text-center">
+                    <span class="text-xs font-medium text-muted-600">{{ paymentTypeLabel(p.paymentType) }}</span>
                   </td>
-                  <td class="px-4 py-3 font-bold text-muted-800 dark:text-muted-100">{{ fmt(p.amount) }}</td>
-                  <td class="px-4 py-3">
-                    <BaseTag :color="statusColor(p.status)" rounded="full" size="sm" variant="muted"
-                      class="font-bold !text-[9px] uppercase">
-                      {{ p.status }}
-                    </BaseTag>
+                  <td class="py-3 px-4 text-center">
+                    <span class="text-xs uppercase px-2 py-1 rounded bg-muted-100 dark:bg-muted-800 text-muted-600">{{
+                      p.paymentMethod || '—' }}</span>
                   </td>
-                  <td class="px-4 py-3 text-muted-500">{{ p.paymentMethod || '—' }}</td>
-                  <td class="px-4 py-3 text-muted-500">
-                    <span v-if="p.plan">{{ p.plan }}</span>
-                    <span v-else-if="p.creditPurchase">{{ p.creditPurchase.creditsAmount }} IRs</span>
-                    <span v-else>—</span>
+                  <td class="py-3 px-4 text-center">
+                    <BaseTag :color="statusColor(p.status)" size="sm" variant="muted"
+                      class="font-bold !px-2 uppercase text-[10px]">{{ p.status }}</BaseTag>
                   </td>
-                  <td class="px-4 py-3 text-muted-400 whitespace-nowrap">{{ fmtDateTime(p.paidAt || p.createdAt) }}
+                  <td class="py-3 px-4 text-right">
+                    <span class="font-bold"
+                      :class="['PAID', 'COMPLETED'].includes(p.status) ? 'text-success-600' : 'text-muted-500'">
+                      {{ fmt(p.amount) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="!data.recentPayments?.length">
+                  <td colspan="7" class="py-6 text-center text-sm text-muted-500 italic">Nenhuma transação encontrada.
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div v-if="!data.recentPayments?.length" class="text-center py-10 text-xs text-muted-400 italic">
-            Nenhuma transação encontrada.
-          </div>
         </BaseCard>
       </div>
+
     </div>
+
+    <!-- MODAL DE DETALHES DE KPI -->
+    <div v-if="isKpiModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-muted-900/50 backdrop-blur-sm">
+      <BaseCard class="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        <div class="flex items-center justify-between p-4 border-b border-muted-200 dark:border-muted-800">
+          <BaseHeading as="h3" size="md">Detalhes: {{ kpiModalTitle }}</BaseHeading>
+          <button @click="isKpiModalOpen = false" class="p-2 text-muted-400 hover:text-muted-600 transition-colors">
+            <Icon name="lucide:x" class="size-5" />
+          </button>
+        </div>
+
+        <div class="p-4 overflow-y-auto flex-1">
+          <div v-if="pendingKpi" class="py-12 flex justify-center">
+            <Icon name="lucide:loader-2" class="size-8 text-primary-500 animate-spin" />
+          </div>
+          <div v-else-if="kpiItems.length === 0" class="py-10 text-center text-muted-500">
+            Nenhum registro encontrado.
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="item in kpiItems" :key="item.id"
+              class="flex justify-between items-center p-3 border rounded-lg border-muted-200 dark:border-muted-800 hover:bg-muted-50 dark:hover:bg-muted-900 transition-colors">
+              <div class="flex items-center gap-3">
+                <BaseAvatar :src="item.user?.photo" :text="item.user?.name?.charAt(0)" size="sm" />
+                <div>
+                  <p class="text-sm font-bold text-muted-800 dark:text-white">{{ item.user?.name || 'Sistema' }}</p>
+                  <p class="text-xs text-muted-500">{{ item.plan ? `Assinatura - ${item.plan?.name}` :
+                    (item.paymentMethod || '—') }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="font-bold text-success-600">{{ fmt((item.amount || item.payments?.[0]?.amount || 0) / 100) }}
+                </p>
+                <p class="text-[10px] text-muted-400">{{ fmtDateTime(item.createdAt) }}</p>
+              </div>
+            </div>
+            <div v-if="kpiItems.length === 100" class="text-center text-xs text-muted-400 pt-2">
+              Mostrando os 100 registros mais recentes para esta métrica.
+            </div>
+          </div>
+        </div>
+      </BaseCard>
+    </div>
+
   </div>
 </template>

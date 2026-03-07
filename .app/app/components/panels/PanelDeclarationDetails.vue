@@ -269,10 +269,10 @@ async function handleDownload(item: any) {
 
 // ─── SMS ──────────────────────────────────────────────────────────────────────
 const smsTemplates = [
-  { id: 1, icon: 'solar:document-add-linear', title: 'Pedir Docs', message: 'Ola [NOME], envie seus documentos para o IR pelo link: {link}. Evite multas! {brand}.' },
-  { id: 2, icon: 'solar:refresh-linear', title: 'Status IR', message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema. {brand}.' },
-  { id: 3, icon: 'solar:check-circle-linear', title: 'Transmitido', message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve. {brand}.' },
-  { id: 4, icon: 'solar:info-circle-linear', title: 'Aviso Geral', message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse {link} para verificar. {brand}.' },
+  { id: 1, icon: 'solar:document-add-linear', title: 'Pedir Docs', message: 'Ola [NOME], envie seus documentos para o IR pelo link: {link}. Evite multas!' },
+  { id: 2, icon: 'solar:refresh-linear', title: 'Status IR', message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema.' },
+  { id: 3, icon: 'solar:check-circle-linear', title: 'Transmitido', message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve.' },
+  { id: 4, icon: 'solar:info-circle-linear', title: 'Aviso Geral', message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse {link} para verificar.' },
 ]
 
 function removeAccents(str: string) {
@@ -919,13 +919,13 @@ onMounted(() => {
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:calendar" class="size-3.5 text-muted-400" />
           <span>{{ form.dueDate ? new Date(`${form.dueDate}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'
-            }}</span>
+          }}</span>
         </div>
         <span class="text-muted-300 dark:text-muted-700">·</span>
         <div class="flex items-center gap-1.5">
           <Icon name="lucide:banknote" class="size-3.5 text-muted-400" />
           <span>{{ form.result === 'restitution' ? 'Restituição' : form.result === 'tax_to_pay' ? 'A pagar' : 'Neutro'
-            }}</span>
+          }}</span>
           <span v-if="form.result !== 'neutral'" class="font-bold text-muted-700 dark:text-muted-200">
             R$ {{ Number(form.resultValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
           </span>
@@ -1218,7 +1218,7 @@ onMounted(() => {
                       <span class="text-xs font-semibold text-muted-700 dark:text-muted-200">{{ log.userName
                         || 'Sistema' }}</span>
                       <span class="text-[10px] text-muted-400">{{ new Date(log.createdAt).toLocaleString('pt-BR')
-                        }}</span>
+                      }}</span>
                     </div>
                     <p class="text-xs text-muted-500 dark:text-muted-400 mt-0.5 leading-snug">
                       {{ log.description }}
