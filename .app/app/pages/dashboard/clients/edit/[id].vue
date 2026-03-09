@@ -42,6 +42,7 @@ const form = ref({
   notes: '',
   isActive: true,
   tags: [] as string[],
+  havProcuracao: false,
 })
 
 // Fetch client data
@@ -81,6 +82,7 @@ async function fetchClient() {
       notes: clientData.notes || '',
       isActive: clientData.isActive,
       tags: clientData.tags || [],
+      havProcuracao: clientData.havProcuracao || false,
     }
   }
   catch (error) {
@@ -509,6 +511,12 @@ onMounted(fetchClient)
                   <BaseField label="C/C">
                     <BaseInput v-model="form.bankAccount" placeholder="00000-0" rounded="lg" />
                   </BaseField>
+                </div>
+
+                <div class="md:col-span-2 pt-4 border-t border-muted-100 dark:border-muted-800">
+                  <BaseCheckbox v-model="form.havProcuracao" label="Possui Procuração Ativa"
+                    description="O cliente concedeu poderes para representação junto à Receita Federal."
+                    color="primary" />
                 </div>
               </div>
             </BaseCard>

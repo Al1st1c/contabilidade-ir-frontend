@@ -44,6 +44,7 @@ const form = ref({
   // Outros
   notes: '',
   tags: [] as string[],
+  havProcuracao: false,
 })
 
 const masks = ref(['999.999.999-99'])
@@ -396,6 +397,10 @@ function prevStep() {
           <BaseField label="Observações de Uso Interno" class="md:col-span-2">
             <BaseTextarea v-model="form.notes" rows="4" placeholder="Algum detalhe importante sobre este cliente..." />
           </BaseField>
+          <div class="md:col-span-2">
+            <BaseCheckbox v-model="form.havProcuracao" label="Possui Procuração?"
+              description="Marque se o cliente já assinou a procuração para o escritório." color="primary" />
+          </div>
         </div>
 
         <div class="flex justify-between items-center pt-8 border-t border-muted-100 dark:border-muted-800 mt-10">
