@@ -103,40 +103,46 @@ const checklistTree = computed(() => {
   const result: any[] = []
   const map: Record<string, any> = {}
 
-  // 1. Identify "Informe de Rendimentos" parent
-  const parentTitle = "Informe de Rendimentos"
-  let parent = items.find(i => i.title === parentTitle)
-
-  // 2. If parent doesn't exist but children do, we might want to create a "virtual" parent or just list them.
-  // User said "os itens que são do informe de rendimento ficar como se fosse um subitem"
-  // Let's assume there is a main "Informe de Rendimentos" item.
+  // Constantes de busca (case insensitive)
+  const parentTitleNormalized = "Informe de rendimentos das contas bancárias".toLowerCase()
+  const childPrefixNormalized = "Informe de rendimentos -".toLowerCase()
 
   items.forEach(item => {
-    if (item.title === parentTitle) {
-      if (!map[parentTitle]) {
-        map[parentTitle] = { ...item, children: [] }
-        result.push(map[parentTitle])
+    const titleLower = item.title.toLowerCase()
+    const isParent = titleLower === parentTitleNormalized
+    const isChild = titleLower.startsWith(childPrefixNormalized)
+
+    if (isParent) {
+      if (!map['parent']) {
+        map['parent'] = { ...item, children: [] }
+        result.push(map['parent'])
       } else {
-        // Merge if somehow there are multiple (shouldn't happen)
-        map[parentTitle] = { ...item, children: map[parentTitle].children }
+        // Se já existia um "virtual parent" (criado por filhos anteriores)
+        const children = map['parent'].children
+        map['parent'] = { ...item, children }
+        // Atualiza a referência no array result
+        const idx = result.findIndex(r => r.isVirtual && r.title.toLowerCase() === parentTitleNormalized)
+        if (idx !== -1) {
+          result[idx] = map['parent']
+        }
       }
-    } else if (item.title.startsWith(`${parentTitle} -`)) {
+    } else if (isChild) {
       const child = { ...item, isChild: true }
-      if (!map[parentTitle]) {
-        // Create virtual parent if it doesn't exist yet
-        map[parentTitle] = { title: parentTitle, isVirtual: true, children: [] }
-        result.push(map[parentTitle])
+      if (!map['parent']) {
+        // Cria um parent virtual caso o pai real ainda não tenha aparecido no map
+        map['parent'] = { title: "Informe de rendimentos das contas bancárias", isVirtual: true, children: [] }
+        result.push(map['parent'])
       }
-      map[parentTitle].children.push(child)
+      map['parent'].children.push(child)
     } else {
       result.push({ ...item, children: [] })
     }
   })
 
-  // 3. Force parent status if children exist
-  if (map[parentTitle] && map[parentTitle].children.length > 0) {
-    map[parentTitle].status = 'approved'
-    map[parentTitle].isInformeParent = true
+  // 3. Forçar o status do pai como approved caso possua filhos
+  if (map['parent'] && map['parent'].children.length > 0) {
+    map['parent'].status = 'approved'
+    map['parent'].isInformeParent = true
   }
 
   return result
