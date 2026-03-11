@@ -61,7 +61,7 @@ async function toggleLink() {
 const registrationUrl = computed(() => {
   if (!analytics.value?.link?.token) return ''
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}/register?token=${analytics.value.link.token}`
+  return `https://irpf26.com/register?token=${analytics.value.link.token}`
 })
 
 function copyLink() {
