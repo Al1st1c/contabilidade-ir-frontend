@@ -142,6 +142,10 @@ function formatCpf(cpf: string): string {
             <Icon name="solar:import-bold-duotone" class="size-4 mr-1" />
             <span>Importar</span>
           </BaseButton>
+          <BaseButton variant="muted" class="w-full sm:w-auto" to="/dashboard/clients/registration">
+            <Icon name="solar:link-round-angle-bold-duotone" class="size-4 mr-1" />
+            <span>Link de Cadastro</span>
+          </BaseButton>
         </div>
       </div>
 
@@ -304,22 +308,6 @@ function formatCpf(cpf: string): string {
                         </BaseButton>
                       </BaseTooltip>
 
-                      <BaseDropdown placement="bottom-end">
-                        <template #button>
-                          <BaseButton rounded="lg" size="sm" variant="muted"
-                            class="size-9 p-0 flex items-center justify-center hover:bg-muted-100 dark:hover:bg-muted-800 border-muted-200 dark:border-muted-700">
-                            <Icon name="lucide:more-vertical" class="size-5" />
-                          </BaseButton>
-                        </template>
-                        <BaseDropdownItem :to="{ path: '/dashboard/ir', query: { newFor: item.id } }"
-                          title="Nova Declaração" text="Iniciar processo de IR">
-                          <template #start>
-                            <BaseAvatar size="xs" class="bg-primary-500/10 text-primary-500">
-                              <Icon name="lucide:plus" class="size-4" />
-                            </BaseAvatar>
-                          </template>
-                        </BaseDropdownItem>
-                      </BaseDropdown>
                     </div>
                   </TairoTableCell>
                 </TairoTableRow>

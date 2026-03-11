@@ -503,6 +503,14 @@ const acessorapido = computed(() => {
       iconColor: 'text-info-500 bg-info-500/10',
       url: '/dashboard/clients',
     },
+    {
+      id: 5,
+      name: 'Link de Cadastro',
+      description: 'Convide clientes a se cadastrar',
+      icon: 'solar:link-round-angle-bold-duotone',
+      iconColor: 'text-emerald-500 bg-emerald-500/10',
+      url: '/dashboard/clients/registration',
+    },
   ]
 
   if (isViewingAdmin.value) {

@@ -122,6 +122,18 @@ onMounted(() => {
                         </BaseParagraph>
                       </NuxtLink>
                     </TairoMenuLink>
+                    <TairoMenuLink as-child>
+                      <NuxtLink to="/dashboard/clients/registration"
+                        class="flex flex-col gap-1 p-2 rounded-lg hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors">
+                        <BaseHeading size="sm" weight="medium"
+                          class="text-muted-900 dark:text-white in-[.router-link-exact-active]:text-primary-500">
+                          Link de Cadastro
+                        </BaseHeading>
+                        <BaseParagraph size="sm" class="max-w-[260px] text-muted-600 dark:text-muted-400">
+                          Link e analytics de pré-cadastro
+                        </BaseParagraph>
+                      </NuxtLink>
+                    </TairoMenuLink>
                   </TairoMenuListItems>
                 </TairoMenuContent>
               </TairoMenuItem>
@@ -344,6 +356,14 @@ onMounted(() => {
               active-class="bg-primary-500/10 text-primary-500! font-semibold">
               <Icon name="solar:users-group-rounded-bold-duotone" class="size-5" />
               Clientes
+            </NuxtLink>
+          </li>
+          <li>
+            <NuxtLink to="/dashboard/clients/registration"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-600 dark:text-muted-400 hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+              active-class="bg-primary-500/10 text-primary-500! font-semibold">
+              <Icon name="solar:link-round-angle-bold-duotone" class="size-5" />
+              Link de Cadastro
             </NuxtLink>
           </li>
         </ul>
