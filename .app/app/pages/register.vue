@@ -171,7 +171,21 @@ async function handleSubmit() {
   }
 }
 
-const primaryColor = computed(() => branding.value?.primaryColor || '#6366f1')
+const { applyColors } = useWhitelabel()
+
+const primaryColorName = computed(() => branding.value?.primaryColor || '#6366f1')
+const secondaryColorName = computed(() => branding.value?.secondaryColor || 'slate')
+
+// Watch for branding changes and apply colors to the document
+watch([primaryColorName, secondaryColorName], () => {
+  applyColors(
+    primaryColorName.value,
+    secondaryColorName.value,
+    branding.value?.logo,
+    undefined,
+    branding.value?.tradeName,
+  )
+}, { immediate: true })
 </script>
 
 <template>
@@ -248,7 +262,7 @@ const primaryColor = computed(() => branding.value?.primaryColor || '#6366f1')
         <!-- Success -->
         <div v-else-if="isSuccess" class="text-center py-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div class="size-20 rounded-full flex items-center justify-center mx-auto mb-6"
-            :style="{ backgroundColor: primaryColor + '15', color: primaryColor }">
+            :style="{ backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-500)' }">
             <Icon name="solar:check-circle-bold" class="size-10" />
           </div>
           <h2 class="text-xl font-bold text-muted-800 dark:text-white mb-2">Cadastro Realizado!</h2>
@@ -273,32 +287,30 @@ const primaryColor = computed(() => branding.value?.primaryColor || '#6366f1')
               <label class="block text-xs font-bold text-muted-500 uppercase tracking-wider mb-1.5">Nome Completo
                 *</label>
               <input v-model="form.name" type="text" placeholder="João da Silva"
-                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                :style="{ '--tw-ring-color': primaryColor + '40' }" />
+                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent transition-all" />
             </div>
 
             <!-- CPF -->
             <div>
               <label class="block text-xs font-bold text-muted-500 uppercase tracking-wider mb-1.5">CPF *</label>
               <input :value="form.cpf" type="text" placeholder="000.000.000-00" maxlength="14"
-                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                :style="{ '--tw-ring-color': primaryColor + '40' }" @input="handleCpfInput" />
+                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent transition-all"
+                @input="handleCpfInput" />
             </div>
 
             <!-- Telefone -->
             <div>
               <label class="block text-xs font-bold text-muted-500 uppercase tracking-wider mb-1.5">Telefone *</label>
               <input :value="form.phone" type="text" placeholder="(00) 00000-0000" maxlength="15"
-                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                :style="{ '--tw-ring-color': primaryColor + '40' }" @input="handlePhoneInput" />
+                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent transition-all"
+                @input="handlePhoneInput" />
             </div>
 
             <!-- Email -->
             <div>
               <label class="block text-xs font-bold text-muted-500 uppercase tracking-wider mb-1.5">E-mail</label>
               <input v-model="form.email" type="email" placeholder="joao@email.com"
-                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                :style="{ '--tw-ring-color': primaryColor + '40' }" />
+                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent transition-all" />
             </div>
 
             <!-- Data Nascimento -->
@@ -306,8 +318,7 @@ const primaryColor = computed(() => branding.value?.primaryColor || '#6366f1')
               <label class="block text-xs font-bold text-muted-500 uppercase tracking-wider mb-1.5">Data de
                 Nascimento</label>
               <input v-model="form.birthDate" type="date"
-                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                :style="{ '--tw-ring-color': primaryColor + '40' }" />
+                class="w-full rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-900 px-4 py-3 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-transparent transition-all" />
             </div>
 
             <!-- Error -->
@@ -319,8 +330,8 @@ const primaryColor = computed(() => branding.value?.primaryColor || '#6366f1')
 
             <!-- Submit -->
             <button type="submit"
-              class="w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              :style="{ backgroundColor: primaryColor }" :disabled="isSubmitting">
+              class="w-full rounded-xl py-3.5 text-sm font-bold text-white bg-primary-500 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              :disabled="isSubmitting">
               <Icon v-if="isSubmitting" name="svg-spinners:ring-resize" class="size-4" />
               <template v-else>
                 <Icon name="solar:user-plus-bold" class="size-4" />
