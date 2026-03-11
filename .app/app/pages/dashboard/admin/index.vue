@@ -590,6 +590,20 @@ const plansChart = computed(() => {
             </div>
           </BaseCard>
         </NuxtLink>
+        <NuxtLink to="/dashboard/admin/updates" class="group">
+          <BaseCard class="p-6 border-dashed border-2 hover:border-primary-500 hover:bg-primary-500/5 transition-all">
+            <div class="flex flex-col items-center gap-3 text-center">
+              <div
+                class="size-14 rounded-full bg-muted-100 dark:bg-muted-800 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <Icon name="solar:star-fall-bold-duotone" class="size-8" />
+              </div>
+              <div>
+                <BaseHeading as="h3" size="sm">Central de Novidades</BaseHeading>
+                <BaseText size="xs" class="text-muted-500">Publicar atualizações</BaseText>
+              </div>
+            </div>
+          </BaseCard>
+        </NuxtLink>
       </div>
     </div>
   </div>

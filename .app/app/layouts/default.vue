@@ -7,6 +7,7 @@ const { currentSubscription, fetchMySubscription } = useSubscription()
 const { user } = useAuth()
 const isMobileOpen = ref(false)
 const route = useRoute()
+const { useCustomFetch } = useApi()
 
 const companyName = computed(() => {
   const hasWhitelabel = currentSubscription.value?.hasWhitelabel ?? false

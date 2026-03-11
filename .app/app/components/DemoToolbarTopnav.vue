@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PanelsPanelNotifications, PanelsPanelSubscription } from '#components'
+import { PanelsPanelNotifications, PanelsPanelSubscription, PanelsPanelChangelog } from '#components'
 import { useApi, useAuth } from '~/composables/useAuth'
 import { useSubscription } from '~/composables/useSubscription'
 
@@ -12,6 +12,27 @@ const { fetchMySubscription, currentSubscription, loading: loadingSubscription }
 const notificationCount = ref(0)
 const hasCritical = ref(false)
 const { dismissedIds } = useNotifications()
+
+// Changelog new updates indicator
+const hasNewUpdates = ref(false)
+
+async function checkNewUpdates() {
+  try {
+    const { data } = await useCustomFetch<any[]>('/changelog')
+    if (data && data.length > 0) {
+      const lastSeen = localStorage.getItem('last_changelog_seen')
+      if (!lastSeen) {
+        hasNewUpdates.value = true
+        return
+      }
+      const latestUpdateDate = new Date(data[0].publishDate).getTime()
+      const lastSeenDate = new Date(lastSeen).getTime()
+      hasNewUpdates.value = latestUpdateDate > lastSeenDate
+    }
+  } catch (error) {
+    console.error('Erro ao verificar novidades:', error)
+  }
+}
 
 // Display count shows only NEW notifications (ones not dismissed)
 const displayCount = computed(() => notificationCount.value)
@@ -76,6 +97,7 @@ onMounted(() => {
   if (!isAffiliateOnly.value) {
     fetchNotificationCount()
     fetchMySubscription()
+    checkNewUpdates()
     // Refresh every 2 minutes
     setInterval(fetchNotificationCount, 120000)
   }
@@ -83,6 +105,11 @@ onMounted(() => {
 
 function openNotifications() {
   open(PanelsPanelNotifications, {})
+}
+
+function openChangelog() {
+  open(PanelsPanelChangelog, {})
+  hasNewUpdates.value = false
 }
 
 function openSubscription() {
@@ -161,6 +188,17 @@ async function handleAffiliateAccess() {
       <span v-if="currentSubscription?.plan?.name"
         class="absolute -top-1 -right-1 flex h-4 items-center justify-center rounded-full bg-primary-500 px-1.5 text-[8px] font-bold uppercase text-white shadow-sm ring-2 ring-white dark:ring-muted-900">
         {{ currentSubscription.plan.name }}
+      </span>
+    </button>
+
+    <!-- Changelog Button -->
+    <button type="button"
+      class="relative inline-flex size-10 items-center justify-center rounded-full hover:bg-muted-100 dark:hover:bg-muted-800 transition-colors"
+      title="Novidades do Sistema" @click="openChangelog">
+      <Icon name="solar:star-fall-bold-duotone" class="size-5 text-muted-400" />
+      <span v-if="hasNewUpdates"
+        class="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[9px] font-bold text-white rounded-full bg-primary-500 ring-2 ring-white dark:ring-muted-900">
+        ✦
       </span>
     </button>
 
