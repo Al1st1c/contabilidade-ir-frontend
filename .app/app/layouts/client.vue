@@ -41,10 +41,15 @@ const menuItems = [
     to: '/client/documentos',
     icon: 'solar:document-bold-duotone',
   },
+  // {
+  //   label: 'Histórico',
+  //   to: '/client/historico',
+  //   icon: 'solar:history-bold-duotone',
+  // },
   {
-    label: 'Histórico',
-    to: '/client/historico',
-    icon: 'solar:history-bold-duotone',
+    label: 'Chat',
+    to: '/client/chat',
+    icon: 'solar:chat-round-dots-bold-duotone',
   },
   {
     label: 'Perfil',

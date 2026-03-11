@@ -201,6 +201,26 @@ async function handleAffiliateAccess() {
               </p>
             </div>
 
+            <!-- Profile Access -->
+            <DropdownMenuItem as="div" class="mb-1">
+              <NuxtLink to="/dashboard/settings/profile"
+                class="group/item flex w-full items-center gap-3 rounded-md p-2 text-sm transition-colors duration-300 hover:bg-muted-100 dark:hover:bg-muted-800 outline-none text-muted-600 dark:text-muted-400">
+                <div
+                  class="flex size-7 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30 group-hover/item:bg-primary-500/20">
+                  <Icon name="solar:user-bold-duotone"
+                    class="size-4 text-primary-500 group-hover/item:text-primary-600" />
+                </div>
+                <div class="text-start">
+                  <h6 class="text-xs font-semibold text-muted-800 dark:text-white leading-none">
+                    Meu Perfil
+                  </h6>
+                  <p class="text-[10px] text-muted-400 mt-0.5">
+                    Editar suas informações
+                  </p>
+                </div>
+              </NuxtLink>
+            </DropdownMenuItem>
+
             <!-- Affiliate Access -->
             <DropdownMenuItem as="div" class="mb-1">
               <button type="button"

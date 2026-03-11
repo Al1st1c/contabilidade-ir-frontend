@@ -63,6 +63,10 @@ const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const isMockMode = ref(false)
 const taxYearFilter = ref(new Date().getFullYear())
+
+watch(taxYearFilter, () => {
+  fetchKanban()
+})
 const irEndDate = ref('2026-05-31T23:59:59')
 
 // Owner check
@@ -751,7 +755,7 @@ async function quickCopyCollectionLink(declarationId: string, clientName: string
         class="mb-6 flex flex-wrap items-center gap-4 bg-white dark:bg-muted-950 p-4 rounded-xl border border-muted-200 dark:border-muted-800 shadow-sm shrink-0">
         <!-- Year Filter -->
         <div class="w-full md:w-48">
-          <BaseSelect v-model="taxYearFilter" rounded="md" icon="ph:calendar" @change="fetchKanban">
+          <BaseSelect v-model="taxYearFilter" rounded="md" icon="ph:calendar">
             <BaseSelectItem v-for="year in availableYears" :key="year" :value="year">
               IR {{ year }} (Ano-C {{ year - 1 }})
             </BaseSelectItem>

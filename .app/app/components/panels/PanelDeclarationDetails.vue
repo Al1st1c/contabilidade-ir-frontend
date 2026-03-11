@@ -45,6 +45,14 @@ const saveDebounced = useDebounceFn(() => {
 }, 500)
 const lastSavedForm = ref<any>({})
 
+// ─── Chat States ──────────────────────────────────────────────────────────────
+const chatMessages = ref<any[]>([])
+const chatInput = ref('')
+const isSendingChat = ref(false)
+const isLoadingChat = ref(false)
+const chatUnread = ref(0)
+const chatContainerRef = ref<HTMLElement | null>(null)
+
 // ─── Active Tab ───────────────────────────────────────────────────────────────
 const activeTab = ref<'details' | 'checklist' | 'attachments' | 'official_documents' | 'communication' | 'management'>('details')
 
@@ -278,7 +286,7 @@ const smsTemplates = [
   { id: 1, icon: 'solar:document-add-linear', title: 'Pedir Docs', message: 'Ola [NOME], envie seus documentos para o IR pelo link: {link}. Evite multas!' },
   { id: 2, icon: 'solar:refresh-linear', title: 'Status IR', message: 'Ola [NOME], seu IR mudou para: [STATUS]. Acompanhe em nosso sistema.' },
   { id: 3, icon: 'solar:check-circle-linear', title: 'Transmitido', message: 'Ola [NOME], seu IR foi transmitido com sucesso! O recibo estara disponivel em breve.' },
-  { id: 4, icon: 'solar:info-circle-linear', title: 'Aviso Geral', message: 'Ola [NOME], temos uma atualizacao no seu IR. Por favor, acesse {link} para verificar.' },
+  { id: 4, icon: 'solar:pen-new-square-linear', title: 'Personalizado', message: '' },
 ]
 
 function removeAccents(str: string) {
@@ -290,6 +298,11 @@ function handleSelectTemplate(index: number) {
   if (!templateObj)
     return
   selectedTemplateIndex.value = index
+  if (templateObj.id === 4) {
+    // Personalizado: limpa para o usuário digitar
+    smsMessage.value = ''
+    return
+  }
   const firstName = declaration.value?.client?.name?.split(' ')[0] || 'Cliente'
   const statusName = declaration.value?.column?.name || 'Atualizado'
   const msg = templateObj.message.replace('[NOME]', firstName).replace('[STATUS]', statusName)
@@ -322,6 +335,116 @@ async function sendSms() {
   }
   finally { isSendingSms.value = false }
 }
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+async function fetchChatMessages() {
+  isLoadingChat.value = true
+  try {
+    const { data } = await useCustomFetch<any>(`/chat/${props.declarationId}`)
+    if (data?.success) {
+      chatMessages.value = data.data || []
+      await nextTick()
+      scrollChatToBottom()
+    }
+  }
+  catch (error) { console.error('Erro ao carregar chat:', error) }
+  finally { isLoadingChat.value = false }
+}
+
+async function sendChatMessage() {
+  if (!chatInput.value.trim() || isSendingChat.value)
+    return
+  isSendingChat.value = true
+  const content = chatInput.value.trim()
+  chatInput.value = ''
+  try {
+    const { data } = await useCustomFetch<any>(`/chat/${props.declarationId}`, {
+      method: 'POST',
+      body: { content },
+    })
+    if (data?.success) {
+      // Socket will also deliver this, but we add immediately for UX
+      const exists = chatMessages.value.find(m => m.id === data.data.id)
+      if (!exists) {
+        chatMessages.value.push(data.data)
+        await nextTick()
+        scrollChatToBottom()
+      }
+    }
+  }
+  catch (error: any) {
+    toaster.add({ title: 'Erro', description: 'Erro ao enviar mensagem', icon: 'ph:warning-circle-fill' })
+    chatInput.value = content // Restore on error
+  }
+  finally { isSendingChat.value = false }
+}
+
+async function markChatAsRead() {
+  try {
+    await useCustomFetch<any>(`/chat/${props.declarationId}/read`, { method: 'PATCH' })
+    chatUnread.value = 0
+  }
+  catch { }
+}
+
+function scrollChatToBottom() {
+  if (chatContainerRef.value) {
+    chatContainerRef.value.scrollTop = chatContainerRef.value.scrollHeight
+  }
+}
+
+function formatChatTime(dateStr: string) {
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatChatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  const today = new Date()
+  if (d.toDateString() === today.toDateString())
+    return 'Hoje'
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString())
+    return 'Ontem'
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function maskIp(ip: string | null) {
+  if (!ip) return null
+  const parts = ip.split('.')
+  if (parts.length === 4)
+    return `${parts[0]}.${parts[1]}.***.***`
+  return ip.substring(0, Math.ceil(ip.length / 2)) + '***'
+}
+
+function parseDevice(ua: string | null) {
+  if (!ua) return null
+  if (ua.includes('iPhone')) return 'iPhone'
+  if (ua.includes('iPad')) return 'iPad'
+  if (ua.includes('Android')) return 'Android'
+  if (ua.includes('Windows')) return 'Windows'
+  if (ua.includes('Macintosh') || ua.includes('Mac OS')) return 'Mac'
+  if (ua.includes('Linux')) return 'Linux'
+  return 'Navegador'
+}
+
+async function fetchChatUnread() {
+  try {
+    const { data } = await useCustomFetch<any>(`/chat/${props.declarationId}/unread`)
+    if (data?.success)
+      chatUnread.value = data.data?.unread || 0
+  }
+  catch { }
+}
+
+// Watch tab change to load messages on first visit
+watch(activeTab, (tab) => {
+  if (tab === 'communication' && chatMessages.value.length === 0) {
+    fetchChatMessages()
+    markChatAsRead()
+  }
+})
 
 // ─── Form ─────────────────────────────────────────────────────────────────────
 const form = ref({
@@ -831,6 +954,7 @@ onMounted(() => {
   fetchKanbanColumns()
   fetchDeclaration()
   fetchTeamMembers()
+  fetchChatUnread()
   try {
     const config = useRuntimeConfig()
     const url = (config.public.apiBase || '').replace(/\/$/, '')
@@ -847,6 +971,22 @@ onMounted(() => {
       }
       if (patch.form) {
         form.value = { ...form.value, ...patch.form }
+      }
+    })
+    // Chat socket
+    socket.value.emit('chat:join', { declarationId: props.declarationId })
+    socket.value.on('chat:message', (msg: any) => {
+      if (!msg) return
+      const exists = chatMessages.value.find(m => m.id === msg.id)
+      if (!exists) {
+        chatMessages.value.push(msg)
+        if (activeTab.value === 'communication') {
+          markChatAsRead()
+          nextTick(() => scrollChatToBottom())
+        } else {
+          if (msg.senderType === 'client')
+            chatUnread.value++
+        }
       }
     })
     const onVisibility = () => {
@@ -965,6 +1105,11 @@ onMounted(() => {
           <span v-if="tab.key === 'official_documents' && officialDocumentsCount > 0"
             class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px]  bg-muted-100 text-muted-500">{{
               officialDocumentsCount }}</span>
+
+          <!-- Badge chat -->
+          <span v-if="tab.key === 'communication' && chatUnread > 0"
+            class="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full px-1 text-[9px] bg-primary-500 text-white animate-pulse">{{
+              chatUnread }}</span>
 
           <span v-if="activeTab === tab.key"
             class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />
@@ -1697,19 +1842,97 @@ onMounted(() => {
               <!-- Preview + envio -->
               <div v-if="selectedTemplateIndex !== null"
                 class="animate-fade-in p-4 rounded-xl bg-primary-500/5 border border-primary-500/20">
-                <p class="text-xs text-muted-600 dark:text-muted-300 italic leading-relaxed mb-3">
+                <!-- Custom message textarea -->
+                <textarea v-if="smsTemplates[selectedTemplateIndex]?.id === 4" v-model="smsMessage"
+                  class="w-full rounded-lg border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-950 px-3 py-2 text-xs text-muted-700 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-none mb-3"
+                  rows="3" placeholder="Digite sua mensagem personalizada..." />
+                <!-- Template preview -->
+                <p v-else class="text-xs text-muted-600 dark:text-muted-300 italic leading-relaxed mb-3">
                   "{{ smsMessage }}"
                 </p>
                 <div class="flex items-center justify-between">
                   <p class="text-[10px] text-muted-400">
                     Para: {{ declaration.client?.phone || '—' }} · {{ smsMessage.length }}/160
                   </p>
-                  <BaseButton variant="primary" size="sm" :loading="isSendingSms" @click="sendSms">
-                    <Icon name="solar:paper-plane-bold" class="size-3.5 mr-1.5" /> Enviar Agora
+                  <BaseButton variant="primary" size="sm" :loading="isSendingSms" :disabled="!smsMessage.trim()"
+                    @click="sendSms">
+                    <Icon name="solar:plain-3-outline" class="size-3.5 mr-1.5" /> Enviar Agora
                   </BaseButton>
                 </div>
               </div>
             </div>
+
+            <!-- Chat -->
+            <BaseCard class="border-t border-muted-200 dark:border-muted-800 p-3">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:message-circle" class="size-4 text-muted-400" />
+                  <BaseText size="xs" class="text-muted-500 uppercase font-bold">
+                    Chat com Cliente
+                  </BaseText>
+                </div>
+                <BaseTag v-if="chatUnread > 0" size="sm" variant="none" class="text-[9px] bg-primary-500 text-white">
+                  {{ chatUnread }} nova{{ chatUnread > 1 ? 's' : '' }}
+                </BaseTag>
+              </div>
+
+              <!-- Messages area -->
+              <div v-if="isLoadingChat" class="flex items-center justify-center py-12">
+                <Icon name="svg-spinners:ring-resize" class="size-6 text-primary-500" />
+              </div>
+              <div v-else ref="chatContainerRef" class="max-h-80 overflow-y-auto space-y-1 mb-3 scroll-smooth px-1">
+                <div v-if="chatMessages.length === 0" class="text-center py-8">
+                  <Icon name="solar:chat-round-dots-linear" class="size-10 text-muted-300 mx-auto mb-2" />
+                  <BaseText size="xs" class="text-muted-400">Nenhuma mensagem ainda.<br>Inicie a conversa com o
+                    cliente!
+                  </BaseText>
+                </div>
+                <template v-for="(msg, idx) in chatMessages" :key="msg.id">
+                  <!-- Date separator -->
+                  <div
+                    v-if="idx === 0 || formatChatDate(msg.createdAt) !== formatChatDate(chatMessages[idx - 1].createdAt)"
+                    class="text-center py-2">
+                    <span class="text-[10px] bg-muted-100 dark:bg-muted-800 text-muted-400 px-3 py-0.5 rounded-full">
+                      {{ formatChatDate(msg.createdAt) }}
+                    </span>
+                  </div>
+                  <!-- Message bubble -->
+                  <div class="flex" :class="msg.senderType === 'staff' ? 'justify-end' : 'justify-start'">
+                    <div class="max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed" :class="msg.senderType === 'staff'
+                      ? 'bg-primary-500 text-white rounded-br-md'
+                      : 'bg-muted-100 dark:bg-muted-800 text-muted-800 dark:text-muted-200 rounded-bl-md'">
+                      <p class="whitespace-pre-wrap break-words">{{ msg.content }}</p>
+                      <p class="text-[10px] mt-0.5 text-right"
+                        :class="msg.senderType === 'staff' ? 'text-white/60' : 'text-muted-400'">
+                        {{ formatChatTime(msg.createdAt) }}
+                      </p>
+                    </div>
+                    <!-- Metadata (only for client messages, visible to staff) -->
+                    <div v-if="msg.senderType === 'client' && (msg.ipAddress || msg.userAgent)"
+                      class="flex items-center gap-1.5 mt-0.5 ml-1">
+                      <Icon name="lucide:monitor-smartphone" class="size-2.5 text-muted-300" />
+                      <span class="text-[9px] text-muted-300">
+                        {{ parseDevice(msg.userAgent) }}<template v-if="msg.ipAddress"> · IP {{ maskIp(msg.ipAddress)
+                        }}</template>
+                      </span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Input -->
+              <div class="flex items-center gap-2">
+                <input v-model="chatInput"
+                  class="flex-1 rounded-xl border border-muted-200 dark:border-muted-700 bg-white dark:bg-muted-950 px-4 py-2.5 text-sm text-muted-800 dark:text-muted-200 placeholder:text-muted-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all"
+                  placeholder="Digite sua mensagem..." @keydown.enter.prevent="sendChatMessage" />
+                <button
+                  class="size-10 flex items-center justify-center rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  :disabled="!chatInput.trim() || isSendingChat" @click="sendChatMessage">
+                  <Icon v-if="isSendingChat" name="svg-spinners:ring-resize" class="size-4" />
+                  <Icon v-else name="solar:plain-3-outline" class="size-4" />
+                </button>
+              </div>
+            </BaseCard>
           </div>
 
           <!-- ━━━ TAB: GESTÃO (MOBILE ONLY) ━━━ -->

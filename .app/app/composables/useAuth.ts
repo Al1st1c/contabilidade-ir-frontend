@@ -6,6 +6,7 @@ interface User {
   id: string
   email: string
   name: string
+  phone?: string
   photo?: string
   onboardingStatus?: string
   userType?: string
@@ -162,6 +163,7 @@ export function useAuth() {
       id: rawUser.id,
       name: rawUser.name,
       email: rawUser.email,
+      phone: rawUser.phone,
       photo: rawUser.photo,
       onboardingStatus: rawUser.onboardingStatus,
       userType: rawUser.userType,

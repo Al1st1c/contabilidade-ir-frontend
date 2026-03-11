@@ -308,6 +308,20 @@ onMounted(() => fetchTenant(true))
                       c.class,
                       form.primaryColor === c.name ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100',
                     ]" @click="setPrimaryColor(c.name)" />
+
+                  <!-- Custom Color Picker -->
+                  <div
+                    class="relative size-10 rounded-xl overflow-hidden transition-all duration-200 flex items-center justify-center cursor-pointer group"
+                    :class="[
+                      form.primaryColor.startsWith('#') ? 'ring-4 ring-primary-500 ring-offset-2 dark:ring-offset-muted-950 scale-110 shadow-lg' : 'hover:scale-110 opacity-80 hover:opacity-100 border-2 border-dashed border-muted-300 dark:border-muted-700 bg-muted-50 dark:bg-muted-900',
+                    ]" :style="form.primaryColor.startsWith('#') ? `background-color: ${form.primaryColor};` : ''">
+                    <input type="color" :value="form.primaryColor.startsWith('#') ? form.primaryColor : '#3b82f6'"
+                      @input="e => setPrimaryColor((e.target as HTMLInputElement).value)"
+                      class="absolute inset-0 opacity-0 size-full cursor-pointer z-10" />
+                    <Icon v-if="!form.primaryColor.startsWith('#')" name="solar:pallete-2-linear"
+                      class="size-5 text-muted-400 group-hover:text-primary-500" />
+                    <Icon v-else name="solar:check-circle-bold" class="size-5 text-white drop-shadow-md" />
+                  </div>
                 </div>
               </div>
 
