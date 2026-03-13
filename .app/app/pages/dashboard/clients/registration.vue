@@ -12,6 +12,9 @@ const isLoading = ref(true)
 const analytics = ref<any>(null)
 const isCopied = ref(false)
 const isToggling = ref(false)
+const isSavingSettings = ref(false)
+const autoCreateDeclaration = ref(false)
+const defaultServiceValue = ref<string>('')
 
 async function fetchAnalytics() {
   isLoading.value = true
@@ -19,6 +22,11 @@ async function fetchAnalytics() {
     const { data } = await useCustomFetch<any>('/registration/analytics')
     if (data?.success) {
       analytics.value = data.data
+      // Sincronizar configurações locais
+      if (data.data.link) {
+        autoCreateDeclaration.value = data.data.link.autoCreateDeclaration || false
+        defaultServiceValue.value = data.data.link.defaultServiceValue ? String(data.data.link.defaultServiceValue) : ''
+      }
     }
   }
   catch (e) {
@@ -70,6 +78,29 @@ function copyLink() {
   isCopied.value = true
   toaster.add({ title: 'Copiado!', description: 'Link copiado para a área de transferência', icon: 'ph:check-circle-fill' })
   setTimeout(() => isCopied.value = false, 3000)
+}
+
+async function saveSettings() {
+  isSavingSettings.value = true
+  try {
+    const { data } = await useCustomFetch<any>('/registration/settings', {
+      method: 'PATCH',
+      body: {
+        autoCreateDeclaration: autoCreateDeclaration.value,
+        defaultServiceValue: defaultServiceValue.value ? Number(defaultServiceValue.value) : null,
+      },
+    })
+    if (data?.success) {
+      analytics.value.link = data.data
+      toaster.add({ title: 'Sucesso', description: 'Configurações salvas', icon: 'ph:check-circle-fill' })
+    }
+  }
+  catch (e) {
+    toaster.add({ title: 'Erro', description: 'Erro ao salvar configurações', icon: 'ph:warning-circle-fill' })
+  }
+  finally {
+    isSavingSettings.value = false
+  }
 }
 
 // ─── Chart: Cliques e Cadastros (Area) ──────────────────────────────
@@ -227,6 +258,49 @@ onMounted(fetchAnalytics)
                 <Icon :name="analytics.link.isActive ? 'solar:lock-bold' : 'solar:lock-unlocked-bold'"
                   class="size-4 mr-1" />
                 {{ analytics.link.isActive ? 'Desativar' : 'Ativar' }}
+              </BaseButton>
+            </div>
+          </div>
+        </BaseCard>
+
+        <!-- Settings Card -->
+        <BaseCard v-if="analytics?.link" rounded="md" class="p-6 mb-6">
+          <div class="mb-5">
+            <BaseHeading as="h3" size="md" weight="medium" lead="tight" class="text-muted-900 dark:text-white">
+              <span>Configurações do Cadastro</span>
+            </BaseHeading>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <BaseHeading as="h5" size="sm" weight="medium" lead="tight" class="text-muted-800 dark:text-muted-200">
+                  <span>Criar declaração IR automaticamente</span>
+                </BaseHeading>
+                <span class="text-muted-400 font-sans text-xs">Ao se cadastrar, o sistema cria automaticamente uma
+                  declaração para o
+                  cliente (debita 1 crédito do saldo).</span>
+              </div>
+              <BaseSwitchBall v-model="autoCreateDeclaration" />
+            </div>
+
+            <div v-if="autoCreateDeclaration" class="pl-0 pt-2 border-t border-muted-200 dark:border-muted-700">
+              <BaseHeading as="h5" size="sm" weight="medium" lead="tight"
+                class="text-muted-500 dark:text-muted-400 mb-1.5">
+                <span>Honorário padrão (R$)</span>
+              </BaseHeading>
+              <div class="max-w-[200px]">
+                <BaseInput v-model="defaultServiceValue" type="number" placeholder="0.00" step="0.01" min="0" size="sm"
+                  rounded="lg" icon="solar:wallet-money-bold-duotone" />
+              </div>
+              <span class="text-muted-400 font-sans text-xs">Valor do serviço que será atribuído à declaração criada
+                automaticamente. Deixe vazio para não definir.</span>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <BaseButton variant="primary" size="sm" :loading="isSavingSettings" @click="saveSettings">
+                <Icon name="solar:diskette-bold" class="size-4 mr-1" />
+                Salvar Configurações
               </BaseButton>
             </div>
           </div>

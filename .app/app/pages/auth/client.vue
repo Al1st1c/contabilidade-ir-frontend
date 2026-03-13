@@ -20,11 +20,14 @@ onMounted(() => {
   checkSubdomain()
 })
 
-const step = ref<'cpf' | 'otp'>('cpf')
+const step = ref<'cpf' | 'method' | 'otp'>('cpf')
 const cpf = ref('')
 const otp = ref('')
 const isLoading = ref(false)
 const isInitialLoading = ref(true)
+const availableMethods = ref<Array<{ method: string; destination: string }>>([])
+const selectedMethod = ref<'SMS' | 'EMAIL' | null>(null)
+const sentDestination = ref('')
 
 const { add } = useNuiToasts()
 
@@ -40,8 +43,10 @@ onMounted(async () => {
 })
 
 const authMessage = computed(() => {
-  return step.value === 'cpf'
-    ? 'Informe seu CPF para acessar seu painel de documentos.'
+  if (step.value === 'cpf') return 'Informe seu CPF para acessar seu painel de documentos.'
+  if (step.value === 'method') return 'Escolha como deseja receber seu código de segurança.'
+  return selectedMethod.value === 'EMAIL'
+    ? 'Enviamos um código de segurança para seu e-mail.'
     : 'Enviamos um código de segurança via SMS.'
 })
 
@@ -73,9 +78,61 @@ async function requestOtp() {
       return
     }
 
+    // Se o backend retorna opções para escolher
+    if (result.requiresMethodSelection) {
+      availableMethods.value = result.availableMethods
+      step.value = 'method'
+      return
+    }
+
+    // Enviou direto (só tem um método disponível)
+    selectedMethod.value = result.method || 'SMS'
+    sentDestination.value = result.phone || result.email || ''
     add({
       title: 'Código Enviado',
-      description: `Enviamos um SMS para o final ${result.phone}`,
+      description: result.method === 'EMAIL'
+        ? `Enviamos um código para ${result.email}`
+        : `Enviamos um SMS para o final ${result.phone}`,
+      icon: 'solar:check-circle-bold-duotone',
+    })
+    step.value = 'otp'
+  }
+  catch (error: any) {
+    add({
+      title: 'Erro',
+      description: error.data?.message || 'Algo deu errado. Tente novamente em instantes.',
+      icon: 'solar:danger-circle-bold-duotone',
+    })
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+async function sendOtpWithMethod(method: 'SMS' | 'EMAIL') {
+  selectedMethod.value = method
+  isLoading.value = true
+  try {
+    const result = await $fetch<any>(getApiUrl('/auth/client/request-otp'), {
+      method: 'POST',
+      body: { cpf: unmaskedCpf.value, method },
+    })
+
+    if (result.error || !result.success) {
+      add({
+        title: 'Erro',
+        description: result.message || 'Não foi possível enviar o código.',
+        icon: 'solar:danger-circle-bold-duotone',
+      })
+      return
+    }
+
+    sentDestination.value = result.phone || result.email || ''
+    add({
+      title: 'Código Enviado',
+      description: method === 'EMAIL'
+        ? `Enviamos um código para ${result.email}`
+        : `Enviamos um SMS para o final ${result.phone}`,
       icon: 'solar:check-circle-bold-duotone',
     })
     step.value = 'otp'
@@ -103,6 +160,7 @@ async function verifyOtp() {
       body: {
         cpf: unmaskedCpf.value,
         code: otp.value,
+        method: selectedMethod.value,
       },
     })
 
@@ -220,6 +278,45 @@ async function verifyOtp() {
               </BaseButton>
             </div>
 
+            <!-- Step 1.5: Method Selection -->
+            <div v-else-if="step === 'method'" key="method" class="space-y-8">
+              <div class="space-y-4">
+                <div class="flex items-center justify-between px-1">
+                  <span class="text-[10px] font-bold text-muted-400 uppercase tracking-[0.2em]">Como receber o código</span>
+                  <button
+                    class="text-xs text-primary-500 font-bold hover:text-primary-600 transition-colors flex items-center gap-1.5"
+                    @click="step = 'cpf'">
+                    <Icon name="solar:undo-left-round-bold-duotone" class="size-3.5" />
+                    Trocar CPF
+                  </button>
+                </div>
+
+                <button
+                  v-for="opt in availableMethods"
+                  :key="opt.method"
+                  :disabled="isLoading"
+                  class="w-full flex items-center gap-4 p-4 rounded-xl border border-muted-200 dark:border-muted-700 bg-white/50 dark:bg-muted-950/50 hover:border-primary-500/50 hover:bg-primary-500/5 transition-all duration-300 text-left group"
+                  @click="sendOtpWithMethod(opt.method as 'SMS' | 'EMAIL')"
+                >
+                  <div class="flex items-center justify-center size-12 rounded-xl bg-primary-500/10 text-primary-500 group-hover:bg-primary-500/20 transition-colors">
+                    <Icon
+                      :name="opt.method === 'SMS' ? 'solar:smartphone-bold-duotone' : 'solar:letter-bold-duotone'"
+                      class="size-6"
+                    />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <span class="block text-sm font-bold text-muted-800 dark:text-muted-100">
+                      {{ opt.method === 'SMS' ? 'SMS' : 'E-mail' }}
+                    </span>
+                    <span class="block text-xs text-muted-400 truncate">
+                      {{ opt.destination }}
+                    </span>
+                  </div>
+                  <Icon name="solar:arrow-right-bold-duotone" class="size-5 text-muted-300 group-hover:text-primary-500 transition-colors" />
+                </button>
+              </div>
+            </div>
+
             <!-- Step 2: OTP -->
             <div v-else key="otp" class="space-y-8">
               <div class="space-y-6">
@@ -228,7 +325,7 @@ async function verifyOtp() {
                     Segurança</span>
                   <button
                     class="text-xs text-primary-500 font-bold hover:text-primary-600 transition-colors flex items-center gap-1.5"
-                    @click="step = 'cpf'">
+                    @click="step = 'cpf'; selectedMethod = null; otp = ''">
                     <Icon name="solar:undo-left-round-bold-duotone" class="size-3.5" />
                     Trocar CPF
                   </button>
@@ -243,7 +340,10 @@ async function verifyOtp() {
 
                 <div class="text-center">
                   <BaseParagraph size="xs" class="text-muted-400 leading-relaxed">
-                    O código SMS pode levar até 2 minutos para chegar em seu aparelho.
+                    {{ selectedMethod === 'EMAIL'
+                      ? 'O código foi enviado para seu e-mail. Verifique também a caixa de spam.'
+                      : 'O código SMS pode levar até 2 minutos para chegar em seu aparelho.'
+                    }}
                   </BaseParagraph>
                 </div>
               </div>
@@ -259,7 +359,7 @@ async function verifyOtp() {
 
                 <BaseButton variant="ghost" block size="md" rounded="lg"
                   class="text-muted-500 hover:text-primary-500 hover:bg-primary-500/5 transition-all"
-                  @click="requestOtp">
+                  @click="selectedMethod ? sendOtpWithMethod(selectedMethod) : requestOtp()">
                   Reenviar Código
                 </BaseButton>
               </div>

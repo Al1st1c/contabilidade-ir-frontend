@@ -13,6 +13,7 @@ const token = computed(() => route.query.token as string)
 const isLoading = ref(true)
 const isSubmitting = ref(false)
 const isSuccess = ref(false)
+const declarationCreated = ref(false)
 const errorMsg = ref('')
 const branding = ref<any>(null)
 
@@ -158,6 +159,7 @@ async function handleSubmit() {
     const result = await res.json()
     if (result?.success) {
       isSuccess.value = true
+      declarationCreated.value = result.data?.declarationCreated || false
     }
     else {
       errorMsg.value = result?.message || 'Erro ao realizar cadastro.'
@@ -268,7 +270,12 @@ watch([primaryColorName, secondaryColorName], () => {
           <h2 class="text-xl font-bold text-muted-800 dark:text-white mb-2">Cadastro Realizado!</h2>
           <p class="text-sm text-muted-500 max-w-sm mx-auto leading-relaxed">
             Seus dados foram enviados para <strong>{{ branding?.tradeName }}</strong>.
-            O escritório entrará em contato em breve para dar continuidade ao seu atendimento.
+            <template v-if="declarationCreated">
+              Sua declaração de Imposto de Renda já foi iniciada automaticamente.
+            </template>
+            <template v-else>
+              O escritório entrará em contato em breve para dar continuidade ao seu atendimento.
+            </template>
           </p>
         </div>
 
