@@ -267,6 +267,16 @@ const isCheckingStatus = ref(false)
 const paymentResult = ref<any>(null)
 const isExitingPage = ref(false)
 
+// Terms Modal State
+const showTermsModal = ref(false)
+const termsModalType = ref<'terms' | 'lgpd'>('terms')
+const acceptedTerms = ref(false)
+
+function openTerms(type: 'terms' | 'lgpd') {
+  termsModalType.value = type
+  showTermsModal.value = true
+}
+
 function handleBeforeUnload(e: BeforeUnloadEvent) {
   if (paymentMethod.value === 'CREDIT_CARD' && !isExitingPage.value && !isSubmitting.value) {
     e.preventDefault()
@@ -389,6 +399,16 @@ const currentCycleLabel = computed(() => {
 async function handlePayment() {
   if (isSubmitting.value || isCurrentPlanSelected.value)
     return
+
+  if (!acceptedTerms.value) {
+    toaster.add({
+      title: 'Atenção',
+      description: 'Você precisa aceitar os termos de uso para continuar.',
+      icon: 'solar:danger-triangle-bold-duotone',
+    })
+    return
+  }
+
   isSubmitting.value = true
   try {
     const params: any = {
@@ -1077,12 +1097,43 @@ const featureMap: Record<string, string> = {
                   </BaseParagraph>
                 </div>
 
+                <!-- Checkbox de Aceite -->
+                <div class="mt-4 mb-4">
+                  <div class="flex flex-col">
+                    <div class="flex items-start gap-3">
+                      <BaseCheckbox
+                        v-model="acceptedTerms"
+                        color="primary"
+                        dense
+                      />
+                      <div class="text-xs leading-tight text-muted-500 font-sans">
+                        Li e concordo com os
+                        <button
+                          type="button"
+                          class="text-primary-500 underline hover:text-primary-600"
+                          @click="openTerms('terms')"
+                        >
+                          Termos de Uso
+                        </button>
+                        e a
+                        <button
+                          type="button"
+                          class="text-primary-500 underline hover:text-primary-600"
+                          @click="openTerms('lgpd')"
+                        >
+                          Política de Privacidade (LGPD)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Botão Final (Sempre desabilitado se já pagou) -->
                 <BaseButton
                   v-if="!paymentResult || (paymentMethod !== 'PIX' && paymentMethod !== 'BOLETO' && paymentResult.status !== 'PAID')"
                   type="submit" variant="primary" color="primary"
-                  class="w-full h-12 mt-8 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans disabled:opacity-60 disabled:cursor-not-allowed"
-                  :loading="isSubmitting" :disabled="isCurrentPlanSelected">
+                  class="w-full h-12 mt-4 shadow-xl shadow-primary-500/20 text-lg font-bold font-sans disabled:opacity-60 disabled:cursor-not-allowed"
+                  :loading="isSubmitting" :disabled="isCurrentPlanSelected || !acceptedTerms">
                   <span v-if="isCurrentPlanSelected">Plano Atual Ativo</span>
                   <span v-else>Finalizar Assinatura</span>
                 </BaseButton>
@@ -1242,5 +1293,11 @@ const featureMap: Record<string, string> = {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Terms Modal -->
+    <TermsModal
+      v-model:open="showTermsModal"
+      :type="termsModalType"
+    />
   </div>
 </template>

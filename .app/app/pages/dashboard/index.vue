@@ -42,11 +42,44 @@ const links = [
 ]
 
 const { useCustomFetch } = useApi()
-const { user } = useAuth()
+const { user, needsTermAcceptance } = useAuth()
 const { open } = usePanels()
 const { selectedEmployeeId } = useAppState() // Global state
 const { tenant, fetchTenant } = useTenant()
 const { currentSubscription } = useSubscription()
+
+const isTermsModalOpen = ref(needsTermAcceptance.value)
+const termsModalType = ref<'terms' | 'lgpd'>('terms')
+
+function openTermsModal(type: 'terms' | 'lgpd') {
+  termsModalType.value = type
+  isTermsModalOpen.value = true
+}
+
+async function handleAcceptTerms() {
+  // Only record acceptance if it was mandatory and for terms
+  if (needsTermAcceptance.value && termsModalType.value === 'terms') {
+    try {
+      await useCustomFetch('/terms/accept', {
+        method: 'POST',
+        body: { 
+          type: 'TERMS',
+          metadata: {
+            acceptedVia: 'Dashboard Modal',
+            acceptedAt: new Date().toISOString(),
+            platform: 'Web',
+          }
+        },
+      })
+      needsTermAcceptance.value = false
+    }
+    catch (error) {
+      console.error('Erro ao aceitar termos:', error)
+    }
+  }
+  
+  isTermsModalOpen.value = false
+}
 
 const isOnboardingOpen = computed(() => user.value?.onboardingStatus === 'PENDING')
 
@@ -892,7 +925,7 @@ const showNoDeclarationsAlert = computed(() => {
           <!-- Alerts Feed Section -->
           <div id="dashboard-alerts" class="mt-3 flex flex-col gap-4">
             <!-- Feed Settings / Tabs -->
-            <div class="flex flex-col items-center justify-between gap-6 sm:flex-row mb-2">
+            <div class="hidden md:flex flex-col items-center justify-between gap-6 sm:flex-row mb-2">
               <div>
                 <BaseHeading as="h3" size="lg" weight="medium" lead="tight" class="text-muted-900 dark:text-muted-100">
                   <span>Alertas de Campanha</span>
@@ -919,7 +952,7 @@ const showNoDeclarationsAlert = computed(() => {
             </div>
 
             <!-- Feed Content -->
-            <div class="space-y-3 min-h-[200px] mt-6">
+            <div class="hidden md:block space-y-3 min-h-[200px] mt-6">
               <TransitionGroup enter-active-class="transform-gpu duration-300 ease-out"
                 enter-from-class="opacity-0 -translate-x-4" enter-to-class="opacity-100 translate-x-0"
                 leave-active-class="absolute transform-gpu duration-200 ease-in" leave-from-class="opacity-100"
@@ -1375,8 +1408,11 @@ const showNoDeclarationsAlert = computed(() => {
             class="h-4 object-contain opacity-40 grayscale hover:opacity-60 hover:grayscale-0 transition-all duration-300"
             @error="(e: any) => e.target.style.display = 'none'">
           <span class="font-medium">{{ companyName }}</span>
-          <span class="text-muted-300 dark:text-muted-600">•</span>
           <span>{{ new Date().getFullYear() }}</span>
+          <span class="text-muted-300 dark:text-muted-600">•</span>
+          <button type="button" class="hover:text-primary-500 transition-colors uppercase tracking-widest" @click="openTermsModal('terms')">Termos de Uso</button>
+          <span class="text-muted-300 dark:text-muted-600">•</span>
+          <button type="button" class="hover:text-primary-500 transition-colors uppercase tracking-widest" @click="openTermsModal('lgpd')">LGPD</button>
         </div>
       </div>
 
@@ -1393,5 +1429,12 @@ const showNoDeclarationsAlert = computed(() => {
         </DialogPortal>
       </DialogRoot>
     </ClientOnly>
+    <!-- Terms Modal -->
+    <TermsModal
+      v-model:open="isTermsModalOpen"
+      :type="termsModalType"
+      :mandatory="needsTermAcceptance && termsModalType === 'terms'"
+      @accept="handleAcceptTerms"
+    />
   </div>
 </template>

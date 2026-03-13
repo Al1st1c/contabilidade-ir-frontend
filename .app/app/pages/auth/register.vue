@@ -109,6 +109,15 @@ const userCookie = authUser
 const isCheckingAvailability = ref({ email: false, document: false })
 const availabilityErrors = ref({ email: '', document: '' })
 
+// Terms Modal State
+const showTermsModal = ref(false)
+const termsModalType = ref<'terms' | 'lgpd'>('terms')
+
+function openTerms(type: 'terms' | 'lgpd') {
+  termsModalType.value = type
+  showTermsModal.value = true
+}
+
 async function checkAvailability(type: 'email' | 'document', value: string) {
   if (!value || value.length < 5) return
 
@@ -147,6 +156,7 @@ const userSchema = z.object({
   document: z.string().min(11, 'CPF/CNPJ é obrigatório'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  acceptedTerms: z.boolean().refine(val => val === true, 'Você precisa aceitar os termos'),
 }).refine((data: any) => data.password === data.confirmPassword, {
   message: 'As senhas não conferem',
   path: ['confirmPassword'],
@@ -165,6 +175,7 @@ const { handleSubmit, values, errors, setValues } = useForm<UserFormData>({
     document: '',
     password: '',
     confirmPassword: '',
+    acceptedTerms: false,
   },
 })
 
@@ -1037,8 +1048,44 @@ watch([step, isFreeFlow, isSubmitting], () => {
                       :classes="{ input: 'h-12' }" @update:model-value="handleChange" @blur="handleBlur" />
                   </BaseField>
                 </Field>
-                <BaseButton type="button" variant="primary" rounded="lg" class="h-12! w-full"
-                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || availabilityErrors.email !== '' || availabilityErrors.document !== ''"
+                <div class="mt-4">
+                  <Field v-slot="{ field, errorMessage, handleChange }" name="acceptedTerms">
+                    <div class="flex flex-col">
+                      <div class="flex items-start gap-3">
+                        <BaseCheckbox
+                          :model-value="field.value"
+                          color="primary"
+                          dense
+                          @update:model-value="handleChange"
+                        />
+                        <div class="text-xs leading-tight text-muted-500">
+                          Li e concordo com os
+                          <button
+                            type="button"
+                            class="text-primary-500 underline hover:text-primary-600"
+                            @click="openTerms('terms')"
+                          >
+                            Termos de Uso
+                          </button>
+                          e a
+                          <button
+                            type="button"
+                            class="text-primary-500 underline hover:text-primary-600"
+                            @click="openTerms('lgpd')"
+                          >
+                            Política de Privacidade (LGPD)
+                          </button>
+                        </div>
+                      </div>
+                      <BaseText v-if="errorMessage" color="danger" size="xs" class="mt-1">
+                        {{ errorMessage }}
+                      </BaseText>
+                    </div>
+                  </Field>
+                </div>
+
+                <BaseButton type="button" variant="primary" rounded="lg" class="h-12! w-full mt-4"
+                  :disabled="!values.name || !values.email || !values.password || !values.confirmPassword || !values.acceptedTerms || availabilityErrors.email !== '' || availabilityErrors.document !== ''"
                   @click="nextStep">
                   Continuar
                 </BaseButton>
@@ -1525,5 +1572,10 @@ watch([step, isFreeFlow, isSubmitting], () => {
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
+
+    <TermsModal
+      v-model:open="showTermsModal"
+      :type="termsModalType"
+    />
   </div>
 </template>

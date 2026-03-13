@@ -44,7 +44,7 @@ onMounted(() => {
   <TairoTopnavLayout>
     <!-- Mobile -->
     <TairoTopnavNavbar class="md:hidden">
-      <TairoTopnavHeader hide="scroll-down" class="px-4 md:px-6 lg:px-8 xl:px-10 z-10">
+      <TairoTopnavHeader class="px-4 md:px-6 lg:px-8 xl:px-10 z-[50] fixed top-0 inset-x-0 bg-white/80 dark:bg-muted-900/80 backdrop-blur-md border-b border-muted-200 dark:border-muted-800">
         <div class="flex-1 flex md:hidden">
           <button type="button" class="flex items-center" @click="isMobileOpen = !isMobileOpen">
             <span class="flex flex-col gap-1.5">

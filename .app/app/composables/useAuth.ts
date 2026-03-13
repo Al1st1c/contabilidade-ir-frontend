@@ -56,6 +56,7 @@ interface AuthResponse {
   two_factor?: boolean
   phone?: string
   email?: string
+  needsTermAcceptance?: boolean
 }
 
 interface LoginCredentials {
@@ -98,15 +99,25 @@ export function useAuth() {
     secure: process.env.NODE_ENV === 'production',
   })
 
+  const needsTermAcceptanceCookie = useCookie<boolean>('needsTermAcceptance', {
+    default: () => false,
+    maxAge: API_CONFIG.TOKEN.MAX_AGE,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  })
+
   // Global reactive state synced with cookies
   const token = useState('auth:token', () => tokenCookie.value)
   const user = useState('auth:user', () => userCookie.value)
   const level = useState('auth:level', () => levelCookie.value)
+  const needsTermAcceptance = useState('auth:needsTermAcceptance', () => needsTermAcceptanceCookie.value)
 
   // Sync state to cookies
   watch(token, (val) => { tokenCookie.value = val })
   watch(user, (val) => { userCookie.value = val })
   watch(level, (val) => { levelCookie.value = val })
+  watch(needsTermAcceptance, (val) => { needsTermAcceptanceCookie.value = val })
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -250,6 +261,8 @@ export function useAuth() {
         level.value = authData.level
       }
 
+      needsTermAcceptance.value = !!authData.needsTermAcceptance
+
       // Verificação de segurança: Checar se o cookie foi realmente setado
       if (process.client) {
         // Pequeno delay para garantir que o navegador processou o cookie
@@ -290,6 +303,7 @@ export function useAuth() {
     token.value = null
     user.value = null
     level.value = null
+    needsTermAcceptance.value = false
 
     // Limpar cache do caixa no logout
     clearCashierCache()
@@ -363,6 +377,7 @@ export function useAuth() {
     user,
     level,
     isAuthenticated,
+    needsTermAcceptance,
     login,
     verifyTwoFactor,
     logout,
