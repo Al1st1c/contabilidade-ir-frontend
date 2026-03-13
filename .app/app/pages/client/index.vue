@@ -31,6 +31,15 @@ function pixKeyType(key: string) {
   return 'bank'
 }
 
+function isUrl(str: string | null) {
+  if (!str) return false
+  return str.startsWith('http://') || str.startsWith('https://')
+}
+
+function openPaymentLink(url: string) {
+  window.open(url, '_blank')
+}
+
 const isLoading = ref(true)
 const isReportingPayment = ref(false)
 const rawClient = ref<any>(null)
@@ -415,7 +424,23 @@ function goToDocuments() {
               <!-- Minimalist Payment Section (REFINED) -->
               <div v-if="index === 4 && step.active && clientData.payment.status === 'pending'"
                 class="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
-                <div v-if="clientData.payment.pixKey"
+                
+                <!-- Payment Link Button -->
+                <div v-if="isUrl(clientData.payment.pixKey)" class="py-2 border-y border-muted-200 dark:border-muted-800">
+                  <BaseButton 
+                    variant="muted" 
+                    rounded="lg" 
+                    size="sm" 
+                    class="w-full h-10 font-semibold text-muted-800 dark:text-muted-100" 
+                    @click="openPaymentLink(clientData.payment.pixKey)"
+                  >
+                    <Icon name="solar:card-2-bold-duotone" class="size-4 mr-2 text-primary-500" />
+                    Pagar via Link
+                  </BaseButton>
+                </div>
+
+                <!-- Standard Pix Key -->
+                <div v-else-if="clientData.payment.pixKey"
                   class="flex items-center justify-between py-2 border-y border-muted-200 dark:border-muted-800">
                   <div class="flex items-center gap-2">
                     <Icon name="fa6-brands:pix" class="size-3 text-emerald-500" />

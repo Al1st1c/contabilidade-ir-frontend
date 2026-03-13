@@ -184,9 +184,9 @@ onMounted(() => {
                 </BaseField>
               </div>
               <div class="col-span-12 md:col-span-6">
-                <BaseField label="Chave PIX (Vai aparecer para o cliente pagar os honorários)">
-                  <TairoInput v-model="form.pixKey" :disabled="!isOwner" placeholder="E-mail, CPF/CNPJ ou Aleatória"
-                    icon="solar:wallet-money-linear" />
+                <BaseField label="Chave PIX ou Link de Pagamento">
+                  <TairoInput v-model="form.pixKey" :disabled="!isOwner"
+                    placeholder="E-mail, CPF/CNPJ, Aleatória ou Link de Pagamento" icon="solar:wallet-money-linear" />
                 </BaseField>
               </div>
             </div>
